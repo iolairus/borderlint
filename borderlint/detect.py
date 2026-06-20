@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 import re
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 IGNORE = {".git", "node_modules", "__pycache__", ".venv", "venv", "build", "dist",
@@ -18,6 +18,9 @@ JS_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
 _ENDPOINT_KEY = re.compile(
     r"""(?i)\b(base_?url|api_base|openai_api_base|azure_endpoint|api_endpoint|inference_endpoint)\b['"]?\s*[:=]\s*['"]?\s*([^\s'"#,}\]]+)""")
 _LOOPBACK = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
+# Inline waiver: `borderlint: allow <reason>` in any comment. The reason (justification) is required.
+_WAIVER = re.compile(r"borderlint:\s*allow\b[ \t]*(.*)", re.I)
 
 # Capture the module specifier from: `import X from "pkg"`, `import "pkg"`, `export ... from "pkg"`,
 # `require("pkg")`, dynamic `import("pkg")`. Regex over tree-sitter keeps borderlint zero-dependency.
@@ -34,6 +37,7 @@ class Detection:
     file: str
     line: int
     jurisdiction: str
+    waiver: str | None = None  # justification, if an inline `borderlint: allow` waiver applies
 
 
 def _scan_py(path: str, src: str, kb) -> list[Detection]:
@@ -113,10 +117,29 @@ def _scan_config_endpoints(path: str, src: str, kb) -> list[Detection]:
     return out
 
 
+def _waivers(src: str) -> dict[int, str]:
+    """Line number → justification for each `borderlint: allow <reason>` comment."""
+    out: dict[int, str] = {}
+    for i, line in enumerate(src.splitlines(), 1):
+        m = _WAIVER.search(line)
+        if m:
+            out[i] = m.group(1).strip()
+    return out
+
+
+def _apply_waiver(d: Detection, waivers: dict) -> Detection:
+    fw = waivers.get(d.file)
+    if fw:
+        reason = fw.get(d.line) or fw.get(d.line - 1)  # the flagged line or the line above it
+        if reason:  # non-empty justification only — a bare waiver is ignored
+            return replace(d, waiver=reason)
+    return d
+
+
 def scan(root, kb) -> list[Detection]:
     root = Path(root)
     paths = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
-    seen, out = set(), []
+    seen, out, waivers = set(), [], {}
     for p in paths:
         if any(part in IGNORE for part in p.parts):
             continue
@@ -130,6 +153,9 @@ def scan(root, kb) -> list[Detection]:
             src = p.read_text("utf-8", errors="ignore")
         except OSError:
             continue
+        fw = _waivers(src)
+        if fw:
+            waivers[str(p)] = fw
         cfg = _scan_config_endpoints(str(p), src, kb)  # AI-endpoint keys / base_url kwargs, any file
         if is_py:
             dets = _scan_py(str(p), src, kb) + cfg
@@ -142,4 +168,4 @@ def scan(root, kb) -> list[Detection]:
             if key not in seen:
                 seen.add(key)
                 out.append(d)
-    return out
+    return [_apply_waiver(d, waivers) for d in out]
