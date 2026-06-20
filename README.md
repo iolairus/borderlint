@@ -88,7 +88,7 @@ customer PII — then fails the build, so you can't ship a service pointed at th
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v0.7.0
+- uses: iolairus/borderlint@v0.8.0
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
