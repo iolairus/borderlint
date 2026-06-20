@@ -17,6 +17,8 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 - No `--policy` → **inventory mode** (lists flows + jurisdictions, exits 0).
 - `--format json|mermaid|sarif|sbom` — machine output, a flow map, **SARIF** for GitHub code-scanning,
   or a deterministic **AI data-flow SBOM** (policy-independent inventory of every flow; an artifact, exits 0).
+- `diff <baseline.sbom> <current.sbom>` — compare two SBOMs; **exits 1 when the PR adds a new
+  non-`local` flow** (new egress), else 0. Diff the base-branch SBOM against the PR's to gate new AI egress.
 - Accept a reviewed flow with an inline `# borderlint: allow <reason>` **waiver** (justification
   required; it's reported as *waived*, not hidden, and can't override an explicit provider `deny`).
 - Exit code is non-zero on a violation, so it gates CI.
@@ -38,8 +40,9 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 
 **Deny-by-default**: a flow to any code not on the list for the declared class fails — so `sg` is
 allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA` is shorthand for `hk` +
-`CN-GBA`. Cross-border arrangements (e.g. the GBA Standard Contract) are surfaced as reference
-links, never adjudicated.
+`CN-GBA`. A flagged flow is tagged with the **data-protection regimes** in play (PDPO / PIPL) and the
+relevant **cross-border arrangement** — GBA Standard Contract, PIPL cross-border, or GDPR SCCs —
+surfaced as reference links, never adjudicated.
 
 ## Capabilities
 
@@ -54,12 +57,15 @@ links, never adjudicated.
   endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` → `hk`).
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
   failure set, declared home regime.
-- **Output & CI:** text / JSON / Mermaid, exit codes, GitHub Action + Jenkins.
+- **Regimes & arrangements:** flagged flows tagged with PDPO / PIPL and linked to the GBA Standard
+  Contract, PIPL cross-border, or GDPR SCCs — reference only, never adjudicated.
+- **Output & CI:** text / JSON / Mermaid / **SARIF** / **SBOM**, an SBOM **`diff`** gate for new
+  egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
 
 ## Scope
 
-For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: SARIF output, container/SCA mode, LLM
-enrichment, and dynamic / `base_url` endpoint resolution. Full roadmap in `CAPABILITIES.md`.
+For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: vector-DB / storage residency, a pre-commit
+hook, CycloneDX / SPDX SBOM export, and optional LLM enrichment. Full roadmap in `CAPABILITIES.md`.
 
 ## Internal endpoints
 
@@ -82,7 +88,7 @@ customer PII — then fails the build, so you can't ship a service pointed at th
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v0.2.0
+- uses: iolairus/borderlint@v0.7.0
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 

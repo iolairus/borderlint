@@ -169,3 +169,35 @@ def sbom(findings, kb, policy=None) -> str:
         "kb_updated": kb.updated,
         "components": components,
     }, indent=2, sort_keys=True)
+
+
+def _flows(doc) -> dict:
+    """{(provider id, jurisdiction): display name} for every flow in an SBOM document."""
+    out = {}
+    for c in doc.get("components", []):
+        for j in c.get("jurisdictions", []):
+            out[(c["provider"], j)] = c.get("name", c["provider"])
+    return out
+
+
+def diff_flows(old: dict, new: dict) -> dict:
+    """Flows added/removed between two AI data-flow SBOMs, at (provider id, jurisdiction) granularity."""
+    o, n = _flows(old), _flows(new)
+    rows = lambda keys, names: [{"provider": p, "jurisdiction": j, "name": names[(p, j)]}
+                                for p, j in sorted(keys)]
+    return {"added": rows(set(n) - set(o), n), "removed": rows(set(o) - set(n), o)}
+
+
+def diff_text(delta: dict) -> str:
+    a, r = delta["added"], delta["removed"]
+    if not a and not r:
+        return "borderlint diff: no AI data-flow changes."
+    lines = ["borderlint diff — AI data-flow changes", "=" * 38]
+    lines += [f"  + added:   {f['name']} -> {juris(f['jurisdiction'])}" for f in a]
+    lines += [f"  - removed: {f['name']} -> {juris(f['jurisdiction'])}" for f in r]
+    lines.append(f"Summary: {len(a)} added, {len(r)} removed")
+    return "\n".join(lines)
+
+
+def diff_json(delta: dict) -> str:
+    return json.dumps(delta, indent=2, sort_keys=True)
