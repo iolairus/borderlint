@@ -14,9 +14,14 @@ byte-for-byte. D6 is that comparison surfaced as a CI gate: "did this PR add a n
 - **Separate `diff` subcommand over two SBOM files, not `scan --baseline`.** Single responsibility; the
   deterministic SBOM is the interchange format (this is what D5's determinism was for). CI already
   checks out the base branch and runs `scan --format sbom` twice, then diffs the two files.
-- **Flow granularity = (provider, jurisdiction).** Alternative: site-level (file:line). Rejected —
-  moving a call between files is not a new flow; *a new place data goes* is the signal. Site churn would
-  drown it in noise.
+- **Flow granularity = (provider id, jurisdiction).** A flow is extracted as `(component.id, j)` for
+  each `j` in the component's **`jurisdictions`** list — the component-level set, not per-site
+  jurisdiction (per-site disagreement could surface the same logical flow as both added and removed).
+  Identity is the component id, never the display name. Alternative: site-level (file:line). Rejected —
+  moving a call between files is not a new flow; *a new place data goes* is the signal.
+- **`diff` owns its exit codes**, independent of the `scan` policy gate: exit 1 = new non-`local`
+  egress, exit 0 = no new egress, exit 2 = invalid input. The two non-zero codes are distinct so a CI
+  consumer can tell "review this flow" (1) from "fix your SBOM pipeline" (2).
 - **Gate on added non-`local` flows.** `local` additions are on-device inference, not egress → never
   gate. `unknown` additions DO gate (egress to an undetermined place is exactly the risk). Removed flows
   are reported but never gate (a PR that stops sending data abroad must not fail).
