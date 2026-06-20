@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 JURIS = {"us": "United States", "eu": "European Union", "cn": "Mainland China", "hk": "Hong Kong",
          "sg": "Singapore", "gb": "United Kingdom", "mo": "Macao", "my": "Malaysia",
@@ -10,21 +11,49 @@ JURIS = {"us": "United States", "eu": "European Union", "cn": "Mainland China", 
 REASON = {"denied_provider": "provider denied by policy",
           "residency": "jurisdiction outside the allow-list for this data class",
           "unknown": "jurisdiction could not be determined"}
-GBA_REF = ("GBA Standard Contract — https://www.digitalpolicy.gov.hk/en/our_work/"
-           "digital_infrastructure/mainland/gbacbdf/cross-boundary_data_flow/index.html")
 _RANK = {"ok": 0, "waived": 1, "warn": 2, "fail": 3}
+
+with open(os.path.join(os.path.dirname(__file__), "data", "arrangements.json"), encoding="utf-8") as _fh:
+    _ARRANGEMENTS = {a["id"]: a for a in json.load(_fh)["arrangements"]}
+# EU/EEA jurisdictions that trigger the GDPR reference (the `eu` token + member country codes).
+_EU = frozenset("eu at be bg hr cy cz dk ee fi fr de gr hu ie it lv lt lu mt nl pl pt ro sk si es se is li no".split())
 
 
 def juris(j: str) -> str:
     return JURIS.get(j, j)
 
 
+def _ref(aid: str) -> str:
+    a = _ARRANGEMENTS[aid]
+    return f"{a['name']} — {a['summary']} {a['url']}"
+
+
 def _arrangements(findings, policy) -> list[str]:
+    """Cross-border arrangement reference(s) for flagged flows — context only, never adjudicated."""
     regime = (policy or {}).get("home_regime")
-    flagged_china = any(f.severity != "ok" and f.detection.jurisdiction in ("cn", "CN-GBA") for f in findings)
-    if regime in ("pdpo", "pipl") and flagged_china:
-        return [f"Reference ({regime}): {GBA_REF}"]
-    return []
+    dests = {f.detection.jurisdiction for f in findings if f.severity != "ok"}
+    out = []
+    if "CN-GBA" in dests and regime in ("pdpo", "pipl"):  # HK <-> nine GBA cities, not plain cn
+        out.append(_ref("gba"))
+    if "cn" in dests or (regime == "pipl" and dests - {"cn", "CN-GBA", "hk"}):
+        out.append(_ref("pipl"))
+    if dests & _EU:
+        out.append(_ref("gdpr"))
+    return out
+
+
+def _regimes(findings, policy) -> list[str]:
+    """Data-protection regime tag(s) implicated by a flagged flow — set {PDPO, PIPL}, informational."""
+    dests = {f.detection.jurisdiction for f in findings if f.severity != "ok"}
+    if not dests:
+        return []
+    regime = (policy or {}).get("home_regime")
+    tags = set()
+    if regime == "pdpo":
+        tags.add("PDPO")
+    if regime == "pipl" or dests & {"cn", "CN-GBA"}:
+        tags.add("PIPL")
+    return sorted(tags)
 
 
 def text(findings, kb, policy=None) -> str:
@@ -51,7 +80,11 @@ def text(findings, kb, policy=None) -> str:
     warns = sum(f.severity == "warn" for f in findings)
     waived = sum(f.severity == "waived" for f in findings)
     lines.append("")
-    lines += _arrangements(findings, policy)
+    tags = _regimes(findings, policy)
+    if tags:
+        lines.append(f"Regimes implicated: {', '.join(tags)}")
+    for r in _arrangements(findings, policy):
+        lines.append(f"Reference: {r}")
     lines.append(f"Summary: {fails} fail, {warns} warn, {waived} waived, {len(findings) - fails - warns - waived} ok")
     return "\n".join(lines)
 
@@ -63,6 +96,7 @@ def as_json(findings, kb, policy=None) -> str:
                       "kind": f.detection.kind, "evidence": f.detection.evidence,
                       "file": f.detection.file, "line": f.detection.line,
                       "waiver": f.detection.waiver} for f in findings],
+        "regimes": _regimes(findings, policy),
         "references": _arrangements(findings, policy),
     }, indent=2)
 

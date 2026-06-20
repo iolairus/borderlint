@@ -252,3 +252,43 @@ def test_sarif_waived_suppressed():
     doc = _json.loads(sarif(f, kb))
     waived = [r for r in doc["runs"][0]["results"] if r.get("suppressions")]
     assert waived and waived[0]["level"] == "note"
+
+
+def _ctx(juris, **polkw):
+    """A single flagged flow to `juris` -> (findings, parsed JSON report)."""
+    import json as _json
+    from borderlint.report import as_json
+    pol = _pol(["xx"], **polkw)
+    f = evaluate([Detection("openai", "sdk_import", "openai", "f.py", 1, juris)], pol, "customer-pii", kb)
+    return f, _json.loads(as_json(f, kb, pol))
+
+
+def test_gba_ref_for_cn_gba_only():
+    _, gba = _ctx("CN-GBA", home_regime="pdpo")
+    assert any("GBA Standard Contract" in r for r in gba["references"])
+    _, cn = _ctx("cn", home_regime="pdpo")  # Beijing is outside the GBA -> PIPL, not the GBA contract
+    assert not any("GBA Standard Contract" in r for r in cn["references"])
+    assert any("PIPL" in r for r in cn["references"])
+
+
+def test_gdpr_ref_for_eu_code():
+    _, doc = _ctx("de", home_regime="pdpo")
+    assert any("GDPR" in r for r in doc["references"])
+
+
+def test_regime_tags_pdpo_pipl():
+    _, doc = _ctx("cn", home_regime="pdpo")
+    assert set(doc["regimes"]) == {"PDPO", "PIPL"}
+
+
+def test_context_does_not_change_verdict():
+    import json as _json
+    from borderlint.report import sarif
+    f = evaluate([Detection("openai", "sdk_import", "openai", "f.py", 1, "cn")],
+                 _pol(["xx"], home_regime="pdpo"), "customer-pii", kb)
+    assert f[0].severity == "fail"  # tags/refs never alter severity
+    doc = _json.loads(sarif(f, kb))
+    res = doc["runs"][0]["results"]
+    assert len(res) == 1 and res[0]["level"] == "error"
+    blob = _json.dumps(doc)
+    assert "GBA" not in blob and "PIPL" not in blob and "regimes" not in blob  # SARIF carries no context
