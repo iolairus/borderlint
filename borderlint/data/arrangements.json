@@ -1,0 +1,23 @@
+{
+  "updated": "2026-06-20",
+  "arrangements": [
+    {
+      "id": "gba",
+      "name": "GBA Standard Contract",
+      "summary": "Facilitated personal-information transfer between Hong Kong and the nine Mainland GBA cities.",
+      "url": "https://www.digitalpolicy.gov.hk/en/our_work/digital_infrastructure/mainland/gbacbdf/cross-boundary_data_flow/index.html"
+    },
+    {
+      "id": "pipl",
+      "name": "PIPL cross-border transfer",
+      "summary": "Mainland China cross-border PI: CAC security assessment, standard contract, or certification (Provisions on Promoting and Regulating Cross-Border Data Flows, 2024).",
+      "url": "https://www.cac.gov.cn/2024-03/22/c_1712776611775634.htm"
+    },
+    {
+      "id": "gdpr",
+      "name": "GDPR Chapter V transfers",
+      "summary": "EU/EEA personal-data transfers: adequacy decision or Standard Contractual Clauses (SCCs).",
+      "url": "https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection/rules-international-data-transfers_en"
+    }
+  ]
+}
