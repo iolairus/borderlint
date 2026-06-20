@@ -131,7 +131,7 @@ Phases: **P1** = MVP · **P2** = next · **P3** = later. Tune these.
 | A1 | Detect AI provider **SDK imports** in Python (AST) | P1 |
 | A2 | Detect AI provider **endpoint/base‑URL references** in Python string literals | P1 |
 | A3 | Scan **config/text files** (`.env`, `.yaml`, `.toml`, `.json`, `.ini`) for endpoint hosts | P1 |
-| A4 | Scan **TypeScript / JavaScript** (tree‑sitter) | P2 |
+| A4 | Scan **TypeScript / JavaScript** (regex imports; tree‑sitter only if precision demands) | P2 |
 | A5 | Detect **vector DBs / data sinks** that imply cross‑border storage (Pinecone, etc.) | P2 |
 | A6 | Detect **observability/telemetry** endpoints that exfiltrate prompts/traces | P3 |
 | A7 | Detect **MCP servers / agent tool endpoints** by jurisdiction | P3 |
