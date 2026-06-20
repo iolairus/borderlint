@@ -28,11 +28,11 @@ is no prior art in `openspec/specs/` (greenfield).
 - **Deny-by-default country allow-lists over an "overseas" bucket.** Alternative: a coarse
   overseas catch-all. Rejected — it cannot express a PDPO agreed-locations EULA where `sg` is in
   scope but `my` is not.
-- **Bundled, vendor-neutral, user-overridable YAML knowledge base.** Alternative: hardcoded
+- **Bundled, vendor-neutral, user-overridable JSON knowledge base.** Alternative: hardcoded
   provider tables. Rejected — the KB is the differentiator and must be contributable and overridable.
 - **Deterministic core; optional LLM enrichment later.** Alternative: LLM-first classification.
   Rejected — CI must run offline and reproducibly.
-- **Python + argparse + PyYAML; AST + endpoint-substring detection.** Alternative: regex-only
+- **Python + argparse + stdlib `json` (zero runtime deps); AST + endpoint-substring detection.** Alternative: regex-only
   (misses imports) or full taint analysis (overkill for v1). Chosen as the pragmatic middle.
 - **Arrangements (GBA Standard Contract, …) surfaced as reference links, not enforced.**
   Alternative: encode arrangement logic. Rejected — applicability depends on the user's home regime,
