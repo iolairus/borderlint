@@ -20,8 +20,13 @@ choice; zero scanner/policy change.
 - **Deterministic — no wall-clock timestamp in the document.** Alternative: stamp generation time
   (conventional for SBOMs). Rejected — a timestamp makes every export differ, defeating the diff use
   case this exists to enable. The KB `updated` date is the meaningful "as-of" stamp (the data version);
-  CI records when it ran. Components are sorted (providers by id, sites by file then line) so the same
-  scan is byte-identical. `# ponytail: deterministic > audit-timestamp; CI already records run time`.
+  CI records when it ran. Byte-identical output requires a *total* order on every list — providers by
+  id, sites by (file, line, kind, evidence) to break ties, jurisdictions sorted — plus
+  `json.dumps(sort_keys=True)` so object key order can't drift. `# ponytail: deterministic >
+  audit-timestamp; CI already records run time`.
+- **Non-gating carve-out is a MODIFIED requirement, not silent.** The existing "CI exit code"
+  requirement is unconditional (non-zero on any violation); `--format sbom` exits 0 regardless, so the
+  change MODIFIES that requirement to scope the gate to non-export formats rather than contradicting it.
 - **Component granularity = provider, with call sites nested.** Each component lists the provider's
   resolved jurisdiction(s) and every `{file, line, kind, evidence, jurisdiction}` site. A new provider
   or a new jurisdiction is a visible diff. No top-level scanned-path field — it is implicit in the
