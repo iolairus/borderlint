@@ -8,9 +8,11 @@ compatible endpoint — which v0.9.0 just made common. This is a correctness bug
 
 ## What Changes
 
-- Emit every Mermaid **node and subgraph label** as a quoted string, replacing any embedded double quote
-  with `#quot;` (Mermaid's escape), so labels with parentheses, slashes, or other metacharacters render.
-- Node and subgraph **ids stay unquoted** — provider ids and `j_<token>` are already identifier-safe.
+- Emit every Mermaid **node and subgraph label** as a double-quoted string, escaping Mermaid's `#`
+  prefix → `#35;` and embedded `"` → `#quot;`, so labels with parentheses or slashes are carried inside
+  the quotes instead of breaking the flow map.
+- Node and subgraph **ids stay unquoted** — the bundled KB's provider ids and `j_<token>` are already
+  `[A-Za-z0-9_]`.
 
 ## Capabilities
 
