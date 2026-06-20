@@ -1,6 +1,6 @@
 """Smallest checks that fail if the core logic breaks (one per key spec scenario)."""
 
-from borderlint.detect import _scan_py
+from borderlint.detect import _scan_js, _scan_py, _scan_text
 from borderlint.kb import load_kb
 from borderlint.policy import evaluate
 
@@ -73,3 +73,33 @@ def test_azure_standard_host_stays_unknown():
 def test_azure_regional_host_resolves():
     assert dets('u = "https://eastasia.api.cognitive.microsoft.com/openai"\n')[0].jurisdiction == "hk"
     assert dets('u = "myresource.swedencentral.inference.ai.azure.com"\n')[0].jurisdiction == "se"
+
+
+def js(src):
+    return _scan_js("x.ts", src, kb)
+
+
+def test_ts_import_detection():
+    assert js('import OpenAI from "openai";\n')[0].provider_id == "openai"
+    assert js('const a = require("@anthropic-ai/sdk");\n')[0].provider_id == "anthropic"
+    assert js('const m = await import("openai");\n')[0].provider_id == "openai"
+
+
+def test_ts_non_us_package():
+    d = js('import { Mistral } from "@mistralai/mistralai";\n')[0]
+    assert d.provider_id == "mistral" and d.jurisdiction == "eu"
+
+
+def test_aggregator_unknown():
+    assert dets("import litellm\n")[0].jurisdiction == "unknown"
+    assert js('import { ChatOpenAI } from "@langchain/openai";\n')[0].jurisdiction == "unknown"
+
+
+def test_ts_endpoint_literal_still_detected():
+    d = _scan_text("x.ts", 'const u = "https://api.openai.com/v1";\n', kb)
+    assert d[0].provider_id == "openai"
+
+
+def test_vercel_ai_sdk():
+    assert js('import { openai } from "@ai-sdk/openai";\n')[0].provider_id == "openai"
+    assert js('import { generateText } from "ai";\n')[0].jurisdiction == "unknown"

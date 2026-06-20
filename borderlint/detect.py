@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,13 @@ from pathlib import Path
 IGNORE = {".git", "node_modules", "__pycache__", ".venv", "venv", "build", "dist",
           ".mypy_cache", ".pytest_cache", ".tox", ".ruff_cache"}
 TEXT_EXT = {".env", ".ts", ".tsx", ".js", ".jsx", ".yaml", ".yml", ".toml", ".json", ".ini", ".cfg", ".sh"}
+JS_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
+
+# Capture the module specifier from: `import X from "pkg"`, `import "pkg"`, `export ... from "pkg"`,
+# `require("pkg")`, dynamic `import("pkg")`. Regex over tree-sitter keeps borderlint zero-dependency.
+_JS_IMPORT = re.compile(
+    r'''(?:^[ \t]*import\b[^'"\n]*?\bfrom[ \t]*|^[ \t]*import[ \t]*|^[ \t]*export\b[^'"\n]*?\bfrom[ \t]*|\brequire[ \t]*\([ \t]*|\bimport[ \t]*\([ \t]*)['"]([^'"]+)['"]''',
+    re.M)
 
 
 @dataclass(frozen=True)
@@ -56,6 +64,16 @@ def _scan_text(path: str, src: str, kb) -> list[Detection]:
     return out
 
 
+def _scan_js(path: str, src: str, kb) -> list[Detection]:
+    out: list[Detection] = []
+    for m in _JS_IMPORT.finditer(src):
+        pid = kb.match_npm(m.group(1))
+        if pid:
+            line = src.count("\n", 0, m.start()) + 1
+            out.append(Detection(pid, "sdk_import", m.group(1), path, line, kb.default_jurisdiction(pid)))
+    return out
+
+
 def scan(root, kb) -> list[Detection]:
     root = Path(root)
     paths = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
@@ -63,13 +81,22 @@ def scan(root, kb) -> list[Detection]:
     for p in paths:
         if any(part in IGNORE for part in p.parts):
             continue
-        if p.suffix != ".py" and p.suffix not in TEXT_EXT and p.name != ".env":
+        suffix = p.suffix
+        is_py = suffix == ".py"
+        is_js = suffix in JS_EXT
+        is_text = suffix in TEXT_EXT or p.name == ".env"
+        if not (is_py or is_js or is_text):
             continue
         try:
             src = p.read_text("utf-8", errors="ignore")
         except OSError:
             continue
-        dets = _scan_py(str(p), src, kb) if p.suffix == ".py" else _scan_text(str(p), src, kb)
+        if is_py:
+            dets = _scan_py(str(p), src, kb)
+        elif is_js:  # imports (new) + endpoint literals (existing text scan)
+            dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb)
+        else:
+            dets = _scan_text(str(p), src, kb)
         for d in dets:
             key = (d.provider_id, d.kind, d.evidence, d.file, d.line)
             if key not in seen:
