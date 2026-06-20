@@ -9,7 +9,7 @@ baseline SBOM against the current one and gates the build when the PR opens a ne
 
 - **`borderlint diff <baseline-sbom> <current-sbom>`** — compare two AI data-flow SBOMs and report the
   flows **added** and **removed**, at provider-and-jurisdiction granularity.
-- **Gates CI** — exits non-zero when the PR introduces a flow to a non-`local` jurisdiction absent from
+- **Gates CI** — exits 1 when the PR introduces a flow to a non-`local` jurisdiction absent from
   the baseline (a new provider, or an existing provider now reaching a new jurisdiction). Removed flows
   are reported but never gate.
 - **text + JSON** output; operates purely on the two SBOM documents — no KB, no policy (names come from
