@@ -3,7 +3,7 @@
     {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
     {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
     {"id": "google_gemini", "name": "Google Gemini", "sdks": ["google.generativeai", "google.genai"], "endpoints": ["generativelanguage.googleapis.com"], "jurisdiction": "us"},
-    {"id": "azure_openai", "name": "Azure OpenAI", "sdks": [], "endpoints": ["openai.azure.com"], "jurisdiction": "unknown", "region_scheme": "azure", "note": "region is a resource property; the standard openai.azure.com host does not carry it"},
+    {"id": "azure_openai", "name": "Azure OpenAI", "sdks": [], "endpoints": ["openai.azure.com", "api.cognitive.microsoft.com", "inference.ai.azure.com"], "jurisdiction": "unknown", "region_scheme": "azure", "note": "regional hosts (<region>.api.cognitive.microsoft.com, *.<region>.inference.ai.azure.com) resolve; the standard openai.azure.com does not carry a region"},
     {"id": "aws_bedrock", "name": "AWS Bedrock", "sdks": [], "endpoints": ["bedrock-runtime"], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region is in the host: bedrock-runtime.<region>.amazonaws.com"},
     {"id": "mistral", "name": "Mistral AI", "sdks": ["mistralai"], "endpoints": ["api.mistral.ai"], "jurisdiction": "eu"},
     {"id": "cohere", "name": "Cohere", "sdks": ["cohere"], "endpoints": ["api.cohere.com", "api.cohere.ai"], "jurisdiction": "us"},
