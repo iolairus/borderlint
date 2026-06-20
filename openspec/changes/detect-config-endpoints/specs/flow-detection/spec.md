@@ -13,6 +13,10 @@ files, and record each as a detection.
 - **WHEN** a JSON file contains `"api_base": "https://api.deepseek.com"`
 - **THEN** a detection is recorded identifying DeepSeek
 
+#### Scenario: A non-AI key is not flagged
+- **WHEN** a config file sets a non-AI URL under a non-AI key (for example `database_url: https://db.example.com`)
+- **THEN** no detection is recorded for it
+
 ### Requirement: Detect AI client endpoint overrides in code
 The system SHALL detect an AI client endpoint override supplied in Python or JavaScript/TypeScript
 code (for example a `base_url` argument) and record the referenced endpoint.
