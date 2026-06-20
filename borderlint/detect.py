@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,7 +25,9 @@ class Detection:
 def _scan_py(path: str, src: str, kb) -> list[Detection]:
     out: list[Detection] = []
     try:
-        tree = ast.parse(src)
+        with warnings.catch_warnings():  # ponytail: hush the scanned file's own warnings, not ours
+            warnings.simplefilter("ignore")
+            tree = ast.parse(src)
     except SyntaxError:
         return out  # resilient: skip unparseable files
     for n in ast.walk(tree):
