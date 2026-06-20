@@ -68,3 +68,8 @@ def test_bedrock_dynamic_region_stays_unknown():
 
 def test_azure_standard_host_stays_unknown():
     assert dets('u = "myresource.openai.azure.com"\n')[0].jurisdiction == "unknown"
+
+
+def test_azure_regional_host_resolves():
+    assert dets('u = "https://eastasia.api.cognitive.microsoft.com/openai"\n')[0].jurisdiction == "hk"
+    assert dets('u = "myresource.swedencentral.inference.ai.azure.com"\n')[0].jurisdiction == "se"
