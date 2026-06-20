@@ -1,0 +1,12 @@
+# Example AI service config — borderlint scans config-declared endpoints too.
+model_list:
+  - model_name: gpt-4o
+    params:
+      api_base: https://api.openai.com/v1       # known provider -> us
+  - model_name: house-llm
+    params:
+      base_url: https://llm.acme.cn/v1          # custom OpenAI-compatible host -> unknown
+  - model_name: local
+    params:
+      base_url: http://localhost:8080           # local inference -> local
+database_url: https://db.example.com            # non-AI key -> not flagged

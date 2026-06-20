@@ -1,6 +1,6 @@
 """Smallest checks that fail if the core logic breaks (one per key spec scenario)."""
 
-from borderlint.detect import _scan_js, _scan_py, _scan_text
+from borderlint.detect import Detection, _scan_config_endpoints, _scan_js, _scan_py, _scan_text
 from borderlint.kb import load_kb
 from borderlint.policy import evaluate
 
@@ -103,3 +103,35 @@ def test_ts_endpoint_literal_still_detected():
 def test_vercel_ai_sdk():
     assert js('import { openai } from "@ai-sdk/openai";\n')[0].provider_id == "openai"
     assert js('import { generateText } from "ai";\n')[0].jurisdiction == "unknown"
+
+
+def cfg(src, path="config.yaml"):
+    return _scan_config_endpoints(path, src, kb)
+
+
+def test_config_custom_host_unknown():
+    assert cfg("base_url: https://llm.acme.cn/v1\n")[0].jurisdiction == "unknown"
+
+
+def test_config_known_host():
+    d = cfg('{"api_base": "https://api.deepseek.com"}', "config.json")
+    assert d[0].provider_id == "deepseek" and d[0].jurisdiction == "cn"
+
+
+def test_code_base_url_override():
+    d = cfg('client = OpenAI(base_url="https://llm.acme.cn")\n', "app.py")
+    assert d[0].jurisdiction == "unknown"
+
+
+def test_loopback_is_local():
+    assert cfg("base_url: http://localhost:8080\n")[0].jurisdiction == "local"
+
+
+def test_non_ai_key_not_flagged():
+    assert cfg("database_url: https://db.example.com\n") == []
+
+
+def test_local_passes_strict_policy_and_not_unknown():
+    loc = Detection("local", "config_endpoint", "localhost", "x", 1, "local")
+    pol = {"classifications": {"c": ["hk"]}, "on_unknown": "fail"}
+    assert evaluate([loc], pol, "c", kb)[0].severity == "ok"
