@@ -402,3 +402,38 @@ def test_diff_rejects_non_sbom_input():
         _json.dump({"schema": "borderlint.ai-dataflow-sbom/1", "components": []}, fh)
     assert cli.main(["diff", good, bad]) == 2
     assert cli.main(["diff", bad, good]) == 2
+
+
+def _api(content, suffix=".ts"):
+    return [d for d in _scan_file(content, suffix) if d.kind == "api_call"]
+
+
+def test_openai_compat_runtime_host_unknown():
+    d = _api("const u = `${LLAMA_URL}/v1/chat/completions`;\nfetch(u);\n")
+    assert len(d) == 1 and d[0].provider_id == "custom_endpoint" and d[0].jurisdiction == "unknown"
+
+
+def test_openai_compat_host_outside_literal_unknown():
+    d = _api('r = base + "/v1/chat/completions"\n', ".py")
+    assert len(d) == 1 and d[0].jurisdiction == "unknown"
+
+
+def test_openai_compat_loopback_local():
+    d = _api('fetch("http://localhost:8080/v1/chat/completions")\n')
+    assert len(d) == 1 and d[0].provider_id == "local" and d[0].jurisdiction == "local"
+
+
+def test_openai_compat_known_host_identified_once():
+    ds = _scan_file('fetch("https://api.openai.com/v1/chat/completions")\n', ".ts")
+    oa = [x for x in ds if x.provider_id == "openai"]
+    assert len(oa) == 1 and oa[0].jurisdiction == "us"  # not double-counted by the api_call detector
+
+
+def test_openai_compat_known_host_cn():
+    ds = _scan_file('r = requests.post("https://api.deepseek.com/v1/chat/completions")\n', ".py")
+    dk = [x for x in ds if x.provider_id == "deepseek"]
+    assert len(dk) == 1 and dk[0].jurisdiction == "cn"
+
+
+def test_openai_compat_non_ai_v1_not_flagged():
+    assert _api('fetch("https://internal.example/v1/users")\nx = "/api/v1/health"\n') == []

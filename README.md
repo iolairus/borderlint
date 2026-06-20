@@ -47,7 +47,8 @@ surfaced as reference links, never adjudicated.
 ## Capabilities
 
 - **Languages:** Python (AST) and TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
-  plus endpoint references in config/text files.
+  plus endpoint references in config/text files and **OpenAI-compatible `/v1/chat/completions` calls**
+  — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
 - **Providers:** 13+ across the east-west boundary (OpenAI, Anthropic, Google, Azure, Bedrock,
   Mistral, Cohere + Tencent, Alibaba, DeepSeek, Moonshot, Zhipu, Baidu), with Python and JS/TS
   package names and the **Vercel AI SDK** (`@ai-sdk/*`).
@@ -88,7 +89,7 @@ customer PII — then fails the build, so you can't ship a service pointed at th
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v0.8.0
+- uses: iolairus/borderlint@v0.9.0
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
