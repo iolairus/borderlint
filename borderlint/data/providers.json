@@ -13,6 +13,8 @@
     {"id": "moonshot", "name": "Moonshot (Kimi)", "sdks": [], "npm": [], "endpoints": ["api.moonshot.cn"], "jurisdiction": "cn"},
     {"id": "zhipu", "name": "Zhipu GLM", "sdks": ["zhipuai"], "npm": [], "endpoints": ["open.bigmodel.cn"], "jurisdiction": "cn"},
     {"id": "baidu_ernie", "name": "Baidu ERNIE", "sdks": [], "npm": [], "endpoints": ["aip.baidubce.com"], "jurisdiction": "cn"},
+    {"id": "local", "name": "Local inference", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "local", "note": "loopback / on-host inference; not a cross-border transfer"},
+    {"id": "custom_endpoint", "name": "Custom / OpenAI-compatible endpoint", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "unknown", "note": "host not in the KB; assert its jurisdiction via --providers"},
 
     {"id": "litellm", "name": "LiteLLM (router)", "kind": "aggregator", "sdks": ["litellm"], "npm": [], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
     {"id": "langchain", "name": "LangChain (router)", "kind": "aggregator", "sdks": ["langchain", "langchain_openai", "langchain_anthropic", "langchain_community", "langchain_google_genai", "langchain_aws", "langchain_mistralai"], "npm": ["langchain", "@langchain/openai", "@langchain/anthropic", "@langchain/community", "@langchain/google-genai", "@langchain/aws", "@langchain/mistralai"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},

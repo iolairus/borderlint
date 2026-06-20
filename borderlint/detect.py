@@ -13,6 +13,12 @@ IGNORE = {".git", "node_modules", "__pycache__", ".venv", "venv", "build", "dist
 TEXT_EXT = {".env", ".ts", ".tsx", ".js", ".jsx", ".yaml", ".yml", ".toml", ".json", ".ini", ".cfg", ".sh"}
 JS_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
 
+# AI endpoint declared via a config key or a base_url kwarg — anchored on the key, not the URL,
+# so arbitrary URLs are not flagged. Works across YAML/JSON/TOML and Python/JS code.
+_ENDPOINT_KEY = re.compile(
+    r"""(?i)\b(base_?url|api_base|openai_api_base|azure_endpoint|api_endpoint|inference_endpoint)\b['"]?\s*[:=]\s*['"]?\s*([^\s'"#,}\]]+)""")
+_LOOPBACK = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
 # Capture the module specifier from: `import X from "pkg"`, `import "pkg"`, `export ... from "pkg"`,
 # `require("pkg")`, dynamic `import("pkg")`. Regex over tree-sitter keeps borderlint zero-dependency.
 _JS_IMPORT = re.compile(
@@ -74,6 +80,39 @@ def _scan_js(path: str, src: str, kb) -> list[Detection]:
     return out
 
 
+def _host_of(value: str) -> str | None:
+    v = value.strip().strip("'\"")
+    if "://" in v:
+        v = v.split("://", 1)[1]
+    v = v.split("/", 1)[0].rsplit("@", 1)[-1]
+    if v.startswith("["):  # ipv6 literal, e.g. [::1]:8080
+        return v.split("]", 1)[0].lstrip("[") or None
+    return v.split(":", 1)[0] or None
+
+
+def _scan_config_endpoints(path: str, src: str, kb) -> list[Detection]:
+    """Endpoints declared behind an AI-endpoint key (config or base_url kwarg)."""
+    out: list[Detection] = []
+    for m in _ENDPOINT_KEY.finditer(src):
+        host = _host_of(m.group(2))
+        if not host:
+            continue
+        low = host.lower()
+        is_loop = low in _LOOPBACK or low.endswith(".localhost")
+        if not is_loop and "." not in host:
+            continue  # bare non-host value (e.g. an enum), skip
+        line = src.count("\n", 0, m.start()) + 1
+        if is_loop:
+            out.append(Detection("local", "config_endpoint", host, path, line, "local"))
+        else:
+            hit = kb.match_endpoint(host)
+            if hit:  # known provider host (incl. region resolution)
+                out.append(Detection(hit[0], "config_endpoint", hit[1], path, line, hit[2]))
+            else:  # custom / OpenAI-compatible host we can't place — surface for assertion
+                out.append(Detection("custom_endpoint", "config_endpoint", host, path, line, "unknown"))
+    return out
+
+
 def scan(root, kb) -> list[Detection]:
     root = Path(root)
     paths = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
@@ -91,12 +130,13 @@ def scan(root, kb) -> list[Detection]:
             src = p.read_text("utf-8", errors="ignore")
         except OSError:
             continue
+        cfg = _scan_config_endpoints(str(p), src, kb)  # AI-endpoint keys / base_url kwargs, any file
         if is_py:
-            dets = _scan_py(str(p), src, kb)
+            dets = _scan_py(str(p), src, kb) + cfg
         elif is_js:  # imports (new) + endpoint literals (existing text scan)
-            dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb)
+            dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb) + cfg
         else:
-            dets = _scan_text(str(p), src, kb)
+            dets = _scan_text(str(p), src, kb) + cfg
         for d in dets:
             key = (d.provider_id, d.kind, d.evidence, d.file, d.line)
             if key not in seen:

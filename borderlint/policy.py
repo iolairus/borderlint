@@ -46,6 +46,8 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
             reasons.append("denied_provider")
         if d.jurisdiction == "unknown":
             reasons.append("unknown")
+        elif d.jurisdiction == "local":
+            pass  # local inference is not a cross-border transfer; never a residency violation
         elif d.jurisdiction not in allow:
             reasons.append("residency")
         findings.append(Finding(d, _severity(reasons, fail_on, on_unknown), reasons))
