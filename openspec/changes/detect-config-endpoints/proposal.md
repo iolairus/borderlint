@@ -21,7 +21,7 @@ though it is a real AI data flow to an unknown jurisdiction. This change closes 
 ### Modified Capabilities
 - `flow-detection`: detect AI-endpoint config keys (YAML/JSON/TOML) and code `base_url` overrides.
 - `jurisdiction-classification`: unrecognised anchored hosts → `unknown`; loopback → `local`.
-- `residency-policy`: a `local` endpoint is always permitted.
+- `residency-policy`: a `local` endpoint is not a residency (allow-list) violation.
 
 ## Impact
 
