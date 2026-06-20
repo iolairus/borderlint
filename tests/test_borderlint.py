@@ -292,3 +292,50 @@ def test_context_does_not_change_verdict():
     assert len(res) == 1 and res[0]["level"] == "error"
     blob = _json.dumps(doc)
     assert "GBA" not in blob and "PIPL" not in blob and "regimes" not in blob  # SARIF carries no context
+
+
+def _two_flows():
+    return evaluate([Detection("openai", "sdk_import", "openai", "a.py", 3, "us"),
+                     Detection("deepseek", "sdk_import", "deepseek", "b.py", 1, "cn")],
+                    _pol(["hk"]), "customer-pii", kb)
+
+
+def test_sbom_envelope_and_flows():
+    import json as _json
+    from borderlint.report import sbom
+    doc = _json.loads(sbom(_two_flows(), kb))
+    assert doc["schema"] == "borderlint.ai-dataflow-sbom/1"
+    assert doc["kb_updated"] == kb.updated and "borderlint" in doc
+    pids = [c["provider"] for c in doc["components"]]
+    assert pids == sorted(pids) == ["deepseek", "openai"]
+    oa = next(c for c in doc["components"] if c["provider"] == "openai")
+    assert oa["jurisdictions"] == ["us"] and oa["sites"][0]["file"] == "a.py"
+
+
+def test_sbom_is_severity_free():
+    from borderlint.report import sbom
+    f = evaluate([Detection("openai", "sdk_import", "openai", "a.py", 1, "us")], _pol(["hk"]), "customer-pii", kb)
+    assert f[0].severity == "fail"  # would gate under a normal format
+    blob = sbom(f, kb)
+    assert "severity" not in blob and "level" not in blob and "fail" not in blob
+
+
+def test_sbom_deterministic_regardless_of_input_order():
+    from borderlint.report import sbom
+    f = _two_flows()
+    assert sbom(f, kb) == sbom(list(reversed(f)), kb)  # input order must not change bytes
+
+
+def test_sbom_does_not_gate():
+    import json as _json
+    import os
+    import tempfile
+    import borderlint.cli as cli
+    d = tempfile.mkdtemp()
+    with open(os.path.join(d, "app.py"), "w") as fh:
+        fh.write("import openai\n")  # us, would fail an hk-only policy
+    polf = os.path.join(d, "pol.json")
+    with open(polf, "w") as fh:
+        fh.write(_json.dumps({"classifications": {"customer-pii": ["hk"]}}))
+    assert cli.main(["scan", d, "--policy", polf, "--classification", "customer-pii", "--format", "sbom"]) == 0
+    assert cli.main(["scan", d, "--format", "sbom"]) == 0  # inventory, no policy

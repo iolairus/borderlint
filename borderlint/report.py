@@ -146,3 +146,26 @@ def sarif(findings, kb, policy=None) -> str:
             "results": results,
         }],
     }, indent=2)
+
+
+def sbom(findings, kb, policy=None) -> str:
+    """Deterministic, policy-independent AI data-flow inventory — severity-free; basis for diff (D6)."""
+    from . import __version__
+    by = {}
+    for f in findings:
+        by.setdefault(f.detection.provider_id, []).append(f.detection)
+    components = []
+    for pid in sorted(by):
+        ds = by[pid]
+        sites = sorted(
+            ({"file": d.file, "line": d.line, "kind": d.kind, "evidence": d.evidence,
+              "jurisdiction": d.jurisdiction} for d in ds),
+            key=lambda s: (s["file"], s["line"], s["kind"], s["evidence"]))
+        components.append({"provider": pid, "name": kb.name(pid),
+                           "jurisdictions": sorted({d.jurisdiction for d in ds}), "sites": sites})
+    return json.dumps({
+        "schema": "borderlint.ai-dataflow-sbom/1",
+        "borderlint": __version__,
+        "kb_updated": kb.updated,
+        "components": components,
+    }, indent=2, sort_keys=True)
