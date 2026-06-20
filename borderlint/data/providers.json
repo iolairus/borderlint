@@ -1,17 +1,23 @@
 {
   "providers": [
-    {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
-    {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
-    {"id": "google_gemini", "name": "Google Gemini", "sdks": ["google.generativeai", "google.genai"], "endpoints": ["generativelanguage.googleapis.com"], "jurisdiction": "us"},
-    {"id": "azure_openai", "name": "Azure OpenAI", "sdks": [], "endpoints": ["openai.azure.com", "api.cognitive.microsoft.com", "inference.ai.azure.com"], "jurisdiction": "unknown", "region_scheme": "azure", "note": "regional hosts (<region>.api.cognitive.microsoft.com, *.<region>.inference.ai.azure.com) resolve; the standard openai.azure.com does not carry a region"},
-    {"id": "aws_bedrock", "name": "AWS Bedrock", "sdks": [], "endpoints": ["bedrock-runtime"], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region is in the host: bedrock-runtime.<region>.amazonaws.com"},
-    {"id": "mistral", "name": "Mistral AI", "sdks": ["mistralai"], "endpoints": ["api.mistral.ai"], "jurisdiction": "eu"},
-    {"id": "cohere", "name": "Cohere", "sdks": ["cohere"], "endpoints": ["api.cohere.com", "api.cohere.ai"], "jurisdiction": "us"},
-    {"id": "deepseek", "name": "DeepSeek", "sdks": [], "endpoints": ["api.deepseek.com"], "jurisdiction": "cn"},
-    {"id": "tencent_hunyuan", "name": "Tencent Hunyuan", "sdks": ["tencentcloud"], "endpoints": ["hunyuan.tencentcloudapi.com"], "jurisdiction": "cn"},
-    {"id": "alibaba_dashscope", "name": "Alibaba DashScope", "sdks": ["dashscope"], "endpoints": ["dashscope-intl.aliyuncs.com", "dashscope.aliyuncs.com"], "jurisdiction": "cn", "endpoint_jurisdictions": {"dashscope-intl.aliyuncs.com": "sg"}},
-    {"id": "moonshot", "name": "Moonshot (Kimi)", "sdks": [], "endpoints": ["api.moonshot.cn"], "jurisdiction": "cn"},
-    {"id": "zhipu", "name": "Zhipu GLM", "sdks": ["zhipuai"], "endpoints": ["open.bigmodel.cn"], "jurisdiction": "cn"},
-    {"id": "baidu_ernie", "name": "Baidu ERNIE", "sdks": [], "endpoints": ["aip.baidubce.com"], "jurisdiction": "cn"}
+    {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "npm": ["openai", "@ai-sdk/openai"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
+    {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "npm": ["@anthropic-ai/sdk", "@ai-sdk/anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
+    {"id": "google_gemini", "name": "Google Gemini", "sdks": ["google.generativeai", "google.genai"], "npm": ["@google/generative-ai", "@google/genai", "@ai-sdk/google", "@ai-sdk/google-vertex"], "endpoints": ["generativelanguage.googleapis.com"], "jurisdiction": "us"},
+    {"id": "azure_openai", "name": "Azure OpenAI", "sdks": [], "npm": ["@azure/openai", "@ai-sdk/azure"], "endpoints": ["openai.azure.com", "api.cognitive.microsoft.com", "inference.ai.azure.com"], "jurisdiction": "unknown", "region_scheme": "azure", "note": "regional hosts (<region>.api.cognitive.microsoft.com, *.<region>.inference.ai.azure.com) resolve; the standard openai.azure.com does not carry a region"},
+    {"id": "aws_bedrock", "name": "AWS Bedrock", "sdks": [], "npm": ["@aws-sdk/client-bedrock-runtime", "@ai-sdk/amazon-bedrock"], "endpoints": ["bedrock-runtime"], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region is in the host: bedrock-runtime.<region>.amazonaws.com"},
+    {"id": "mistral", "name": "Mistral AI", "sdks": ["mistralai"], "npm": ["@mistralai/mistralai", "@ai-sdk/mistral"], "endpoints": ["api.mistral.ai"], "jurisdiction": "eu"},
+    {"id": "cohere", "name": "Cohere", "sdks": ["cohere"], "npm": ["cohere-ai", "@ai-sdk/cohere"], "endpoints": ["api.cohere.com", "api.cohere.ai"], "jurisdiction": "us"},
+    {"id": "deepseek", "name": "DeepSeek", "sdks": [], "npm": ["@ai-sdk/deepseek"], "endpoints": ["api.deepseek.com"], "jurisdiction": "cn"},
+    {"id": "tencent_hunyuan", "name": "Tencent Hunyuan", "sdks": ["tencentcloud"], "npm": [], "endpoints": ["hunyuan.tencentcloudapi.com"], "jurisdiction": "cn"},
+    {"id": "alibaba_dashscope", "name": "Alibaba DashScope", "sdks": ["dashscope"], "npm": [], "endpoints": ["dashscope-intl.aliyuncs.com", "dashscope.aliyuncs.com"], "jurisdiction": "cn", "endpoint_jurisdictions": {"dashscope-intl.aliyuncs.com": "sg"}},
+    {"id": "moonshot", "name": "Moonshot (Kimi)", "sdks": [], "npm": [], "endpoints": ["api.moonshot.cn"], "jurisdiction": "cn"},
+    {"id": "zhipu", "name": "Zhipu GLM", "sdks": ["zhipuai"], "npm": [], "endpoints": ["open.bigmodel.cn"], "jurisdiction": "cn"},
+    {"id": "baidu_ernie", "name": "Baidu ERNIE", "sdks": [], "npm": [], "endpoints": ["aip.baidubce.com"], "jurisdiction": "cn"},
+
+    {"id": "litellm", "name": "LiteLLM (router)", "kind": "aggregator", "sdks": ["litellm"], "npm": [], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
+    {"id": "langchain", "name": "LangChain (router)", "kind": "aggregator", "sdks": ["langchain", "langchain_openai", "langchain_anthropic", "langchain_community", "langchain_google_genai", "langchain_aws", "langchain_mistralai"], "npm": ["langchain", "@langchain/openai", "@langchain/anthropic", "@langchain/community", "@langchain/google-genai", "@langchain/aws", "@langchain/mistralai"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
+    {"id": "llama_index", "name": "LlamaIndex (router)", "kind": "aggregator", "sdks": ["llama_index"], "npm": ["llamaindex"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
+    {"id": "aisuite", "name": "aisuite (router)", "kind": "aggregator", "sdks": ["aisuite"], "npm": ["aisuite"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
+    {"id": "vercel_ai", "name": "Vercel AI SDK (router)", "kind": "aggregator", "sdks": [], "npm": ["ai"], "endpoints": [], "jurisdiction": "unknown", "note": "provider-agnostic core; the @ai-sdk/<provider> adapter package determines the provider"}
   ]
 }
