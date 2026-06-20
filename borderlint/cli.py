@@ -1,0 +1,52 @@
+"""borderlint command-line interface."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+
+from . import report
+from .detect import scan
+from .kb import load_kb
+from .policy import Finding, evaluate, load_policy
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(prog="borderlint", description="Map and govern where your AI data flows.")
+    sub = ap.add_subparsers(dest="cmd")
+    s = sub.add_parser("scan", help="Scan a path for AI data flows and check a residency policy.")
+    s.add_argument("path", nargs="?", default=".")
+    s.add_argument("-p", "--policy", help="residency policy JSON (omit for inventory mode)")
+    s.add_argument("-c", "--classification", help="data class on the scanned path (required with --policy)")
+    s.add_argument("-f", "--format", choices=["text", "json", "mermaid"], default="text")
+    s.add_argument("--providers", help="custom provider knowledge base JSON")
+    a = ap.parse_args(argv)
+
+    if a.cmd != "scan":
+        ap.print_help()
+        return 0
+
+    kb = load_kb(a.providers)
+    detections = scan(a.path, kb)
+
+    policy = None
+    if a.policy:
+        if not a.classification:
+            print("error: --classification is required when --policy is given", file=sys.stderr)
+            return 2
+        policy = load_policy(a.policy)
+        try:
+            findings = evaluate(detections, policy, a.classification, kb)
+        except KeyError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
+    else:
+        findings = [Finding(d, "ok", []) for d in detections]  # inventory mode
+
+    renderers = {"text": report.text, "json": report.as_json, "mermaid": report.mermaid}
+    print(renderers[a.format](findings, kb, policy))
+    return 1 if any(f.severity == "fail" for f in findings) else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

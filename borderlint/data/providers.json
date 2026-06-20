@@ -1,0 +1,17 @@
+{
+  "providers": [
+    {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
+    {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
+    {"id": "google_gemini", "name": "Google Gemini", "sdks": ["google.generativeai", "google.genai"], "endpoints": ["generativelanguage.googleapis.com"], "jurisdiction": "us"},
+    {"id": "azure_openai", "name": "Azure OpenAI", "sdks": [], "endpoints": ["openai.azure.com"], "jurisdiction": "unknown", "note": "region is in the endpoint host"},
+    {"id": "aws_bedrock", "name": "AWS Bedrock", "sdks": [], "endpoints": ["bedrock-runtime"], "jurisdiction": "unknown", "note": "region is in the endpoint host"},
+    {"id": "mistral", "name": "Mistral AI", "sdks": ["mistralai"], "endpoints": ["api.mistral.ai"], "jurisdiction": "eu"},
+    {"id": "cohere", "name": "Cohere", "sdks": ["cohere"], "endpoints": ["api.cohere.com", "api.cohere.ai"], "jurisdiction": "us"},
+    {"id": "deepseek", "name": "DeepSeek", "sdks": [], "endpoints": ["api.deepseek.com"], "jurisdiction": "cn"},
+    {"id": "tencent_hunyuan", "name": "Tencent Hunyuan", "sdks": ["tencentcloud"], "endpoints": ["hunyuan.tencentcloudapi.com"], "jurisdiction": "cn"},
+    {"id": "alibaba_dashscope", "name": "Alibaba DashScope", "sdks": ["dashscope"], "endpoints": ["dashscope-intl.aliyuncs.com", "dashscope.aliyuncs.com"], "jurisdiction": "cn", "endpoint_jurisdictions": {"dashscope-intl.aliyuncs.com": "sg"}},
+    {"id": "moonshot", "name": "Moonshot (Kimi)", "sdks": [], "endpoints": ["api.moonshot.cn"], "jurisdiction": "cn"},
+    {"id": "zhipu", "name": "Zhipu GLM", "sdks": ["zhipuai"], "endpoints": ["open.bigmodel.cn"], "jurisdiction": "cn"},
+    {"id": "baidu_ernie", "name": "Baidu ERNIE", "sdks": [], "endpoints": ["aip.baidubce.com"], "jurisdiction": "cn"}
+  ]
+}

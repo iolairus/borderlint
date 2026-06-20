@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "borderlint"
+version = "0.1.0"
+description = "Map and govern where your AI data and traffic flow — east-west / APAC lens."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Iolaire McKinnon" }]
+keywords = ["ai", "governance", "data-residency", "sovereignty", "llm", "compliance"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+borderlint = "borderlint.cli:main"
+
+[tool.hatch.build.targets.wheel]
+include = ["borderlint"]
