@@ -20,15 +20,26 @@ the gap dogfooding `retire` exposed. The signal that *is* present is the OpenAI-
   runtime; `unknown` is the honest verdict and `on_unknown: fail` gates it. Resolving the `?? localhost`
   default would need variable/default data-flow analysis — deferred. So `retire` reads as one `unknown`
   flow ("destination set at runtime; pin it"), which is more correct than a guessed `local`.
-- **Reuse host resolution + `custom_endpoint` / `local`.** When a static `http(s)://host` precedes the
-  path in the same string: loopback → `local`; `kb.match_endpoint(host)` → that provider + jurisdiction;
-  otherwise `custom_endpoint` / `unknown`. No new provider id. `# ponytail: one regex + existing resolver`.
-- **De-dup against existing detections on the same line** so a static known endpoint already caught by a
-  config-key or import scan is not double-reported.
+- **"Same string literal" is the resolution boundary.** A static host resolves the jurisdiction only
+  when it sits in the *same quoted or template-literal token on one line* as the path — so
+  `'http://localhost:8080/v1/chat/completions'` and `` `${VAR}/v1/chat/completions` `` are in-scope (the
+  second has no static host → `unknown`), but `base + "/v1/chat/completions"` (host in a different
+  token) is dynamic → `unknown`. Reuse the existing resolver: loopback → `local`;
+  `kb.match_endpoint(host)` → that provider + jurisdiction; otherwise `custom_endpoint` / `unknown`.
+- **De-dup needs a same-line/same-provider pass — the existing key won't collapse it.** `match_endpoint`
+  is a substring match, so a static `https://api.openai.com/v1/...` is *already* emitted as an
+  `endpoint_reference` by `_scan_py` / `_scan_text`. The dedup key is `(provider_id, kind, evidence,
+  file, line)`, so a new `api_call` detection of the same line would NOT collapse. So `scan()` drops an
+  api-call detection when another scanner already recorded the same `(provider_id, jurisdiction, file,
+  line)` — yielding one detection per flow per line. (The collision exists for both languages:
+  `_scan_text` runs on JS/TS as well as config and also substring-matches endpoints, so a static known
+  host in a `.ts` string literal is likewise double-produced — the suppression pass applies uniformly.)
 
 ## Risks / Trade-offs
 
-- A literal `/v1/chat/completions` in a comment or doc string would flag → acceptable; it is still an
-  OpenAI-compatible reference worth surfacing, and waivers cover false positives.
+- A literal signature in a comment/docstring, or a *non-AI* internal endpoint literally named
+  `/v1/embeddings`, both flag — resolving to `custom_endpoint` / `unknown`, never a wrong provider
+  attribution. Accepted: conservative for a deny-by-default tool, and a waiver clears it. The signature
+  is deliberately the OpenAI-compatible suffix family, not a bare `/v1/`, to keep this rare.
 - `retire` surfaces `unknown` rather than `local` until variable-default resolution lands → correct and
   conservative for a sovereignty tool; documented as a non-goal.
