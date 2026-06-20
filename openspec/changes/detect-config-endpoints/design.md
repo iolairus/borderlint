@@ -19,7 +19,11 @@ hosts as `unknown`, treat loopback as `local`.
   surface OpenAI-compatible / self-hosted endpoints for assertion; the user pins them via the
   `--providers` override. Alternative: ignore unknown hosts. Rejected — that is exactly the miss.
 - **Loopback → `local`, never a cross-border violation.** Local inference (Ollama, vLLM, llama.cpp)
-  is not a transfer, so flagging it would be a false alarm.
+  is not a transfer, so flagging it would be a false alarm. A loopback host takes precedence over the
+  unknown-host rule.
+- **`azure_endpoint` converges on the existing Azure path.** A value under `azure_endpoint` feeds the
+  existing Azure region-in-endpoint handling — a standard `openai.azure.com` host still resolves to
+  `unknown`, consistent with prior behaviour.
 - **Lightweight key/value regex over YAML/JSON/TOML, not a parser.** Alternative: stdlib `json` +
   `tomllib` + PyYAML. Rejected — PyYAML breaks the zero-dependency guarantee, and one uniform regex
   handles all three formats in the existing scanner style. Accept minor imprecision.
@@ -28,5 +32,5 @@ hosts as `unknown`, treat loopback as `local`.
 
 - Regex key/value parsing may miss multi-line/complex YAML or over-match → accept; a missed config
   value still can't pass a *known* host falsely (the host scan catches those); refine the key set over time.
-- The new `local` jurisdiction must be wired into the policy as always-allowed, or local inference
-  would surface as `unknown`.
+- The new `local` jurisdiction must be wired into the policy so a local flow is not a residency
+  violation, or local inference would surface as `unknown`.

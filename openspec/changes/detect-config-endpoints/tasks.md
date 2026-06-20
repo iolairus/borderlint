@@ -15,5 +15,5 @@
 
 ## 4. Tests & dogfood
 
-- [ ] 4.1 Tests: custom host in a YAML `base_url` → `unknown`; known host in a JSON `api_base` → `cn`; Python `base_url=` override → detected; `localhost` → `local` (passes a strict policy); a non-AI URL under a non-AI key is NOT flagged
-- [ ] 4.2 Dogfood: re-scan a config-driven setup (a litellm config / a local-inference config) and confirm custom + local endpoints surface correctly
+- [ ] 4.1 Tests: custom host in a YAML `base_url` → `unknown`; known host in a JSON `api_base` → `cn`; Python `base_url=` override → detected; `localhost` → `local` (passes a strict allow-list AND does not trip `on_unknown: fail`); a non-AI URL under a non-AI key is NOT flagged
+- [ ] 4.2 Dogfood: re-scan a config-driven setup (a litellm config / a local-inference config) to verify the new requirements on real files — config-key detection, custom host → `unknown`, loopback → `local`
