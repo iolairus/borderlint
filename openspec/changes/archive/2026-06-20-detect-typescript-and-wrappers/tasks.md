@@ -15,4 +15,4 @@
 ## 4. Tests & dogfood
 
 - [x] 4.1 Tests: TS `import OpenAI from "openai"` → OpenAI `[us]`; `require("@anthropic-ai/sdk")` → Anthropic `[us]`; dynamic `await import("openai")` detected; `@mistralai/mistralai` → Mistral `[eu]`; aggregator `import litellm` (py) → `unknown`; `@langchain/openai` (js) → `unknown`; a TS endpoint literal (`https://api.openai.com`) is still detected by the text scan
-- [x] 4.2 Dogfood: `retire` uses local llama.cpp (correctly clean — no cross-border flow); `TellMeWhy` uses dynamic httpx (out-of-scope runtime endpoint, see follow-up); aggregator + TS detection proven by re-scanning litellm (24.8k router flows) and adding Vercel AI SDK (`@ai-sdk/*`) coverage
+- [x] 4.2 Dogfood: an internal TypeScript app uses local llama.cpp (correctly clean — no cross-border flow); an internal Python service uses dynamic httpx (out-of-scope runtime endpoint, see follow-up); aggregator + TS detection proven by re-scanning litellm (24.8k router flows) and adding Vercel AI SDK (`@ai-sdk/*`) coverage
