@@ -1,0 +1,17 @@
+// Jenkins declarative pipeline — add the stage to a consuming repo's Jenkinsfile.
+// borderlint is a zero-dependency CLI; a non-zero exit fails the stage and the build.
+pipeline {
+  agent any
+  stages {
+    stage('AI data residency') {
+      steps {
+        sh '''
+          python3 -m venv .blv && . .blv/bin/activate
+          # Private repo: inject a token credential, e.g. git+https://${GIT_TOKEN}@github.com/...
+          pip install --quiet "git+https://github.com/iolairus/borderlint.git@v0.1.0"
+          python3 -m borderlint scan . --policy residency.json --classification customer-pii
+        '''
+      }
+    }
+  }
+}

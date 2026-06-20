@@ -1,0 +1,26 @@
+name: borderlint
+description: Map and govern where your AI data and traffic flow against a residency policy.
+inputs:
+  path:
+    description: Path to scan
+    default: "."
+  policy:
+    description: Residency policy JSON (omit for inventory mode)
+    default: ""
+  classification:
+    description: Data class on the scanned path (required with policy)
+    default: ""
+  format:
+    description: "text | json | mermaid"
+    default: text
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        # Install borderlint from this action's own checkout — no token needed even when private.
+        python3 -m pip install --quiet "${{ github.action_path }}"
+        args=(scan "${{ inputs.path }}" --format "${{ inputs.format }}")
+        [ -n "${{ inputs.policy }}" ] && args+=(--policy "${{ inputs.policy }}")
+        [ -n "${{ inputs.classification }}" ] && args+=(--classification "${{ inputs.classification }}")
+        python3 -m borderlint "${args[@]}"
