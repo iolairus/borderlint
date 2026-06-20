@@ -62,15 +62,18 @@ def load_kb(path: str | None = None) -> "KB":
 class KB:
     def __init__(self, providers: list[dict]):
         self.by_id = {p["id"]: p for p in providers}
-        sdks, eps = [], []
+        sdks, npm, eps = [], [], []
         for p in providers:
             for s in p.get("sdks", []):
                 sdks.append((s, p["id"]))
+            for n in p.get("npm", []):
+                npm.append((n, p["id"]))
             ej = p.get("endpoint_jurisdictions", {})
             for h in p.get("endpoints", []):
                 eps.append((h, p["id"], ej.get(h, p.get("jurisdiction", "unknown"))))
         # Longest match first so specific SDKs/hosts win over shorter ones.
         self._sdks = sorted(sdks, key=lambda x: -len(x[0]))
+        self._npm = sorted(npm, key=lambda x: -len(x[0]))
         self._eps = sorted(eps, key=lambda x: -len(x[0]))
         self.region_scheme = {p["id"]: p["region_scheme"] for p in providers if p.get("region_scheme")}
 
@@ -83,6 +86,12 @@ class KB:
     def match_sdk(self, module: str) -> str | None:
         for s, pid in self._sdks:
             if module == s or module.startswith(s + "."):
+                return pid
+        return None
+
+    def match_npm(self, pkg: str) -> str | None:
+        for name, pid in self._npm:
+            if pkg == name or pkg.startswith(name + "/"):
                 return pid
         return None
 
