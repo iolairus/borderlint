@@ -28,11 +28,16 @@ _JS_IMPORT = re.compile(
     r'''(?:^[ \t]*import\b[^'"\n]*?\bfrom[ \t]*|^[ \t]*import[ \t]*|^[ \t]*export\b[^'"\n]*?\bfrom[ \t]*|\brequire[ \t]*\([ \t]*|\bimport[ \t]*\([ \t]*)['"]([^'"]+)['"]''',
     re.M)
 
+# OpenAI-compatible API call by its request-path signature. A static host is resolved only when its
+# `scheme://host` sits in the same literal directly before the path; otherwise the host is dynamic.
+_API_PATH = re.compile(
+    r"""(?:https?://(?P<host>[^\s'"`/]+))?(?P<path>/v1/(?:chat/completions|completions|responses|embeddings))\b""")
+
 
 @dataclass(frozen=True)
 class Detection:
     provider_id: str
-    kind: str  # "sdk_import" | "endpoint_reference"
+    kind: str  # "sdk_import" | "endpoint_reference" | "config_endpoint" | "api_call"
     evidence: str
     file: str
     line: int
@@ -117,6 +122,27 @@ def _scan_config_endpoints(path: str, src: str, kb) -> list[Detection]:
     return out
 
 
+def _scan_api_calls(path: str, src: str, kb) -> list[Detection]:
+    """OpenAI-compatible calls by request-path signature; host resolved only if static in the literal."""
+    out: list[Detection] = []
+    for m in _API_PATH.finditer(src):
+        line = src.count("\n", 0, m.start()) + 1
+        host = _host_of(m.group("host")) if m.group("host") else None
+        if host:
+            low = host.lower()
+            if low in _LOOPBACK or low.endswith(".localhost"):
+                out.append(Detection("local", "api_call", host, path, line, "local"))
+                continue
+            hit = kb.match_endpoint(host)
+            if hit:  # known provider host (incl. region resolution)
+                out.append(Detection(hit[0], "api_call", hit[1], path, line, hit[2]))
+                continue
+            out.append(Detection("custom_endpoint", "api_call", host, path, line, "unknown"))
+        else:  # dynamic host, outside the literal, or relative path → destination set at runtime
+            out.append(Detection("custom_endpoint", "api_call", m.group("path"), path, line, "unknown"))
+    return out
+
+
 def _waivers(src: str) -> dict[int, str]:
     """Line number → justification for each `borderlint: allow <reason>` comment."""
     out: dict[int, str] = {}
@@ -158,11 +184,14 @@ def scan(root, kb) -> list[Detection]:
             waivers[str(p)] = fw
         cfg = _scan_config_endpoints(str(p), src, kb)  # AI-endpoint keys / base_url kwargs, any file
         if is_py:
-            dets = _scan_py(str(p), src, kb) + cfg
-        elif is_js:  # imports (new) + endpoint literals (existing text scan)
-            dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb) + cfg
+            dets = _scan_py(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
+        elif is_js:  # imports + endpoint literals (text scan) + OpenAI-compatible call paths
+            dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
         else:
             dets = _scan_text(str(p), src, kb) + cfg
+        # one detection per flow per line: drop an api_call already produced by another scanner on its line
+        anchored = {(d.provider_id, d.jurisdiction, d.line) for d in dets if d.kind != "api_call"}
+        dets = [d for d in dets if d.kind != "api_call" or (d.provider_id, d.jurisdiction, d.line) not in anchored]
         for d in dets:
             key = (d.provider_id, d.kind, d.evidence, d.file, d.line)
             if key not in seen:
