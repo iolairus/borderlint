@@ -3,10 +3,10 @@
 **Map and govern where your AI data and traffic flow — east-west / APAC lens.**
 
 A static, in-CI check for **HK / GBA entities**: does your AI data stay within the jurisdictions
-your PDPO / PIPL policy allows? borderlint detects AI provider usage in your repo, resolves each
-flow to a jurisdiction (ccTLD codes plus the `CN-GBA` / `GBA` tokens), and fails the build on any
-flow outside the allow-list for the data class you declare. Western and Chinese providers are
-treated evenly. **Zero runtime dependencies.**
+your PDPO / PIPL policy allows? borderlint statically scans your repo (**Python and
+TypeScript/JavaScript**) for AI provider usage, resolves each flow to a jurisdiction (ccTLD codes
+plus the `CN-GBA` / `GBA` tokens), and fails the build on any flow outside the allow-list for the
+data class you declare. Western and Chinese providers are treated evenly. **Zero runtime dependencies.**
 
 ## Use
 
@@ -38,17 +38,32 @@ allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA` is shortha
 `CN-GBA`. Cross-border arrangements (e.g. the GBA Standard Contract) are surfaced as reference
 links, never adjudicated.
 
-## Scope (v1)
+## Capabilities
 
-For HK / GBA home bases under PDPO / PIPL / GBA. Python scanning today. Not yet: TypeScript, SARIF,
-a GitHub Action, container/SCA mode, LLM enrichment. Full scope in `CAPABILITIES.md`.
+- **Languages:** Python (AST) and TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
+  plus endpoint references in config/text files.
+- **Providers:** 13+ across the east-west boundary (OpenAI, Anthropic, Google, Azure, Bedrock,
+  Mistral, Cohere + Tencent, Alibaba, DeepSeek, Moonshot, Zhipu, Baidu), with Python and JS/TS
+  package names and the **Vercel AI SDK** (`@ai-sdk/*`).
+- **Aggregators:** litellm, langchain, LlamaIndex, aisuite, Vercel AI core (`ai`) → `unknown`
+  (runtime-routed), so `on_unknown: fail` blocks them for sensitive classes.
+- **Jurisdictions:** ccTLD/ISO codes + `CN-GBA` / `GBA`; **AWS/Azure region resolved from the
+  endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` → `hk`).
+- **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
+  failure set, declared home regime.
+- **Output & CI:** text / JSON / Mermaid, exit codes, GitHub Action + Jenkins.
+
+## Scope
+
+For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: SARIF output, container/SCA mode, LLM
+enrichment, and dynamic / `base_url` endpoint resolution. Full roadmap in `CAPABILITIES.md`.
 
 ## CI
 
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v0.1.0
+- uses: iolairus/borderlint@v0.2.0
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 

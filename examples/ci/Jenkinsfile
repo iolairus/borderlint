@@ -8,7 +8,7 @@ pipeline {
         sh '''
           python3 -m venv .blv && . .blv/bin/activate
           # Private repo: inject a token credential, e.g. git+https://${GIT_TOKEN}@github.com/...
-          pip install --quiet "git+https://github.com/iolairus/borderlint.git@v0.1.0"
+          pip install --quiet "git+https://github.com/iolairus/borderlint.git@v0.2.0"
           python3 -m borderlint scan . --policy residency.json --classification customer-pii
         '''
       }
