@@ -9,6 +9,7 @@ jobs:
     environment: pypi
     permissions:
       id-token: write  # OIDC token for PyPI Trusted Publishing — no stored secrets
+      contents: read   # checkout needs read access (private repo); declaring permissions resets the rest to none
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
