@@ -53,3 +53,18 @@ def test_unknown_warn_vs_fail():
 def test_denied_provider():
     pol = _pol(["us"], providers={"deny": ["openai"]})
     assert evaluate(dets("import openai\n"), pol, "customer-pii", kb)[0].severity == "fail"
+
+
+def test_bedrock_region_from_host():
+    assert dets('u = "https://bedrock-runtime.ap-east-1.amazonaws.com/m"\n')[0].jurisdiction == "hk"
+    assert dets('u = "bedrock-runtime.us-east-1.amazonaws.com"\n')[0].jurisdiction == "us"
+    assert dets('u = "bedrock-runtime.cn-north-1.amazonaws.com.cn"\n')[0].jurisdiction == "cn"
+
+
+def test_bedrock_dynamic_region_stays_unknown():
+    # region interpolated at runtime -> not in the literal -> unknown
+    assert dets('u = "https://bedrock-runtime."\n')[0].jurisdiction == "unknown"
+
+
+def test_azure_standard_host_stays_unknown():
+    assert dets('u = "myresource.openai.azure.com"\n')[0].jurisdiction == "unknown"
