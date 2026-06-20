@@ -19,10 +19,15 @@ existing policy.
   objects for each internal host. Rejected — too heavy for "these hosts are in these jurisdictions."
 - **Reuse `--providers`; no new flag.** The file may contain `providers` and/or `endpoints`; both
   merge additively onto the bundled KB.
+- **The wrong-endpoint guard reuses existing policy.** An endpoints-resolved jurisdiction outside the
+  active allow-list is caught by `residency-policy`'s existing deny-by-default evaluation — this
+  change adds no new policy mechanism.
+- **Endpoints-map values are validated against the recognised token set.** An unrecognised token is
+  an error, not a silent pass — a typo'd jurisdiction must not quietly change a CI verdict.
 
 ## Risks / Trade-offs
 
 - A user `endpoints` entry that overrides a bundled host masks the bundled jurisdiction — this is the
   intended override semantics (your network knows best); document it.
-- Longest-match endpoint resolution still applies, so a specific internal host wins over a shorter
-  bundled substring.
+- User-supplied hosts are resolved in preference to bundled hosts; longest-match only breaks ties
+  within a single source (user, or bundled).
