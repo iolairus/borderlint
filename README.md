@@ -15,7 +15,8 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 ```
 
 - No `--policy` → **inventory mode** (lists flows + jurisdictions, exits 0).
-- `--format json|mermaid|sarif` — machine output, a flow map, or **SARIF** for GitHub code-scanning.
+- `--format json|mermaid|sarif|sbom` — machine output, a flow map, **SARIF** for GitHub code-scanning,
+  or a deterministic **AI data-flow SBOM** (policy-independent inventory of every flow; an artifact, exits 0).
 - Accept a reviewed flow with an inline `# borderlint: allow <reason>` **waiver** (justification
   required; it's reported as *waived*, not hidden, and can't override an explicit provider `deny`).
 - Exit code is non-zero on a violation, so it gates CI.
