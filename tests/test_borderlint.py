@@ -339,3 +339,66 @@ def test_sbom_does_not_gate():
         fh.write(_json.dumps({"classifications": {"customer-pii": ["hk"]}}))
     assert cli.main(["scan", d, "--policy", polf, "--classification", "customer-pii", "--format", "sbom"]) == 0
     assert cli.main(["scan", d, "--format", "sbom"]) == 0  # inventory, no policy
+
+
+def _comp(pid, name, jurs):
+    return {"provider": pid, "name": name, "jurisdictions": jurs, "sites": []}
+
+
+def _diff_exit(old_comps, new_comps):
+    import json as _json
+    import os
+    import tempfile
+    import borderlint.cli as cli
+    d = tempfile.mkdtemp()
+    paths = []
+    for i, comps in enumerate((old_comps, new_comps)):
+        p = os.path.join(d, f"{i}.json")
+        with open(p, "w") as fh:
+            _json.dump({"schema": "borderlint.ai-dataflow-sbom/1", "components": comps}, fh)
+        paths.append(p)
+    return cli.main(["diff", paths[0], paths[1]])
+
+
+def test_diff_flows_added_removed_and_swap():
+    from borderlint.report import diff_flows
+    old = {"components": [_comp("openai", "OpenAI", ["us"])]}
+    new = {"components": [_comp("deepseek", "DeepSeek", ["cn"])]}
+    d = diff_flows(old, new)
+    assert [(f["provider"], f["jurisdiction"]) for f in d["added"]] == [("deepseek", "cn")]
+    assert [(f["provider"], f["jurisdiction"]) for f in d["removed"]] == [("openai", "us")]
+    ds = diff_flows(new, old)  # swap inverts added/removed
+    assert [(f["provider"], f["jurisdiction"]) for f in ds["added"]] == [("openai", "us")]
+    assert [(f["provider"], f["jurisdiction"]) for f in ds["removed"]] == [("deepseek", "cn")]
+
+
+def test_diff_new_nonlocal_egress_gates():
+    assert _diff_exit([], [_comp("openai", "OpenAI", ["us"])]) == 1
+
+
+def test_diff_new_unknown_gates():
+    assert _diff_exit([], [_comp("custom_endpoint", "Custom", ["unknown"])]) == 1
+
+
+def test_diff_local_only_does_not_gate():
+    assert _diff_exit([], [_comp("local", "Local inference", ["local"])]) == 0
+
+
+def test_diff_removed_only_does_not_gate():
+    assert _diff_exit([_comp("openai", "OpenAI", ["us"])], []) == 0
+
+
+def test_diff_rejects_non_sbom_input():
+    import json as _json
+    import os
+    import tempfile
+    import borderlint.cli as cli
+    d = tempfile.mkdtemp()
+    bad = os.path.join(d, "bad.json")
+    with open(bad, "w") as fh:
+        _json.dump({"hello": "world"}, fh)
+    good = os.path.join(d, "good.json")
+    with open(good, "w") as fh:
+        _json.dump({"schema": "borderlint.ai-dataflow-sbom/1", "components": []}, fh)
+    assert cli.main(["diff", good, bad]) == 2
+    assert cli.main(["diff", bad, good]) == 2
