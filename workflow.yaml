@@ -1,0 +1,41 @@
+# Workflow configuration — read by the .opencode/commands/* pipeline commands.
+# Tool-agnostic: any agent (opencode, Claude Code, etc.) can read this file.
+
+git:
+  main_branch: main            # release branch — protected, never worked on directly
+  integration_branch: develop  # PRs target this branch (git-flow)
+  branch_prefix: feature/
+  # Branch naming: if the change is linked to a backlog task with a real Jira
+  # key, branches are <prefix><task-id>-<change-name>
+  # (e.g. feature/PROJ-123-speed-up-search); otherwise <prefix><change-name>.
+  # Commands parse both forms when inferring the change from the branch name.
+  # Working mode for implementation:
+  #   feature  → always require feature/<change> branches + PR (strict)
+  #   flexible → feature branches recommended, but committing directly on the
+  #              integration branch is allowed; /ship then skips PR/merge
+  work_mode: flexible
+  commit_convention: conventional  # https://www.conventionalcommits.org
+  commit_scope_from: change    # scope = openspec change name unless overridden
+
+platform:
+  provider: auto               # auto | github | gitlab | none
+  # auto: detect from `git remote get-url origin`; use gh/glab CLI if available.
+  # none: never call a CLI; write the PR description to backlog/exports/pr/.
+
+jira:
+  project_key: PROJ            # task IDs are <project_key>-<n>, matching Jira keys
+  export_dir: backlog/exports/jira
+  default_issue_type: Task
+
+content:
+  # Default language offered for client-facing artifacts (discovery docs,
+  # stories, Jira exports, PR descriptions). Commands ALWAYS confirm the
+  # language with the user before generating; this is only the preselected option.
+  default_language: en   # es | en
+
+backlog:
+  discovery_dir: backlog/discovery
+  tasks_dir: backlog/tasks
+  # Task IDs ARE Jira keys: <jira.project_key>-<n>, provided by the user.
+  # If the Jira issue doesn't exist yet, use <project_key>-D<nn> (draft) and
+  # rename the file/frontmatter when the real key is known.
