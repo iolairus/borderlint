@@ -13,6 +13,7 @@ from .policy import Finding, evaluate, load_policy
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="borderlint", description="Map and govern where your AI data flows.")
+    ap.add_argument("--version", action="store_true", help="print version and KB last-reviewed date")
     sub = ap.add_subparsers(dest="cmd")
     s = sub.add_parser("scan", help="Scan a path for AI data flows and check a residency policy.")
     s.add_argument("path", nargs="?", default=".")
@@ -22,6 +23,10 @@ def main(argv=None) -> int:
     s.add_argument("--providers", help="custom provider knowledge base JSON")
     a = ap.parse_args(argv)
 
+    if a.version:
+        from . import __version__
+        print(f"borderlint {__version__} (KB last reviewed {load_kb().updated})")
+        return 0
     if a.cmd != "scan":
         ap.print_help()
         return 0

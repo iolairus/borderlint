@@ -1,13 +1,13 @@
 ## 1. KB provenance
 
-- [ ] 1.1 Add a last-reviewed date field to `providers.json` and expose it (e.g. via the KB / `--version`)
+- [x] 1.1 Add a last-reviewed ISO-8601 date to a top-level field in `providers.json`, expose it on load and via `--version`
 
 ## 2. Coverage check
 
-- [ ] 2.1 Add `scripts/kb_drift.py`: fetch a maintained upstream provider list, diff against the bundled providers, and emit the uncovered providers — assigning no jurisdiction or endpoint
-- [ ] 2.2 Add a weekly scheduled GitHub Action (`.github/workflows/kb-refresh.yml`, cron) that runs the script and opens a PR/issue listing the gaps for human curation
+- [x] 2.1 Add `scripts/kb_drift.py`: a pure diff of (bundled providers, supplied upstream list) → uncovered provider names with no jurisdiction/endpoint, plus a fetch of a maintained upstream (litellm)
+- [x] 2.2 Add a weekly scheduled GitHub Action (`.github/workflows/kb-refresh.yml`, cron) that runs the script and opens an issue/PR listing the gaps for human curation
 
 ## 3. Tests & docs
 
-- [ ] 3.1 Test the drift diff against a fixture upstream list (no network): the uncovered set is correct, and no jurisdiction/endpoint is auto-assigned
-- [ ] 3.2 CONTRIBUTING / README note on the KB-freshness loop
+- [x] 3.1 Tests (no network): the diff returns the correct uncovered set; gap records carry no jurisdiction/endpoint; the bundled KB exposes an ISO date; the scanner / KB-load path has no network imports
+- [x] 3.2 CONTRIBUTING / README note on the KB-freshness loop
