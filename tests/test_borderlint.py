@@ -176,3 +176,31 @@ def test_wrong_endpoint_is_violation():
     dets = _scan_config_endpoints("c.yaml", "base_url: https://llm-cn.acme.com\n", k)
     f = evaluate(dets, {"classifications": {"customer-pii": ["hk", "sg"]}}, "customer-pii", k)
     assert f[0].severity == "fail"
+
+
+def test_kb_drift_diff():
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    known = kb_drift.known_providers({"providers": [{"id": "openai", "name": "OpenAI", "sdks": ["openai"]}]})
+    gap = kb_drift.coverage_gap({"openai", "deepseek", "Mistral"}, known)
+    assert gap == ["Mistral", "deepseek"]          # openai covered; sorted; names only
+    assert all(isinstance(g, str) for g in gap)    # no jurisdiction/endpoint assigned
+
+
+def test_kb_has_iso_date():
+    import re
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", load_kb().updated or "")
+
+
+def test_scanner_has_no_network_imports():
+    import inspect
+    import borderlint.cli
+    import borderlint.detect
+    import borderlint.kb
+    import borderlint.policy
+    import borderlint.report
+    for m in (borderlint.kb, borderlint.detect, borderlint.policy, borderlint.cli, borderlint.report):
+        src = inspect.getsource(m)
+        for bad in ("urllib", "requests", "httpx", "socket"):
+            assert bad not in src, f"{m.__name__} references {bad}"
