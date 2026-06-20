@@ -21,3 +21,7 @@ htmlcov/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local / one-off — tool state and scratch, not shared
+.opsx/
+RESUME.md
