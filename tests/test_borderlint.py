@@ -437,3 +437,22 @@ def test_openai_compat_known_host_cn():
 
 def test_openai_compat_non_ai_v1_not_flagged():
     assert _api('fetch("https://internal.example/v1/users")\nx = "/api/v1/health"\n') == []
+
+
+def test_mlabel_entity_escape():
+    from borderlint.report import _mlabel
+    assert _mlabel("a#b") == '"a#35;b"'
+    assert _mlabel('a"b') == '"a#quot;b"'
+    assert _mlabel('a#"b') == '"a#35;#quot;b"'  # # escaped first; the quote-escape's # is not re-escaped
+
+
+def test_mermaid_labels_are_quoted():
+    from borderlint.report import mermaid
+    f = evaluate([Detection("custom_endpoint", "api_call", "/v1/chat/completions", "a.ts", 1, "unknown")],
+                 _pol(["hk"]), "customer-pii", kb)
+    out = mermaid(f, kb)
+    assert 'app(["Your application"])' in out
+    assert '["Unknown (region-dependent)"]' in out          # subgraph label: parens inside the quotes
+    assert '["Custom / OpenAI-compatible endpoint"]' in out  # provider label: slash inside the quotes
+    assert "subgraph j_unknown[" in out                       # ids stay bare identifiers
+    assert "    custom_endpoint[" in out
