@@ -101,16 +101,21 @@ def as_json(findings, kb, policy=None) -> str:
     }, indent=2)
 
 
+def _mlabel(s: str) -> str:
+    """A Mermaid label: double-quoted and entity-escaped (# before ", as the quote escape adds a #)."""
+    return '"' + s.replace("#", "#35;").replace('"', "#quot;") + '"'
+
+
 def mermaid(findings, kb, policy=None) -> str:
     by_j = {}
     for f in findings:
         by_j.setdefault(f.detection.jurisdiction, set()).add(f.detection.provider_id)
-    lines = ["flowchart LR", "  app([Your application])"]
+    lines = ["flowchart LR", f"  app([{_mlabel('Your application')}])"]
     for j, pids in by_j.items():
         jid = "j_" + j.replace("-", "_")
-        lines.append(f"  subgraph {jid}[{juris(j)}]")
+        lines.append(f"  subgraph {jid}[{_mlabel(juris(j))}]")
         for pid in sorted(pids):
-            lines.append(f"    {pid}[{kb.name(pid)}]")
+            lines.append(f"    {pid}[{_mlabel(kb.name(pid))}]")
         lines.append("  end")
         for pid in sorted(pids):
             lines.append(f"  app --> {pid}")
