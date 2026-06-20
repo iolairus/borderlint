@@ -15,13 +15,12 @@ Full scope: **`CAPABILITIES.md`**.
   - Change: `openspec/changes/mvp-residency-scanner/` — `proposal.md`, `design.md`, four capability specs (`flow-detection`, `jurisdiction-classification`, `residency-policy`, `cli-and-reporting`), `tasks.md` (6 groups, ~26 steps).
   - `openspec validate mvp-residency-scanner --strict` → **valid**.
   - `spec-reviewer` gate → **APPROVE** (after one revision cycle that added provider allow/deny, configurable failure-set, and home-regime, plus de-dup + unknown-warn scenarios).
-- **No implementation code yet — by design.**
+- **P1 BUILT** on branch `feature/mvp-residency-scanner`: `borderlint/` (`kb`, `detect`, `policy`, `report`, `cli`) + JSON knowledge base + examples + 6 passing tests. **Zero runtime deps** (stdlib only; KB is JSON, not YAML). Two commits (spec, then impl). `openspec validate --strict` ✓; all `tasks.md` boxes checked. Verified end-to-end (customer-pii scan → 3 FAIL, DashScope-intl→sg OK, exit 1).
 
 ## NEXT STEPS (where to pick up)
-1. **Commit the approved spec** as a checkpoint: `docs(spec): mvp-residency-scanner P1 spec`.
-2. **Create the working branch**: `git checkout -b feature/mvp-residency-scanner` (repo has no commits yet; `main` is the protected release branch).
-3. **Build P1**: `/opsx-apply` — work through `tasks.md` group by group, committing per step (`/git-commit`, conventional commits traced to `Change:`/`Task:`).
-4. When `tasks.md` is all green: `/ship` (flexible mode → validate, archive the change into `openspec/specs/`, no PR).
+1. **Verify**: `python -m borderlint scan examples --policy examples/residency.json --classification customer-pii` → expect 3 FAIL / exit 1 (or `/opsx-verify mvp-residency-scanner`).
+2. **Ship**: `/ship` — validate, archive the change into `openspec/specs/`, merge `feature/mvp-residency-scanner` → `main` (flexible mode, no PR).
+3. **Then P2** (`CAPABILITIES.md`): SARIF + GitHub Action, TypeScript scanning, supply-chain/container SCA mode, optional Claude enrichment.
 
 ## Locked design decisions (don't relitigate)
 - **Policy = user-provided JSON eval-set**: data classification (`non-pii` | `employee-pii` | `customer-pii`, extensible) → allow-list of jurisdictions. Per-run `--classification` declares the data class on the scanned path.
