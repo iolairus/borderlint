@@ -1,0 +1,38 @@
+schema: spec-driven
+
+# Project context — shown to AI when creating artifacts.
+# TEMPLATE NOTE: when instantiating this template for a real project,
+# replace the placeholder lines with your actual stack and conventions.
+context: |
+  borderlint — a static, developer-side CLI that maps where an application's AI data and traffic
+  flow and governs them against a data-residency policy. v1 targets Hong Kong / Greater Bay Area
+  entities under PDPO, PIPL and the GBA Standard Contract. See CAPABILITIES.md for the full,
+  agreed capability set and the P1 (MVP) cut.
+  Tech stack: Python >= 3.10; single-purpose CLI (argparse); PyYAML; deterministic core (optional
+  LLM enrichment is later, never required); pytest; MIT; vendor-neutral.
+  Domain model: the policy is a user-provided JSON eval-set mapping a data classification
+  (non-pii | employee-pii | customer-pii, extensible) -> an allow-list of jurisdictions.
+  Jurisdictions are ccTLD/ISO-3166 country codes (lowercase: hk, cn, sg, my, us, gb, mo) plus the
+  special tokens CN-GBA (nine Mainland GBA cities) and GBA (alias = hk + CN-GBA). Deny-by-default:
+  a flow to any code not on the list for the declared classification fails. Per run, --classification
+  declares the data class on the scanned path; borderlint detects AI provider usage (SDK imports +
+  endpoint references), resolves each to a jurisdiction via a bundled knowledge base, and fails CI
+  on violations. Cross-border arrangements (e.g. GBA Standard Contract) are surfaced as reference
+  links only, never adjudicated.
+  Traceability chain: Requirement -> Scenario -> Task -> Code.
+  Conventions: conventional commits; one concern per change; one change per branch.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - Always include a "Non-goals" section
+    - Keep proposals under 500 words
+  specs:
+    - Use RFC-2119 keywords (MUST/SHALL/SHOULD/MAY)
+    - Every requirement needs at least one GIVEN/WHEN/THEN scenario
+    - No implementation details in requirements
+  design:
+    - Record alternatives considered and why they were rejected
+  tasks:
+    - Each task must map to a requirement or design decision
+    - Break tasks into chunks of max 2 hours
