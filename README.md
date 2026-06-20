@@ -58,6 +58,22 @@ links, never adjudicated.
 For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: SARIF output, container/SCA mode, LLM
 enrichment, and dynamic / `base_url` endpoint resolution. Full roadmap in `CAPABILITIES.md`.
 
+## Internal endpoints
+
+Map your own regional endpoints to jurisdictions; they **merge** with the bundled provider KB (your
+entries win on conflict):
+
+```json
+{ "endpoints": { "llm-cn.acme.internal": "cn", "llm-hk.acme.internal": "hk", "llm-sg.acme.internal": "sg" } }
+```
+
+```bash
+borderlint scan . --providers internal-endpoints.json --policy residency.json --classification customer-pii
+```
+
+A configuration wired to the **wrong regional endpoint** — e.g. the CN endpoint for HK/SG-only
+customer PII — then fails the build, so you can't ship a service pointed at the wrong region.
+
 ## CI
 
 Same command in any pipeline. GitHub Actions (composite action):

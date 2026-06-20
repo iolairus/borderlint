@@ -1,0 +1,7 @@
+{
+  "endpoints": {
+    "llm-cn.acme.internal": "cn",
+    "llm-hk.acme.internal": "hk",
+    "llm-sg.acme.internal": "sg"
+  }
+}
