@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 from . import report
@@ -21,12 +22,18 @@ def main(argv=None) -> int:
     s.add_argument("-c", "--classification", help="data class on the scanned path (required with --policy)")
     s.add_argument("-f", "--format", choices=["text", "json", "mermaid", "sarif", "sbom"], default="text")
     s.add_argument("--providers", help="custom provider knowledge base JSON")
+    dp = sub.add_parser("diff", help="Compare two AI data-flow SBOMs (baseline vs current).")
+    dp.add_argument("baseline")
+    dp.add_argument("current")
+    dp.add_argument("-f", "--format", choices=["text", "json"], default="text")
     a = ap.parse_args(argv)
 
     if a.version:
         from . import __version__
         print(f"borderlint {__version__} (KB last reviewed {load_kb().updated})")
         return 0
+    if a.cmd == "diff":
+        return _run_diff(a)
     if a.cmd != "scan":
         ap.print_help()
         return 0
@@ -58,6 +65,24 @@ def main(argv=None) -> int:
     if a.format == "sbom":  # an export is an artifact, not a gate
         return 0
     return 1 if any(f.severity == "fail" for f in findings) else 0
+
+
+def _run_diff(a) -> int:
+    docs = []
+    for path in (a.baseline, a.current):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                doc = json.load(fh)
+        except (OSError, ValueError) as e:  # unreadable / not JSON
+            print(f"error: {e}", file=sys.stderr)
+            return 2
+        if not isinstance(doc, dict) or doc.get("schema") != "borderlint.ai-dataflow-sbom/1":
+            print(f"error: {path} is not a borderlint AI data-flow SBOM", file=sys.stderr)
+            return 2
+        docs.append(doc)
+    delta = report.diff_flows(docs[0], docs[1])
+    print(report.diff_json(delta) if a.format == "json" else report.diff_text(delta))
+    return 1 if any(f["jurisdiction"] != "local" for f in delta["added"]) else 0  # new non-local egress gates
 
 
 if __name__ == "__main__":
