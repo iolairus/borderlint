@@ -16,6 +16,16 @@ def _kb_file(data):
     return f.name
 
 
+def _scan_file(content, suffix=".py"):
+    import os
+    import tempfile
+    from borderlint.detect import scan
+    p = os.path.join(tempfile.mkdtemp(), "f" + suffix)
+    with open(p, "w", encoding="utf-8") as fh:
+        fh.write(content)
+    return scan(p, kb)
+
+
 def dets(src):
     return _scan_py("x.py", src, kb)
 
@@ -204,3 +214,41 @@ def test_scanner_has_no_network_imports():
         src = inspect.getsource(m)
         for bad in ("urllib", "requests", "httpx", "socket"):
             assert bad not in src, f"{m.__name__} references {bad}"
+
+
+def test_waiver_downgrades_to_waived():
+    f = evaluate(_scan_file("import openai  # borderlint: allow reviewed, US ok per SEC-1\n"),
+                 _pol(["hk"]), "customer-pii", kb)
+    assert any(x.severity == "waived" for x in f)
+    assert not any(x.severity == "fail" for x in f)
+
+
+def test_unjustified_waiver_ignored():
+    f = evaluate(_scan_file("import openai  # borderlint: allow\n"), _pol(["hk"]), "customer-pii", kb)
+    assert any(x.severity == "fail" for x in f)
+
+
+def test_waiver_does_not_clear_deny():
+    f = evaluate(_scan_file("import openai  # borderlint: allow trust me\n"),
+                 _pol(["us"], providers={"deny": ["openai"]}), "customer-pii", kb)
+    assert f[0].severity == "fail"
+
+
+def test_sarif_output():
+    import json as _json
+    from borderlint.report import sarif
+    f = evaluate(_scan_file("import openai\n"), _pol(["hk"]), "customer-pii", kb)
+    doc = _json.loads(sarif(f, kb))
+    assert doc["version"] == "2.1.0"
+    assert doc["runs"][0]["tool"]["driver"]["name"] == "borderlint"
+    assert len(doc["runs"][0]["results"]) == len(f)
+    assert doc["runs"][0]["results"][0]["locations"][0]["physicalLocation"]["region"]["startLine"] >= 1
+
+
+def test_sarif_waived_suppressed():
+    import json as _json
+    from borderlint.report import sarif
+    f = evaluate(_scan_file("import openai  # borderlint: allow ok per SEC-9\n"), _pol(["hk"]), "customer-pii", kb)
+    doc = _json.loads(sarif(f, kb))
+    waived = [r for r in doc["runs"][0]["results"] if r.get("suppressions")]
+    assert waived and waived[0]["level"] == "note"
