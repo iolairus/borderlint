@@ -1,0 +1,15 @@
+# Drop into a consuming repo at .github/workflows/borderlint.yml
+# (The borderlint repo is private, so the consumer must be in the same org
+#  or grant the workflow read access to iolairus/borderlint.)
+name: AI data residency
+on: [push, pull_request]
+jobs:
+  borderlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: iolairus/borderlint@v0.1.0
+        with:
+          path: .
+          policy: residency.json
+          classification: customer-pii

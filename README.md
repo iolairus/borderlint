@@ -43,6 +43,17 @@ links, never adjudicated.
 For HK / GBA home bases under PDPO / PIPL / GBA. Python scanning today. Not yet: TypeScript, SARIF,
 a GitHub Action, container/SCA mode, LLM enrichment. Full scope in `CAPABILITIES.md`.
 
+## CI
+
+Same command in any pipeline. GitHub Actions (composite action):
+
+```yaml
+- uses: iolairus/borderlint@v0.1.0
+  with: { path: ., policy: residency.json, classification: customer-pii }
+```
+
+Jenkins / anything else: `pip install borderlint && borderlint scan . --policy residency.json --classification customer-pii` — a non-zero exit fails the stage. Full examples in `examples/ci/`.
+
 ## License
 
 MIT © 2026 Iolaire McKinnon. Vendor-neutral by design.
