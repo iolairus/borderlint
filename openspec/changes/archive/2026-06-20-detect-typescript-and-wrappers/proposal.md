@@ -2,8 +2,9 @@
 
 Dogfooding borderlint on real repos exposed two false-negative gaps: TypeScript/JavaScript code is
 invisible (the scanner reads Python + config only), and AI calls routed through multi-provider
-aggregators (litellm, langchain) or wrapper libraries slip past SDK-import detection. `retire` (TS)
-and `TellMeWhy` (httpx/wrapper) both returned no flows despite using AI. This change closes both.
+aggregators (litellm, langchain) or wrapper libraries slip past SDK-import detection. Dogfooding on
+internal repos — a TypeScript app, and a Python service using an httpx wrapper — surfaced both gaps.
+This change closes them.
 
 ## What Changes
 
