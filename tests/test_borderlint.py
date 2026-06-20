@@ -452,7 +452,17 @@ def test_mermaid_labels_are_quoted():
                  _pol(["hk"]), "customer-pii", kb)
     out = mermaid(f, kb)
     assert 'app(["Your application"])' in out
-    assert '["Unknown (region-dependent)"]' in out          # subgraph label: parens inside the quotes
     assert '["Custom / OpenAI-compatible endpoint"]' in out  # provider label: slash inside the quotes
-    assert "subgraph j_unknown[" in out                       # ids stay bare identifiers
-    assert "    custom_endpoint[" in out
+    assert 'subgraph j_unknown["unknown"]' in out             # zone titled by the jurisdiction code
+    assert "custom_endpoint__unknown[" in out                 # node id is per (provider, jurisdiction)
+
+
+def test_mermaid_multi_jurisdiction_provider():
+    from borderlint.report import mermaid
+    f = evaluate([Detection("aws_bedrock", "endpoint_reference", "x", "a.py", 1, "us"),
+                  Detection("aws_bedrock", "endpoint_reference", "y", "a.py", 2, "de")],
+                 _pol(["hk"]), "customer-pii", kb)
+    out = mermaid(f, kb)
+    assert 'subgraph j_us["us"]' in out and 'subgraph j_de["de"]' in out   # zones titled by code
+    assert "aws_bedrock__us[" in out and "aws_bedrock__de[" in out          # distinct node per zone
+    assert "app --> aws_bedrock__us" in out and "app --> aws_bedrock__de" in out  # an edge to each

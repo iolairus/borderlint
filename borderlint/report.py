@@ -112,13 +112,13 @@ def mermaid(findings, kb, policy=None) -> str:
         by_j.setdefault(f.detection.jurisdiction, set()).add(f.detection.provider_id)
     lines = ["flowchart LR", f"  app([{_mlabel('Your application')}])"]
     for j, pids in by_j.items():
-        jid = "j_" + j.replace("-", "_")
-        lines.append(f"  subgraph {jid}[{_mlabel(juris(j))}]")
+        js = j.replace("-", "_")
+        lines.append(f"  subgraph j_{js}[{_mlabel(j)}]")  # zone titled by the jurisdiction code
         for pid in sorted(pids):
-            lines.append(f"    {pid}[{_mlabel(kb.name(pid))}]")
+            lines.append(f"    {pid}__{js}[{_mlabel(kb.name(pid))}]")  # one node per (provider, jurisdiction)
         lines.append("  end")
         for pid in sorted(pids):
-            lines.append(f"  app --> {pid}")
+            lines.append(f"  app --> {pid}__{js}")
     return "\n".join(lines)
 
 
