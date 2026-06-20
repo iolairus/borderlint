@@ -7,6 +7,15 @@ from borderlint.policy import evaluate
 kb = load_kb()
 
 
+def _kb_file(data):
+    import json
+    import tempfile
+    f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8")
+    json.dump(data, f)
+    f.close()
+    return f.name
+
+
 def dets(src):
     return _scan_py("x.py", src, kb)
 
@@ -37,9 +46,7 @@ def test_deny_by_default_sg_in_my_out():
 
 
 def test_gba_alias_permits_cn_gba():
-    k = load_kb()
-    k.by_id["x"] = {"id": "x", "name": "X", "jurisdiction": "CN-GBA"}
-    k._eps.insert(0, ("x.local", "x", "CN-GBA"))
+    k = load_kb(_kb_file({"endpoints": {"x.local": "CN-GBA"}}))
     f = evaluate(_scan_py("x.py", 'u = "x.local"\n', k), {"classifications": {"c": ["GBA"]}}, "c", k)
     assert f[0].severity == "ok"
 
@@ -135,3 +142,37 @@ def test_local_passes_strict_policy_and_not_unknown():
     loc = Detection("local", "config_endpoint", "localhost", "x", 1, "local")
     pol = {"classifications": {"c": ["hk"]}, "on_unknown": "fail"}
     assert evaluate([loc], pol, "c", kb)[0].severity == "ok"
+
+
+def test_user_kb_merges_not_replaces():
+    k = load_kb(_kb_file({"providers": [
+        {"id": "acme", "name": "Acme", "endpoints": ["llm.acme.io"], "jurisdiction": "us"}]}))
+    assert k.match_endpoint("api.deepseek.com")[2] == "cn"   # bundled still resolves
+    assert k.match_endpoint("llm.acme.io")[2] == "us"        # user provider resolves
+
+
+def test_endpoints_map_regions():
+    k = load_kb(_kb_file({"endpoints": {"llm-cn.acme.com": "cn", "llm-sg.acme.com": "sg", "llm-hk.acme.com": "hk"}}))
+    assert k.match_endpoint("llm-cn.acme.com")[2] == "cn"
+    assert k.match_endpoint("llm-sg.acme.com")[2] == "sg"
+    assert k.match_endpoint("llm-hk.acme.com")[2] == "hk"
+
+
+def test_user_overrides_bundled_host():
+    k = load_kb(_kb_file({"endpoints": {"api.openai.com": "hk"}}))
+    assert k.match_endpoint("api.openai.com")[2] == "hk"
+
+
+def test_invalid_token_rejected():
+    try:
+        load_kb(_kb_file({"endpoints": {"x.acme.com": "overseas"}}))
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+
+
+def test_wrong_endpoint_is_violation():
+    k = load_kb(_kb_file({"endpoints": {"llm-cn.acme.com": "cn"}}))
+    dets = _scan_config_endpoints("c.yaml", "base_url: https://llm-cn.acme.com\n", k)
+    f = evaluate(dets, {"classifications": {"customer-pii": ["hk", "sg"]}}, "customer-pii", k)
+    assert f[0].severity == "fail"

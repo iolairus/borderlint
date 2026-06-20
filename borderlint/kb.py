@@ -50,31 +50,57 @@ def _region_jurisdiction(text: str, scheme: str):
     return None
 
 
+_SPECIAL_TOKENS = {"CN-GBA", "GBA", "local", "unknown"}
+
+
+def _valid_jurisdiction(token: str) -> bool:
+    return token in _SPECIAL_TOKENS or (len(token) == 2 and token.isalpha() and token.islower())
+
+
+def _endpoints_provider(endpoints: dict) -> dict:
+    for host, juris in endpoints.items():
+        if not _valid_jurisdiction(juris):
+            raise ValueError(
+                f"invalid jurisdiction '{juris}' for endpoint '{host}' "
+                "(use a ccTLD/ISO code or one of CN-GBA, GBA, local, unknown)")
+    return {"id": "internal_endpoint", "name": "Internal endpoint", "_user": True,
+            "sdks": [], "npm": [], "endpoints": list(endpoints), "jurisdiction": "unknown",
+            "endpoint_jurisdictions": dict(endpoints)}
+
+
 def load_kb(path: str | None = None) -> "KB":
+    """Load the bundled KB; if a user file is given, merge it on top (user entries win)."""
+    bundled = json.loads(files("borderlint").joinpath("data/providers.json").read_text("utf-8"))
+    providers = list(bundled.get("providers", []))
     if path:
         with open(path, encoding="utf-8") as fh:
-            data = json.load(fh)
-    else:
-        data = json.loads(files("borderlint").joinpath("data/providers.json").read_text("utf-8"))
-    return KB(data.get("providers", []))
+            user = json.load(fh)
+        user_providers = [dict(p, _user=True) for p in user.get("providers", [])]
+        if user.get("endpoints"):
+            user_providers.append(_endpoints_provider(user["endpoints"]))
+        providers = user_providers + providers  # user first → precedence
+    return KB(providers)
 
 
 class KB:
     def __init__(self, providers: list[dict]):
-        self.by_id = {p["id"]: p for p in providers}
+        self.by_id = {}
+        for p in providers:
+            self.by_id.setdefault(p["id"], p)  # first wins; user providers are passed first
         sdks, npm, eps = [], [], []
         for p in providers:
+            prio = 0 if p.get("_user") else 1  # user-supplied entries resolve in preference
             for s in p.get("sdks", []):
-                sdks.append((s, p["id"]))
+                sdks.append((prio, s, p["id"]))
             for n in p.get("npm", []):
-                npm.append((n, p["id"]))
+                npm.append((prio, n, p["id"]))
             ej = p.get("endpoint_jurisdictions", {})
             for h in p.get("endpoints", []):
-                eps.append((h, p["id"], ej.get(h, p.get("jurisdiction", "unknown"))))
-        # Longest match first so specific SDKs/hosts win over shorter ones.
-        self._sdks = sorted(sdks, key=lambda x: -len(x[0]))
-        self._npm = sorted(npm, key=lambda x: -len(x[0]))
-        self._eps = sorted(eps, key=lambda x: -len(x[0]))
+                eps.append((prio, h, p["id"], ej.get(h, p.get("jurisdiction", "unknown"))))
+        # User entries first; within a source, longest match wins.
+        self._sdks = sorted(sdks, key=lambda x: (x[0], -len(x[1])))
+        self._npm = sorted(npm, key=lambda x: (x[0], -len(x[1])))
+        self._eps = sorted(eps, key=lambda x: (x[0], -len(x[1])))
         self.region_scheme = {p["id"]: p["region_scheme"] for p in providers if p.get("region_scheme")}
 
     def name(self, pid: str) -> str:
@@ -84,19 +110,19 @@ class KB:
         return self.by_id.get(pid, {}).get("jurisdiction", "unknown")
 
     def match_sdk(self, module: str) -> str | None:
-        for s, pid in self._sdks:
+        for _prio, s, pid in self._sdks:
             if module == s or module.startswith(s + "."):
                 return pid
         return None
 
     def match_npm(self, pkg: str) -> str | None:
-        for name, pid in self._npm:
+        for _prio, name, pid in self._npm:
             if pkg == name or pkg.startswith(name + "/"):
                 return pid
         return None
 
     def match_endpoint(self, text: str):
-        for h, pid, juris in self._eps:
+        for _prio, h, pid, juris in self._eps:
             if h in text:
                 scheme = self.region_scheme.get(pid)
                 if scheme:

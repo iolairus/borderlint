@@ -1,0 +1,5 @@
+# A service wired to the Mainland China regional endpoint.
+# Scan with: --providers internal-endpoints.json  --classification customer-pii
+service: chat
+params:
+  base_url: https://llm-cn.acme.internal/v1   # cn — resolved via the internal-endpoints registry

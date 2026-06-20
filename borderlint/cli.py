@@ -26,7 +26,11 @@ def main(argv=None) -> int:
         ap.print_help()
         return 0
 
-    kb = load_kb(a.providers)
+    try:
+        kb = load_kb(a.providers)
+    except (ValueError, OSError) as e:  # bad jurisdiction token / unreadable file (JSONDecodeError is a ValueError)
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     detections = scan(a.path, kb)
 
     policy = None
