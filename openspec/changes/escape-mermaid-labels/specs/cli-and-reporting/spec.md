@@ -2,9 +2,10 @@
 
 ### Requirement: Output formats
 The CLI SHALL produce a human-readable report, a machine-readable JSON report, and a Mermaid
-flow map of detected flows. Every Mermaid node and subgraph label SHALL be emitted as a quoted string,
-with any embedded double quote replaced by `#quot;`, so a label containing Mermaid metacharacters
-(parentheses, slashes) renders as valid Mermaid.
+flow map of detected flows. Every Mermaid node and subgraph label SHALL be emitted as a double-quoted
+string in which Mermaid's escape prefix `#` is replaced by `#35;` and an embedded double quote by
+`#quot;` — so that labels containing parentheses or slashes are carried inside the quotes rather than
+breaking the flow map.
 
 #### Scenario: JSON output requested
 - **WHEN** the user requests JSON output
@@ -14,10 +15,10 @@ with any embedded double quote replaced by `#quot;`, so a label containing Merma
 - **WHEN** the user requests Mermaid output
 - **THEN** the CLI emits a flow map grouping each provider under its jurisdiction
 
-#### Scenario: Mermaid labels with metacharacters are quoted
+#### Scenario: A label with metacharacters is double-quoted
 - **WHEN** a jurisdiction or provider label contains parentheses or a slash (for example `Unknown (region-dependent)` or `Custom / OpenAI-compatible endpoint`)
-- **THEN** the Mermaid output emits that label as a quoted string valid for the Mermaid parser
+- **THEN** the Mermaid output emits it as a double-quoted label with the parentheses or slash inside the quotes
 
-#### Scenario: An embedded quote in a Mermaid label is escaped
-- **WHEN** a label contains a double quote
-- **THEN** it is emitted as `#quot;` in the Mermaid output
+#### Scenario: Mermaid escape characters are entity-escaped
+- **WHEN** a label contains a `#` or a double quote
+- **THEN** they are emitted as `#35;` and `#quot;` respectively
