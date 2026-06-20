@@ -8,7 +8,7 @@ context: |
   flow and governs them against a data-residency policy. v1 targets Hong Kong / Greater Bay Area
   entities under PDPO, PIPL and the GBA Standard Contract. See CAPABILITIES.md for the full,
   agreed capability set and the P1 (MVP) cut.
-  Tech stack: Python >= 3.10; single-purpose CLI (argparse); PyYAML; deterministic core (optional
+  Tech stack: Python >= 3.10; single-purpose CLI (argparse); stdlib json (zero runtime deps); deterministic core (optional
   LLM enrichment is later, never required); pytest; MIT; vendor-neutral.
   Domain model: the policy is a user-provided JSON eval-set mapping a data classification
   (non-pii | employee-pii | customer-pii, extensible) -> an allow-list of jurisdictions.
