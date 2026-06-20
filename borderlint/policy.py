@@ -50,7 +50,12 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
             pass  # local inference is not a cross-border transfer; never a residency violation
         elif d.jurisdiction not in allow:
             reasons.append("residency")
-        findings.append(Finding(d, _severity(reasons, fail_on, on_unknown), reasons))
+        sev = _severity(reasons, fail_on, on_unknown)
+        if sev == "fail" and d.waiver:  # a justified waiver downgrades a residency/unknown failure
+            blocking = "denied_provider" in reasons and "denied_provider" in fail_on
+            if not blocking:  # ...but never an explicit provider deny
+                sev = "waived"
+        findings.append(Finding(d, sev, reasons))
     return findings
 
 

@@ -19,7 +19,7 @@ def main(argv=None) -> int:
     s.add_argument("path", nargs="?", default=".")
     s.add_argument("-p", "--policy", help="residency policy JSON (omit for inventory mode)")
     s.add_argument("-c", "--classification", help="data class on the scanned path (required with --policy)")
-    s.add_argument("-f", "--format", choices=["text", "json", "mermaid"], default="text")
+    s.add_argument("-f", "--format", choices=["text", "json", "mermaid", "sarif"], default="text")
     s.add_argument("--providers", help="custom provider knowledge base JSON")
     a = ap.parse_args(argv)
 
@@ -52,7 +52,7 @@ def main(argv=None) -> int:
     else:
         findings = [Finding(d, "ok", []) for d in detections]  # inventory mode
 
-    renderers = {"text": report.text, "json": report.as_json, "mermaid": report.mermaid}
+    renderers = {"text": report.text, "json": report.as_json, "mermaid": report.mermaid, "sarif": report.sarif}
     print(renderers[a.format](findings, kb, policy))
     return 1 if any(f.severity == "fail" for f in findings) else 0
 
