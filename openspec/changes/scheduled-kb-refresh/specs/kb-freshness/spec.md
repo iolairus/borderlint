@@ -12,17 +12,34 @@ base against a maintained upstream provider list and reports providers that are 
 - **WHEN** the scheduled check runs and the bundled knowledge base already covers every upstream provider
 - **THEN** no review item is raised
 
+### Requirement: Deterministic coverage diff
+The coverage comparison SHALL be a pure, offline function of the bundled knowledge base and a
+supplied upstream provider list, returning exactly the upstream providers not covered.
+
+#### Scenario: Uncovered providers computed from a fixture
+- **WHEN** the diff runs against a fixed upstream list and the bundled knowledge base
+- **THEN** it returns exactly the upstream providers absent from the bundled knowledge base, with no network access
+
 ### Requirement: Human-assigned jurisdictions
 The coverage check SHALL NOT auto-assign a jurisdiction or endpoint host to a discovered provider;
-discovered gaps are surfaced for human curation only.
+each emitted gap record carries no jurisdiction and no endpoint host, leaving them for human curation.
 
-#### Scenario: Discovered gap is not auto-merged
+#### Scenario: Emitted gap record has no jurisdiction or endpoint
 - **WHEN** the check surfaces a new provider
-- **THEN** no jurisdiction or endpoint is assigned automatically, and a person assigns them
+- **THEN** the emitted gap record carries no jurisdiction and no endpoint host
 
 ### Requirement: Knowledge base provenance
-The bundled knowledge base SHALL carry a last-reviewed date.
+The bundled knowledge base SHALL carry a last-reviewed date as an ISO-8601 (`YYYY-MM-DD`) value in a
+top-level metadata field, exposed when the knowledge base is loaded.
 
-#### Scenario: KB carries a date
+#### Scenario: KB carries an ISO date
 - **WHEN** the bundled knowledge base is loaded
-- **THEN** a last-reviewed date is available
+- **THEN** its last-reviewed date is available as an ISO-8601 `YYYY-MM-DD` value
+
+### Requirement: Refresh does not affect scans
+The coverage check SHALL be dev/CI-only; the scanner and knowledge-base load path SHALL perform no
+network access.
+
+#### Scenario: The scan path makes no network request
+- **WHEN** the knowledge base is loaded and a scan runs
+- **THEN** no network request is made

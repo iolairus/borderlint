@@ -85,6 +85,12 @@ Same command in any pipeline. GitHub Actions (composite action):
 
 Jenkins / anything else: `pip install borderlint && borderlint scan . --policy residency.json --classification customer-pii` — a non-zero exit fails the stage. Full examples in `examples/ci/`.
 
+## Keeping the KB fresh
+
+A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) diffs the bundled provider KB against
+litellm's registry and opens an issue listing providers we don't yet cover — jurisdictions are
+assigned **by hand**, never auto-merged. `borderlint --version` shows the KB's last-reviewed date.
+
 ## License
 
 MIT © 2026 Iolaire McKinnon. Vendor-neutral by design.

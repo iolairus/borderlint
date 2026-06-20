@@ -79,7 +79,9 @@ def load_kb(path: str | None = None) -> "KB":
         if user.get("endpoints"):
             user_providers.append(_endpoints_provider(user["endpoints"]))
         providers = user_providers + providers  # user first → precedence
-    return KB(providers)
+    kb = KB(providers)
+    kb.updated = bundled.get("updated")
+    return kb
 
 
 class KB:
@@ -102,6 +104,7 @@ class KB:
         self._npm = sorted(npm, key=lambda x: (x[0], -len(x[1])))
         self._eps = sorted(eps, key=lambda x: (x[0], -len(x[1])))
         self.region_scheme = {p["id"]: p["region_scheme"] for p in providers if p.get("region_scheme")}
+        self.updated: str | None = None  # KB last-reviewed date, set by load_kb
 
     def name(self, pid: str) -> str:
         return self.by_id.get(pid, {}).get("name", pid)
