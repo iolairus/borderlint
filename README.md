@@ -86,6 +86,18 @@ borderlint scan . --providers internal-endpoints.json --policy residency.json --
 A configuration wired to the **wrong regional endpoint** — e.g. the CN endpoint for HK/SG-only
 customer PII — then fails the build, so you can't ship a service pointed at the wrong region.
 
+A runnable end-to-end example is in [`examples/gba-resident-app/`](examples/gba-resident-app/) — a
+GBA-resident app (internal Shenzhen endpoint → `CN-GBA`, plus Mainland / Western / local fallbacks). Run
+it under `residency-hk.json` vs `residency-mo.json` and the surfaced **GBA Standard Contract** flips
+between the *(Mainland, Hong Kong)* and *(Mainland, Macao)* variant, and the regime tag between PDPO and
+Macao PDPA:
+
+```bash
+borderlint scan examples/gba-resident-app \
+  --providers examples/gba-resident-app/internal-endpoints.json \
+  --policy examples/gba-resident-app/residency-hk.json --classification customer-pii
+```
+
 ## CI
 
 Same command in any pipeline. GitHub Actions (composite action):
