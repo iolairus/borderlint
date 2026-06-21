@@ -29,7 +29,7 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 
 ```json
 {
-  "home_regime": "pdpo",
+  "home_location": "hk",
   "classifications": {
     "customer-pii": ["hk", "CN-GBA", "sg"],
     "employee-pii": ["hk", "CN-GBA"],
@@ -40,9 +40,11 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 
 **Deny-by-default**: a flow to any code not on the list for the declared class fails — so `sg` is
 allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA` is shorthand for `hk` +
-`CN-GBA`. A flagged flow is tagged with the **data-protection regimes** in play (PDPO / PIPL) and the
-relevant **cross-border arrangement** — GBA Standard Contract, PIPL cross-border, or GDPR SCCs —
-surfaced as reference links, never adjudicated.
+`CN-GBA`. Declare your **`home_location`** (`hk`, `mo`, or `CN-GBA`) and a flagged flow is tagged with
+the **data-protection regimes** in play (PDPO / **Macao PDPA** / PIPL) and the relevant **cross-border
+arrangement** — the matching GBA Standard Contract variant, *(Mainland, Hong Kong)* or *(Mainland,
+Macao)*, PIPL cross-border, or GDPR SCCs — as reference links, never adjudicated. (`home_regime`
+`pdpo`/`pipl` is still accepted.)
 
 ## Capabilities
 
@@ -58,8 +60,8 @@ surfaced as reference links, never adjudicated.
   endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` → `hk`).
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
   failure set, declared home regime.
-- **Regimes & arrangements:** flagged flows tagged with PDPO / PIPL and linked to the GBA Standard
-  Contract, PIPL cross-border, or GDPR SCCs — reference only, never adjudicated.
+- **Regimes & arrangements:** home location `hk`/`mo`/`CN-GBA` → PDPO / Macao PDPA / PIPL tags, linked to
+  the matching GBA Standard Contract (HK or Macao), PIPL cross-border, or GDPR SCCs — reference only.
 - **Output & CI:** text / JSON / Mermaid / **SARIF** / **SBOM**, an SBOM **`diff`** gate for new
   egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
 
@@ -89,7 +91,7 @@ customer PII — then fails the build, so you can't ship a service pointed at th
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v0.9.3
+- uses: iolairus/borderlint@v0.10.0
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 

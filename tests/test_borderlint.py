@@ -294,6 +294,58 @@ def test_context_does_not_change_verdict():
     assert "GBA" not in blob and "PIPL" not in blob and "regimes" not in blob  # SARIF carries no context
 
 
+def _ctx2(jurs, **polkw):
+    """(arrangement refs, regime tags) for flagged flows to `jurs` under a policy."""
+    from borderlint.report import _arrangements, _regimes
+    dets = [Detection(f"p{i}", "sdk_import", "p", "a.py", i + 1, j) for i, j in enumerate(jurs)]
+    pol = _pol(["xx"], **polkw)
+    f = evaluate(dets, pol, "customer-pii", kb)
+    return _arrangements(f, pol), _regimes(f, pol)
+
+
+def test_macao_home_gba_contract_and_tags():
+    arr, reg = _ctx2(["CN-GBA"], home_location="mo")
+    assert any("Mainland, Macao" in a for a in arr)
+    assert set(reg) == {"Macao PDPA", "PIPL"}
+
+
+def test_hk_home_location_contract_and_tags():
+    arr, reg = _ctx2(["CN-GBA"], home_location="hk")
+    assert any("Mainland, Hong Kong" in a for a in arr)
+    assert set(reg) == {"PDPO", "PIPL"}
+
+
+def test_both_sars_surface_both_contracts():
+    arr, _ = _ctx2(["hk", "mo"], home_location="CN-GBA")
+    assert any("Mainland, Hong Kong" in a for a in arr) and any("Mainland, Macao" in a for a in arr)
+
+
+def test_macao_destination_implies_macao_tag():
+    _, reg = _ctx2(["mo"], home_location="hk")
+    assert set(reg) == {"PDPO", "Macao PDPA"}
+
+
+def test_plain_cn_surfaces_no_gba_contract():
+    arr, _ = _ctx2(["cn"], home_location="hk")
+    assert not any("Mainland, Hong Kong" in a or "Mainland, Macao" in a for a in arr)
+    assert any("PIPL cross-border" in a for a in arr)
+
+
+def test_home_regime_pdpo_back_compat():
+    arr, reg = _ctx2(["CN-GBA"], home_regime="pdpo")
+    assert any("GBA Standard Contract" in a for a in arr) and set(reg) == {"PDPO", "PIPL"}
+
+
+def test_home_regime_pipl_back_compat():
+    arr, reg = _ctx2(["CN-GBA"], home_regime="pipl")
+    assert any("GBA Standard Contract" in a for a in arr) and "PIPL" in reg
+
+
+def test_mo_destination_no_macao_tag_under_home_regime():
+    _, reg = _ctx2(["mo"], home_regime="pdpo")  # back-compat: Macao tag is home_location-only
+    assert "Macao PDPA" not in reg
+
+
 def _two_flows():
     return evaluate([Detection("openai", "sdk_import", "openai", "a.py", 3, "us"),
                      Detection("deepseek", "sdk_import", "deepseek", "b.py", 1, "cn")],
