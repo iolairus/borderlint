@@ -30,10 +30,32 @@ def _ref(aid: str) -> str:
     return f"{a['name']} — {a['summary']} {a['url']}"
 
 
+_REGIME_OF = {"hk": "PDPO", "mo": "Macao PDPA", "cn": "PIPL", "CN-GBA": "PIPL"}
+
+
+def _flagged_dests(findings) -> set:
+    return {f.detection.jurisdiction for f in findings if f.severity != "ok"}
+
+
 def _arrangements(findings, policy) -> list[str]:
     """Cross-border arrangement reference(s) for flagged flows — context only, never adjudicated."""
-    regime = (policy or {}).get("home_regime")
-    dests = {f.detection.jurisdiction for f in findings if f.severity != "ok"}
+    policy = policy or {}
+    dests = _flagged_dests(findings)
+    loc = policy.get("home_location")
+    if loc in ("hk", "mo", "CN-GBA"):  # home-location path: span-based GBA Standard Contract variant
+        span = {loc} | dests
+        out = []
+        if {"hk", "CN-GBA"} <= span:
+            out.append(_ref("gba"))
+        if {"mo", "CN-GBA"} <= span:
+            out.append(_ref("gba_mo"))
+        if "cn" in dests or (loc == "CN-GBA" and dests - {"cn", "CN-GBA", "hk", "mo"}):
+            out.append(_ref("pipl"))
+        if dests & _EU:
+            out.append(_ref("gdpr"))
+        return out
+    # legacy home_regime path — unchanged
+    regime = policy.get("home_regime")
     out = []
     if "CN-GBA" in dests and regime in ("pdpo", "pipl"):  # HK <-> nine GBA cities, not plain cn
         out.append(_ref("gba"))
@@ -45,11 +67,18 @@ def _arrangements(findings, policy) -> list[str]:
 
 
 def _regimes(findings, policy) -> list[str]:
-    """Data-protection regime tag(s) implicated by a flagged flow — set {PDPO, PIPL}, informational."""
-    dests = {f.detection.jurisdiction for f in findings if f.severity != "ok"}
+    """Regime tag(s) implicated by a flagged flow — {PDPO, PIPL, Macao PDPA}, informational."""
+    policy = policy or {}
+    dests = _flagged_dests(findings)
     if not dests:
         return []
-    regime = (policy or {}).get("home_regime")
+    loc = policy.get("home_location")
+    if loc in ("hk", "mo", "CN-GBA"):  # home-location path: regime of the home + each destination
+        tags = {_REGIME_OF.get(loc)} | {_REGIME_OF.get(d) for d in dests}
+        tags.discard(None)
+        return sorted(tags)
+    # legacy home_regime path — unchanged
+    regime = policy.get("home_regime")
     tags = set()
     if regime == "pdpo":
         tags.add("PDPO")

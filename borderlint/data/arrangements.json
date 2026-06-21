@@ -1,11 +1,17 @@
 {
-  "updated": "2026-06-20",
+  "updated": "2026-06-21",
   "arrangements": [
     {
       "id": "gba",
-      "name": "GBA Standard Contract",
+      "name": "GBA Standard Contract (Mainland, Hong Kong)",
       "summary": "Facilitated personal-information transfer between Hong Kong and the nine Mainland GBA cities.",
       "url": "https://www.digitalpolicy.gov.hk/en/our_work/digital_infrastructure/mainland/gbacbdf/cross-boundary_data_flow/index.html"
+    },
+    {
+      "id": "gba_mo",
+      "name": "GBA Standard Contract (Mainland, Macao)",
+      "summary": "Facilitated personal-information transfer between Macao and the nine Mainland GBA cities (CAC, Macao DSEDT/DSPDP; effective Sept 2024).",
+      "url": "https://www.dsedt.gov.mo/en/web/public/pg_tpd_gbadata_contract"
     },
     {
       "id": "pipl",
