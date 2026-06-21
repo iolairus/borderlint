@@ -43,11 +43,11 @@ PDPO, and `mo` implies Macao PDPA. GDPR is surfaced as an arrangement reference 
 ## ADDED Requirements
 
 ### Requirement: Home location within the GBA
-The policy MAY declare a `home_location` of `hk`, `mo`, or `CN-GBA`, identifying the entity's seat within
-the Greater Bay Area. The home location SHALL determine the home data-protection regime — `hk` → PDPO,
-`mo` → Macao PDPA (Law 8/2005), `CN-GBA` → PIPL — and SHALL select the GBA Standard Contract variant for
-a flagged GBA flow. When `home_location` is absent, a declared `home_regime` (`pdpo` or `pipl`) SHALL
-continue to drive regime tags and arrangement references unchanged.
+The report SHALL accept an optional `home_location` of `hk`, `mo`, or `CN-GBA` in the policy,
+identifying the entity's seat within the Greater Bay Area, and SHALL derive the home data-protection
+regime from it — `hk` → PDPO, `mo` → Macao PDPA (Law 8/2005), `CN-GBA` → PIPL — and select the GBA
+Standard Contract variant accordingly. When `home_location` is absent, the report SHALL continue to use
+a declared `home_regime` (`pdpo` or `pipl`) unchanged.
 
 #### Scenario: A Macao home location implies the Macao regime and contract
 - **WHEN** the policy declares `home_location` `mo` and a flagged flow resolves to `CN-GBA`
