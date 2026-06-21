@@ -1,0 +1,14 @@
+{
+  "home_location": "mo",
+  "on_unknown": "fail",
+  "fail_on": [
+    "residency",
+    "denied_provider",
+    "unknown"
+  ],
+  "classifications": {
+    "customer-pii": [
+      "hk"
+    ]
+  }
+}
