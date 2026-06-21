@@ -101,6 +101,19 @@ A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) diffs the bundled pr
 litellm's registry and opens an issue listing providers we don't yet cover — jurisdictions are
 assigned **by hand**, never auto-merged. `borderlint --version` shows the KB's last-reviewed date.
 
+## Development
+
+borderlint is built **spec-first** with [OpenSpec](https://github.com/Fission-AI/OpenSpec): every change
+is a reviewed proposal (specs + design + tasks) gated by a `spec-reviewer` agent before any code is
+written. To bootstrap the same workflow into another repo:
+
+```bash
+scripts/opsx-init.sh [--no-jira] /path/to/your/repo
+```
+
+It scaffolds `AGENTS.md`, `.claude/` (slash commands + the spec-reviewer gate), an empty `openspec/`, and
+`workflow.yaml`. `--no-jira` trims it to the core loop — propose → review → apply → commit → ship.
+
 ## License
 
 MIT © 2026 Iolaire McKinnon. Vendor-neutral by design.
