@@ -103,7 +103,7 @@ borderlint scan examples/gba-resident-app \
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v0.10.0
+- uses: iolairus/borderlint@v0.10.1
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
