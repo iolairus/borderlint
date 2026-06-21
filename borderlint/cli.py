@@ -59,7 +59,8 @@ def main(argv=None) -> int:
     else:
         findings = [Finding(d, "ok", []) for d in detections]  # inventory mode
 
-    renderers = {"text": report.text, "json": report.as_json, "mermaid": report.mermaid,
+    renderers = {"text": report.text, "json": report.as_json,
+                 "mermaid": lambda f, k, p: report.mermaid(f, k, p, report.project_label(a.path)),
                  "sarif": report.sarif, "sbom": report.sbom}
     print(renderers[a.format](findings, kb, policy))
     if a.format == "sbom":  # an export is an artifact, not a gate
