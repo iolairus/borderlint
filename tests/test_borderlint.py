@@ -457,6 +457,68 @@ def test_mermaid_labels_are_quoted():
     assert "custom_endpoint__unknown[" in out                 # node id is per (provider, jurisdiction)
 
 
+def _tmp_with(files):
+    import os
+    import tempfile
+    d = tempfile.mkdtemp()
+    for name, content in files.items():
+        with open(os.path.join(d, name), "w", encoding="utf-8") as fh:
+            fh.write(content)
+    return d
+
+
+def test_project_label_package_json():
+    import json as _json
+    from borderlint.report import project_label
+    d = _tmp_with({"package.json": _json.dumps({"name": "acme-bot", "version": "1.2.3"})})
+    assert project_label(d) == "acme-bot@1.2.3"
+
+
+def test_project_label_pyproject():
+    from borderlint.report import project_label
+    d = _tmp_with({"pyproject.toml": '[project]\nname = "acme"\nversion = "0.4.0"\n'})
+    assert project_label(d) == "acme@0.4.0"
+
+
+def test_project_label_name_only():
+    from borderlint.report import project_label
+    d = _tmp_with({"package.json": '{"name": "nameonly"}'})
+    assert project_label(d) == "nameonly"
+
+
+def test_project_label_dir_fallback():
+    import os
+    from borderlint.report import project_label
+    d = _tmp_with({"README.md": "hi"})  # no manifest, no git
+    assert project_label(d) == os.path.basename(d)
+
+
+def test_project_label_sanitizes_and_escapes():
+    import json as _json
+    from borderlint.report import project_label, mermaid
+    d = _tmp_with({"package.json": _json.dumps({"name": 'a"b#c\nd', "version": "1"})})
+    lab = project_label(d)
+    assert "\n" not in lab and lab.endswith("@1")  # collapsed to a single line, version kept
+    out = mermaid(evaluate([Detection("openai", "sdk_import", "openai", "a.py", 1, "us")],
+                           _pol(["hk"]), "customer-pii", kb), kb, None, lab)
+    assert "#quot;" in out and "#35;" in out       # the " and # are escaped in the root node
+
+
+def test_project_label_git_tag_wins():
+    import os
+    import shutil
+    import subprocess
+    from borderlint.report import project_label
+    if not shutil.which("git"):
+        return  # skip when git is unavailable
+    d = _tmp_with({"pyproject.toml": '[project]\nname = "gitproj"\nversion = "9.9.9"\n'})
+    g = lambda *a: subprocess.run(["git", "-C", d, *a], capture_output=True, check=True)
+    g("init", "-q")
+    g("-c", "user.name=t", "-c", "user.email=t@t", "commit", "--allow-empty", "-q", "-m", "x")
+    g("tag", "v2.0.0")
+    assert project_label(d) == "gitproj@v2.0.0"  # git tag preferred over the manifest's 9.9.9
+
+
 def test_mermaid_multi_jurisdiction_provider():
     from borderlint.report import mermaid
     f = evaluate([Detection("aws_bedrock", "endpoint_reference", "x", "a.py", 1, "us"),

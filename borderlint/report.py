@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import subprocess
 
 JURIS = {"us": "United States", "eu": "European Union", "cn": "Mainland China", "hk": "Hong Kong",
          "sg": "Singapore", "gb": "United Kingdom", "mo": "Macao", "my": "Malaysia",
@@ -106,11 +108,80 @@ def _mlabel(s: str) -> str:
     return '"' + s.replace("#", "#35;").replace('"', "#quot;") + '"'
 
 
-def mermaid(findings, kb, policy=None) -> str:
+def _pyproject_nv(path: str):
+    """(name, version) from a PEP 621 pyproject `[project]` table — tomllib if present, else a regex."""
+    try:
+        import tomllib
+        with open(path, "rb") as fh:
+            proj = tomllib.load(fh).get("project", {})
+        return proj.get("name"), proj.get("version")
+    except ModuleNotFoundError:
+        pass  # Python 3.10 — fall back to the regex below
+    except (OSError, ValueError):
+        return None, None
+    try:
+        src = open(path, encoding="utf-8").read()
+    except OSError:
+        return None, None
+    m = re.search(r"(?ms)^\[project\](.*?)(?=^\[|\Z)", src)
+    if not m:
+        return None, None
+    block = m.group(1)
+    def field(k):
+        fm = re.search(rf'(?m)^[ \t]*{k}[ \t]*=[ \t]*["\']([^"\']+)["\']', block)
+        return fm.group(1) if fm else None
+    return field("name"), field("version")
+
+
+def _manifest(root: str):
+    """(name, version) from the scan root's pyproject `[project]` or package.json; same manifest for both."""
+    py = os.path.join(root, "pyproject.toml")
+    if os.path.isfile(py):
+        n, v = _pyproject_nv(py)
+        if n or v:
+            return n, v
+    pj = os.path.join(root, "package.json")
+    if os.path.isfile(pj):
+        try:
+            with open(pj, encoding="utf-8") as fh:
+                d = json.load(fh)
+            if isinstance(d, dict):
+                return d.get("name"), d.get("version")
+        except (OSError, ValueError):
+            pass
+    return None, None
+
+
+def _git_tag(root: str):
+    try:  # best-effort: git absent / not a repo / no tags / timeout -> None, never fails the scan
+        r = subprocess.run(["git", "-C", root, "describe", "--tags", "--abbrev=0"],
+                           capture_output=True, text=True, timeout=2)
+        out = r.stdout.strip()
+        return out if r.returncode == 0 and out else None
+    except Exception:
+        return None
+
+
+def project_label(root) -> str:
+    """Codebase label for the Mermaid root node: name@version where determinable, else the directory name."""
+    base = os.path.abspath(str(root))
+    if not os.path.isdir(base):
+        base = os.path.dirname(base)
+    name, mver = _manifest(base)
+    if not name:
+        name = os.path.basename(base) or None
+    if not name:
+        return "Your application"
+    ver = _git_tag(base) or mver
+    label = f"{name}@{ver}" if ver else str(name)
+    return " ".join(label.split())  # collapse to a single line
+
+
+def mermaid(findings, kb, policy=None, app_label="Your application") -> str:
     by_j = {}
     for f in findings:
         by_j.setdefault(f.detection.jurisdiction, set()).add(f.detection.provider_id)
-    lines = ["flowchart LR", f"  app([{_mlabel('Your application')}])"]
+    lines = ["flowchart LR", f"  app([{_mlabel(app_label)}])"]
     for j, pids in by_j.items():
         js = j.replace("-", "_")
         lines.append(f"  subgraph j_{js}[{_mlabel(j)}]")  # zone titled by the jurisdiction code
