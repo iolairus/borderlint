@@ -1,0 +1,5 @@
+{
+  "endpoints": {
+    "llm-sz.acme.cn": "CN-GBA"
+  }
+}
