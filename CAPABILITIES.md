@@ -1,6 +1,6 @@
 # borderlint — Capability Set
 
-> **Status:** shipped — v0.11.0. The full P1 (MVP) and most of P2 are built and tested; the
+> **Status:** shipped — v0.12.0. The full P1 (MVP) and most of P2 are built and tested; the
 > capability map below tracks actual state (✅ shipped · next · later), not the original plan.
 
 ## 1. Purpose
@@ -123,7 +123,7 @@ asserts the classification, and borderlint governs the resulting flows.
 
 ## 5. Capability map
 
-Status: **✅** = shipped (v0.11.0) · **next** = planned next · **later** = deferred. The full P1
+Status: **✅** = shipped (v0.12.0) · **next** = planned next · **later** = deferred. The full P1
 MVP and most of P2 have shipped; the remaining work is re-tiered into next/later below.
 
 ### A. Detection — *find every AI data flow*
