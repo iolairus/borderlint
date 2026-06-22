@@ -9,7 +9,14 @@ import subprocess
 
 JURIS = {"us": "United States", "eu": "European Union", "cn": "Mainland China", "hk": "Hong Kong",
          "sg": "Singapore", "gb": "United Kingdom", "mo": "Macao", "my": "Malaysia",
-         "CN-GBA": "Mainland GBA", "GBA": "Greater Bay Area", "unknown": "Unknown (region-dependent)"}
+         "ru": "Russia", "in": "India", "fr": "France", "nl": "Netherlands", "de": "Germany",
+         "be": "Belgium", "ch": "Switzerland", "it": "Italy", "es": "Spain", "fi": "Finland",
+         "pl": "Poland", "se": "Sweden", "no": "Norway", "ie": "Ireland", "jp": "Japan",
+         "kr": "South Korea", "tw": "Taiwan", "au": "Australia", "ca": "Canada", "br": "Brazil",
+         "cl": "Chile", "id": "Indonesia", "th": "Thailand", "il": "Israel", "ae": "UAE",
+         "qa": "Qatar", "sa": "Saudi Arabia", "za": "South Africa",
+         "CN-GBA": "Mainland GBA", "GBA": "Greater Bay Area", "local": "Local",
+         "unknown": "Unknown (region-dependent)"}
 REASON = {"denied_provider": "provider denied by policy",
           "residency": "jurisdiction outside the allow-list for this data class",
           "unknown": "jurisdiction could not be determined"}

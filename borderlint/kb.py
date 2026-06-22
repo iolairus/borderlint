@@ -36,6 +36,22 @@ _AZURE_REGION = {
     "chinaeast": "cn", "chinaeast2": "cn", "chinanorth": "cn", "chinanorth2": "cn", "chinanorth3": "cn",
 }
 
+# GCP regions in a Vertex AI host: <region>-aiplatform.googleapis.com ; multi-region aiplatform.<us|eu>.rep...
+_GCP_RE = re.compile(r"\b([a-z]+-[a-z]+\d+)-aiplatform\.googleapis\.com")
+_GCP_MULTI_RE = re.compile(r"\baiplatform\.(us|eu)\.rep\.googleapis\.com")
+_GCP_REGION = {
+    "us-central1": "us", "us-east1": "us", "us-east4": "us", "us-east5": "us", "us-west1": "us",
+    "us-west4": "us", "us-south1": "us", "northamerica-northeast1": "ca", "northamerica-northeast2": "ca",
+    "southamerica-east1": "br", "southamerica-west1": "cl", "europe-west1": "be", "europe-west2": "gb",
+    "europe-west3": "de", "europe-west4": "nl", "europe-west6": "ch", "europe-west8": "it",
+    "europe-west9": "fr", "europe-west12": "it", "europe-central2": "pl", "europe-north1": "fi",
+    "europe-southwest1": "es", "asia-east1": "tw", "asia-east2": "hk", "asia-northeast1": "jp",
+    "asia-northeast2": "jp", "asia-northeast3": "kr", "asia-south1": "in", "asia-south2": "in",
+    "asia-southeast1": "sg", "asia-southeast2": "id", "australia-southeast1": "au",
+    "australia-southeast2": "au", "me-west1": "il", "me-central1": "qa", "me-central2": "sa",
+    "africa-south1": "za",
+}
+
 
 def _region_jurisdiction(text: str, scheme: str):
     if scheme == "aws":
@@ -47,6 +63,12 @@ def _region_jurisdiction(text: str, scheme: str):
     if scheme == "azure":
         m = _AZURE_RE.search(text)
         return _AZURE_REGION.get(m.group(1)) if m else None
+    if scheme == "gcp":
+        m = _GCP_RE.search(text)
+        if m:
+            return _GCP_REGION.get(m.group(1))
+        mr = _GCP_MULTI_RE.search(text)
+        return mr.group(1) if mr else None  # global aiplatform.googleapis.com -> None -> default unknown
     return None
 
 
