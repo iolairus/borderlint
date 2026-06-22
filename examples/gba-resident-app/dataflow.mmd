@@ -1,0 +1,22 @@
+flowchart LR
+  app(["gba-resident-app@v0.12.1"])
+  subgraph j_CN_GBA["CN-GBA"]
+    internal_endpoint__CN_GBA["Internal endpoint"]
+  end
+  app --> internal_endpoint__CN_GBA
+  subgraph j_cn["cn"]
+    deepseek__cn["DeepSeek"]
+  end
+  app --> deepseek__cn
+  subgraph j_local["local"]
+    local__local["Local inference"]
+  end
+  app --> local__local
+  subgraph j_us["us"]
+    openai__us["OpenAI"]
+  end
+  app --> openai__us
+  subgraph j_unknown["unknown"]
+    custom_endpoint__unknown["Custom / OpenAI-compatible endpoint"]
+  end
+  app --> custom_endpoint__unknown
