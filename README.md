@@ -103,16 +103,17 @@ borderlint scan examples/gba-resident-app \
 ```
 
 The same scan renders to a data-flow map grouped by jurisdiction — Mermaid source in
-[`dataflow.mmd`](examples/gba-resident-app/dataflow.mmd), rendered to PNG:
+[`dataflow.mmd`](https://github.com/iolairus/borderlint/blob/main/examples/gba-resident-app/dataflow.mmd),
+rendered to PNG:
 
-![borderlint AI data-flow map for the GBA-resident sample app, grouped by jurisdiction](examples/gba-resident-app/dataflow.png)
+![borderlint AI data-flow map for the GBA-resident sample app, grouped by jurisdiction](https://raw.githubusercontent.com/iolairus/borderlint/main/examples/gba-resident-app/dataflow.png)
 
 ## CI
 
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v1.0.0
+- uses: iolairus/borderlint@v1.0.1
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -123,7 +124,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v1.0.0
+  rev: v1.0.1
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
