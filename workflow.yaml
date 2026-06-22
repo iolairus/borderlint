@@ -2,8 +2,8 @@
 # Tool-agnostic: any agent (opencode, Claude Code, etc.) can read this file.
 
 git:
-  main_branch: main            # release branch — protected, never worked on directly
-  integration_branch: develop  # PRs target this branch (git-flow)
+  main_branch: main            # release + integration branch — work via feature branch + PR
+  integration_branch: main     # PRs target main; this repo has no separate develop branch
   branch_prefix: feature/
   # Branch naming: if the change is linked to a backlog task with a real Jira
   # key, branches are <prefix><task-id>-<change-name>
