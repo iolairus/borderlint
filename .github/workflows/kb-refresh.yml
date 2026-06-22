@@ -12,8 +12,8 @@ jobs:
   drift:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - id: drift
@@ -21,7 +21,7 @@ jobs:
           python3 scripts/kb_drift.py > gap.txt || true
           echo "count=$(wc -l < gap.txt)" >> "$GITHUB_OUTPUT"
       - if: steps.drift.outputs.count != '0'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
