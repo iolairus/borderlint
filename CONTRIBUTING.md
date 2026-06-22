@@ -30,7 +30,7 @@ Each object in the `providers` array:
 | `npm` | no | string[] | JS/TS package names, e.g. `["@anthropic-ai/sdk"]`. Matched on import/require and `pkg/<sub>`. |
 | `endpoints` | no | string[] | Host substrings that identify the provider in code/config, e.g. `["api.openai.com"]`. |
 | `endpoint_jurisdictions` | no | object | Per-host override of `jurisdiction`, e.g. `{"dashscope-intl.aliyuncs.com": "sg"}`. |
-| `region_scheme` | no | `"aws"` \| `"azure"` | The host carries the cloud region; borderlint resolves the region → jurisdiction (e.g. `bedrock-runtime.ap-east-1…` → `hk`). |
+| `region_scheme` | no | `"aws"` \| `"azure"` \| `"gcp"` | The host carries the cloud region; borderlint resolves the region → jurisdiction (e.g. `bedrock-runtime.ap-east-1…` and `asia-east2-aiplatform.googleapis.com` → `hk`). |
 
 Omit a field rather than setting it empty. At least one of `sdks`, `npm`, or `endpoints` should
 be present, or the entry can never match.

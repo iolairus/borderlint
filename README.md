@@ -51,16 +51,18 @@ Macao)*, PIPL cross-border, or GDPR SCCs — as reference links. (`home_regime`
 - **Languages:** Python (AST) and TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
   plus endpoint references in config/text files and **OpenAI-compatible `/v1/chat/completions` calls**
   — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
-- **Providers:** 20+ across the east-west boundary (OpenAI, Anthropic, Google, Azure, Bedrock,
-  Mistral, Cohere, Cerebras, Fireworks, DeepInfra, Baseten, fal, FriendliAI, Databricks + Tencent,
-  Alibaba, DeepSeek, Moonshot, Zhipu, Baidu), with Python and JS/TS package names and the
-  **Vercel AI SDK** (`@ai-sdk/*`).
+- **Providers:** 40+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
+  AI**), Azure, Bedrock, Mistral, Cohere, Groq, Together, Perplexity, xAI, Cerebras, Fireworks,
+  Replicate, SambaNova, Meta Llama + **Tencent, Alibaba, DeepSeek, Moonshot, Zhipu/Z.ai, Baidu,
+  Volcengine, MiniMax**, plus **GigaChat (RU), Sarvam (IN), Scaleway & OVHcloud (FR/EU)** — with
+  Python and JS/TS package names and the **Vercel AI SDK** (`@ai-sdk/*`).
 - **Vector stores (data sinks):** Pinecone, Weaviate Cloud, Qdrant Cloud, Zilliz/Milvus — flagged
   as `vector_store` and governed for residency (region is per-cluster, so default `unknown`).
-- **Aggregators:** litellm, langchain, LlamaIndex, aisuite, Vercel AI core (`ai`) → `unknown`
-  (runtime-routed), so `on_unknown: fail` blocks them for sensitive classes.
-- **Jurisdictions:** ccTLD/ISO codes + `CN-GBA` / `GBA`; **AWS/Azure region resolved from the
-  endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` → `hk`).
+- **Aggregators:** litellm, langchain, LlamaIndex, aisuite, OpenRouter, Vercel AI core & Gateway →
+  `unknown` (runtime-routed), so `on_unknown: fail` blocks them for sensitive classes.
+- **Jurisdictions:** ccTLD/ISO codes + `CN-GBA` / `GBA`; **AWS / Azure / GCP-Vertex region resolved
+  from the endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` and
+  `asia-east2-aiplatform.googleapis.com` → `hk`).
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
   failure set, declared home regime.
 - **Regimes & arrangements:** home location `hk`/`mo`/`CN-GBA` → PDPO / Macao PDPA / PIPL tags, linked to

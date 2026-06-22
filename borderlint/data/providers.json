@@ -3,7 +3,8 @@
   "providers": [
     {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "npm": ["openai", "@ai-sdk/openai"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
     {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "npm": ["@anthropic-ai/sdk", "@ai-sdk/anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
-    {"id": "google_gemini", "name": "Google Gemini", "sdks": ["google.generativeai", "google.genai"], "npm": ["@google/generative-ai", "@google/genai", "@ai-sdk/google", "@ai-sdk/google-vertex"], "endpoints": ["generativelanguage.googleapis.com"], "jurisdiction": "us"},
+    {"id": "google_gemini", "name": "Google Gemini", "sdks": ["google.generativeai", "google.genai"], "npm": ["@google/generative-ai", "@google/genai", "@ai-sdk/google"], "endpoints": ["generativelanguage.googleapis.com"], "jurisdiction": "us"},
+    {"id": "vertex_ai", "name": "Google Vertex AI", "sdks": ["vertexai", "google.cloud.aiplatform"], "npm": ["@ai-sdk/google-vertex"], "endpoints": ["aiplatform.googleapis.com", "aiplatform.us.rep.googleapis.com", "aiplatform.eu.rep.googleapis.com"], "jurisdiction": "unknown", "region_scheme": "gcp", "note": "region is in the host: <region>-aiplatform.googleapis.com (or aiplatform.<us|eu>.rep...); the global endpoint carries no region"},
     {"id": "azure_openai", "name": "Azure OpenAI", "sdks": [], "npm": ["@azure/openai", "@ai-sdk/azure"], "endpoints": ["openai.azure.com", "api.cognitive.microsoft.com", "inference.ai.azure.com"], "jurisdiction": "unknown", "region_scheme": "azure", "note": "regional hosts (<region>.api.cognitive.microsoft.com, *.<region>.inference.ai.azure.com) resolve; the standard openai.azure.com does not carry a region"},
     {"id": "aws_bedrock", "name": "AWS Bedrock", "sdks": [], "npm": ["@aws-sdk/client-bedrock-runtime", "@ai-sdk/amazon-bedrock"], "endpoints": ["bedrock-runtime"], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region is in the host: bedrock-runtime.<region>.amazonaws.com"},
     {"id": "mistral", "name": "Mistral AI", "sdks": ["mistralai"], "npm": ["@mistralai/mistralai", "@ai-sdk/mistral"], "endpoints": ["api.mistral.ai"], "jurisdiction": "eu"},
@@ -19,8 +20,30 @@
     {"id": "tencent_hunyuan", "name": "Tencent Hunyuan", "sdks": ["tencentcloud"], "npm": [], "endpoints": ["hunyuan.tencentcloudapi.com"], "jurisdiction": "cn"},
     {"id": "alibaba_dashscope", "name": "Alibaba DashScope", "sdks": ["dashscope"], "npm": [], "endpoints": ["dashscope-intl.aliyuncs.com", "dashscope.aliyuncs.com"], "jurisdiction": "cn", "endpoint_jurisdictions": {"dashscope-intl.aliyuncs.com": "sg"}},
     {"id": "moonshot", "name": "Moonshot (Kimi)", "sdks": [], "npm": [], "endpoints": ["api.moonshot.cn"], "jurisdiction": "cn"},
-    {"id": "zhipu", "name": "Zhipu GLM", "sdks": ["zhipuai"], "npm": [], "endpoints": ["open.bigmodel.cn"], "jurisdiction": "cn"},
+    {"id": "zhipu", "name": "Zhipu GLM / Z.ai", "sdks": ["zhipuai"], "npm": [], "endpoints": ["open.bigmodel.cn", "api.z.ai"], "jurisdiction": "cn", "note": "api.z.ai is the international Zhipu endpoint; its cloud API is subject to Chinese law"},
     {"id": "baidu_ernie", "name": "Baidu ERNIE", "sdks": [], "npm": [], "endpoints": ["aip.baidubce.com"], "jurisdiction": "cn"},
+    {"id": "volcengine", "name": "Volcengine Ark (Doubao)", "sdks": ["volcenginesdkarkruntime"], "npm": [], "endpoints": ["volces.com"], "jurisdiction": "cn", "note": "ByteDance; host carries the region, e.g. ark.cn-beijing.volces.com"},
+    {"id": "minimax", "name": "MiniMax", "sdks": [], "npm": [], "endpoints": ["api.minimaxi.com", "api.minimax.io"], "jurisdiction": "cn", "endpoint_jurisdictions": {"api.minimax.io": "unknown"}, "note": "api.minimaxi.com = China; api.minimax.io = international, data location undocumented"},
+
+    {"id": "groq", "name": "Groq", "sdks": ["groq"], "npm": ["groq-sdk", "@ai-sdk/groq"], "endpoints": ["api.groq.com"], "jurisdiction": "us"},
+    {"id": "together_ai", "name": "Together AI", "sdks": ["together"], "npm": ["together-ai", "@ai-sdk/togetherai"], "endpoints": ["api.together.xyz", "api.together.ai"], "jurisdiction": "us"},
+    {"id": "perplexity", "name": "Perplexity", "sdks": [], "npm": ["@ai-sdk/perplexity"], "endpoints": ["api.perplexity.ai"], "jurisdiction": "us"},
+    {"id": "xai", "name": "xAI (Grok)", "sdks": ["xai_sdk"], "npm": ["@ai-sdk/xai"], "endpoints": ["api.x.ai"], "jurisdiction": "us"},
+    {"id": "sambanova", "name": "SambaNova", "sdks": [], "npm": [], "endpoints": ["api.sambanova.ai"], "jurisdiction": "us"},
+    {"id": "replicate", "name": "Replicate", "sdks": ["replicate"], "npm": ["replicate"], "endpoints": ["api.replicate.com"], "jurisdiction": "us"},
+    {"id": "anyscale", "name": "Anyscale", "sdks": [], "npm": [], "endpoints": ["api.endpoints.anyscale.com"], "jurisdiction": "us"},
+    {"id": "meta_llama", "name": "Meta Llama API", "sdks": [], "npm": [], "endpoints": ["api.llama.com"], "jurisdiction": "us"},
+    {"id": "hyperbolic", "name": "Hyperbolic", "sdks": [], "npm": [], "endpoints": ["api.hyperbolic.xyz"], "jurisdiction": "us"},
+
+    {"id": "gigachat", "name": "GigaChat (Sber)", "sdks": ["gigachat"], "npm": [], "endpoints": ["gigachat.devices.sberbank.ru", "giga.chat"], "jurisdiction": "ru", "note": "hosted on Sberbank infrastructure in Russia"},
+    {"id": "sarvam", "name": "Sarvam AI", "sdks": ["sarvamai"], "npm": [], "endpoints": ["api.sarvam.ai"], "jurisdiction": "in", "note": "India sovereign AI; data residency in India"},
+    {"id": "scaleway", "name": "Scaleway Generative APIs", "sdks": [], "npm": [], "endpoints": ["api.scaleway.ai"], "jurisdiction": "fr", "note": "hosted in Paris, France (OPCORE)"},
+    {"id": "ovhcloud", "name": "OVHcloud AI Endpoints", "sdks": [], "npm": [], "endpoints": ["ai.cloud.ovh.net"], "jurisdiction": "fr", "note": "EU/France-hosted; GDPR"},
+
+    {"id": "nebius", "name": "Nebius AI Studio", "sdks": [], "npm": [], "endpoints": ["api.studio.nebius.com", "api.studio.nebius.ai"], "jurisdiction": "unknown", "note": "EU (Finland/France) or US data centers, chosen per deployment; not in the host"},
+    {"id": "novita", "name": "Novita AI", "sdks": [], "npm": [], "endpoints": ["api.novita.ai"], "jurisdiction": "unknown", "note": "global multi-region infrastructure; HQ US + Singapore entity"},
+    {"id": "nvidia_nim", "name": "NVIDIA NIM", "sdks": [], "npm": [], "endpoints": ["integrate.api.nvidia.com"], "jurisdiction": "unknown", "endpoint_jurisdictions": {"integrate.api.nvidia.com": "us"}, "note": "hosted catalog = US DGX Cloud; NIM is often self-hosted (default unknown)"},
+    {"id": "ollama", "name": "Ollama (local)", "sdks": ["ollama"], "npm": ["ollama"], "endpoints": [], "jurisdiction": "local", "note": "local-first inference server (localhost by default)"},
 
     {"id": "pinecone", "name": "Pinecone", "category": "vector_store", "sdks": ["pinecone"], "npm": ["@pinecone-database/pinecone"], "endpoints": ["pinecone.io"], "jurisdiction": "unknown", "note": "vector cluster region is chosen per index; not resolvable from the host"},
     {"id": "weaviate", "name": "Weaviate Cloud", "category": "vector_store", "sdks": ["weaviate"], "npm": ["weaviate-client", "weaviate-ts-client"], "endpoints": ["weaviate.cloud", "weaviate.network"], "jurisdiction": "unknown", "note": "cluster region chosen at creation; SDK may also target a self-hosted instance"},
@@ -34,6 +57,8 @@
     {"id": "langchain", "name": "LangChain (router)", "category": "aggregator", "sdks": ["langchain", "langchain_openai", "langchain_anthropic", "langchain_community", "langchain_google_genai", "langchain_aws", "langchain_mistralai"], "npm": ["langchain", "@langchain/openai", "@langchain/anthropic", "@langchain/community", "@langchain/google-genai", "@langchain/aws", "@langchain/mistralai"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
     {"id": "llama_index", "name": "LlamaIndex (router)", "category": "aggregator", "sdks": ["llama_index"], "npm": ["llamaindex"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
     {"id": "aisuite", "name": "aisuite (router)", "category": "aggregator", "sdks": ["aisuite"], "npm": ["aisuite"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
-    {"id": "vercel_ai", "name": "Vercel AI SDK (router)", "category": "aggregator", "sdks": [], "npm": ["ai"], "endpoints": [], "jurisdiction": "unknown", "note": "provider-agnostic core; the @ai-sdk/<provider> adapter package determines the provider"}
+    {"id": "vercel_ai", "name": "Vercel AI SDK (router)", "category": "aggregator", "sdks": [], "npm": ["ai"], "endpoints": [], "jurisdiction": "unknown", "note": "provider-agnostic core; the @ai-sdk/<provider> adapter package determines the provider"},
+    {"id": "openrouter", "name": "OpenRouter (router)", "category": "aggregator", "sdks": [], "npm": ["@openrouter/ai-sdk-provider"], "endpoints": ["openrouter.ai"], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
+    {"id": "vercel_ai_gateway", "name": "Vercel AI Gateway (router)", "category": "aggregator", "sdks": [], "npm": [], "endpoints": ["ai-gateway.vercel.sh"], "jurisdiction": "unknown", "note": "router/gateway; destination chosen at runtime"}
   ]
 }

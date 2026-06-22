@@ -626,3 +626,30 @@ def test_oversized_file_is_skipped():
     assert len(big.encode()) > MAX_FILE_BYTES
     assert _scan_file(big, ".py") == []                       # skipped: nothing detected
     assert {d.provider_id for d in _scan_file('import openai\n', ".py")} == {"openai"}  # normal still scans
+
+
+def test_vertex_ai_gcp_region_resolution():
+    # Vertex region lives in the host (like Bedrock/Azure); the global endpoint carries none.
+    r = {h: kb.match_endpoint(h) for h in [
+        "asia-east2-aiplatform.googleapis.com", "europe-west4-aiplatform.googleapis.com",
+        "us-central1-aiplatform.googleapis.com", "aiplatform.googleapis.com",
+        "aiplatform.eu.rep.googleapis.com"]}
+    assert r["asia-east2-aiplatform.googleapis.com"] == ("vertex_ai", "aiplatform.googleapis.com", "hk")
+    assert r["europe-west4-aiplatform.googleapis.com"][2] == "nl"
+    assert r["us-central1-aiplatform.googleapis.com"][2] == "us"
+    assert r["aiplatform.googleapis.com"][2] == "unknown"            # global endpoint -> unknown
+    assert r["aiplatform.eu.rep.googleapis.com"][2] == "eu"          # multi-region rep host
+
+
+def test_drift_providers_resolve():
+    assert kb.match_endpoint("gigachat.devices.sberbank.ru")[2] == "ru"
+    assert kb.match_endpoint("api.sarvam.ai")[2] == "in"
+    assert kb.match_endpoint("api.scaleway.ai")[2] == "fr"
+    assert kb.match_endpoint("ark.cn-beijing.volces.com")[0:1] + (kb.match_endpoint("ark.cn-beijing.volces.com")[2],) == ("volcengine", "cn")
+    assert kb.match_sdk("ollama") == "ollama" and kb.default_jurisdiction("ollama") == "local"
+    assert kb.match_endpoint("https://max.ai/v1") is None            # x.ai host must not false-match
+
+
+def test_minimax_split_endpoints():
+    assert kb.match_endpoint("api.minimaxi.com")[2] == "cn"          # China endpoint
+    assert kb.match_endpoint("api.minimax.io")[2] == "unknown"       # intl endpoint, DC undocumented
