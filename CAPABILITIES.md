@@ -229,7 +229,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 
 ## 9. MVP cut (delivered)
 **The MVP was** A1–A3, B1–B3, C1–C4, D1–D3, E1–E2, F1–F3 — a genuinely useful, shippable
-tool, a residency‑aware AI data‑flow scanner with an east‑west KB, built in a focused weekend. The east-west **jurisdiction model** (B6) — discrete HK / CN / **CN-GBA** / MO entities and the **GBA** zone with zone-aware residency (C8) — shipped in the MVP; the named **GBA Standard Contract** arrangement (C9) shipped shortly after.
+tool: a residency‑aware AI data‑flow scanner with an east‑west KB. The east-west **jurisdiction model** (B6) — discrete HK / CN / **CN-GBA** / MO entities and the **GBA** zone with zone-aware residency (C8) — shipped in the MVP; the named **GBA Standard Contract** arrangement (C9) shipped as a follow-on.
 
 In short, **v1 solves it for a HK/GBA company**: detect AI flows, classify each flow to a country code (ccTLD) plus the CN-GBA / GBA tokens, and check them against an HK/GBA-centric residency policy tied to your declared regime (PDPO for HK, PIPL for GBA/Mainland) — not a global residency solver.
 
