@@ -68,7 +68,8 @@ Macao)*, PIPL cross-border, or GDPR SCCs — as reference links, never adjudicat
 ## Scope
 
 For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: vector-DB / storage residency, a pre-commit
-hook, CycloneDX / SPDX SBOM export, and optional LLM enrichment. Full roadmap in `CAPABILITIES.md`.
+hook, CycloneDX / SPDX SBOM export, and optional LLM enrichment. Per-capability status — shipped vs.
+next vs. later — is tracked in [`CAPABILITIES.md`](CAPABILITIES.md).
 
 ## Internal endpoints
 
