@@ -617,3 +617,12 @@ def test_category_in_output_does_not_change_verdict():
     assert "(vector store)" in text(f, kb)                   # text annotates the sink
     assert _json.loads(as_json(f, kb))["findings"][0]["category"] == "vector_store"
     assert _json.loads(sbom(f, kb))["components"][0]["category"] == "vector_store"
+
+
+def test_oversized_file_is_skipped():
+    # A file over the cap is excluded (memory-exhaustion guard); a normal file is still scanned.
+    from borderlint.detect import MAX_FILE_BYTES
+    big = 'import openai\n' + ('# ' + 'x' * 80 + '\n') * ((MAX_FILE_BYTES // 82) + 1)
+    assert len(big.encode()) > MAX_FILE_BYTES
+    assert _scan_file(big, ".py") == []                       # skipped: nothing detected
+    assert {d.provider_id for d in _scan_file('import openai\n', ".py")} == {"openai"}  # normal still scans
