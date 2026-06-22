@@ -1,7 +1,7 @@
 # borderlint — Capability Set
 
-> **Status:** scoping document (no code yet). This defines *what borderlint should do* before
-> anything is built. Review, cut, add, and re-phase freely.
+> **Status:** shipped — v0.10.1. The full P1 (MVP) and most of P2 are built and tested; the
+> capability map below tracks actual state (✅ shipped · next · later), not the original plan.
 
 ## 1. Purpose
 
@@ -123,82 +123,83 @@ asserts the classification, and borderlint governs the resulting flows.
 
 ## 5. Capability map
 
-Phases: **P1** = MVP · **P2** = next · **P3** = later. Tune these.
+Status: **✅** = shipped (v0.10.1) · **next** = planned next · **later** = deferred. The full P1
+MVP and most of P2 have shipped; the remaining work is re-tiered into next/later below.
 
 ### A. Detection — *find every AI data flow*
-| # | Capability | Phase |
+| # | Capability | Status |
 |---|---|---|
-| A1 | Detect AI provider **SDK imports** in Python (AST) | P1 |
-| A2 | Detect AI provider **endpoint/base‑URL references** in Python string literals | P1 |
-| A3 | Scan **config/text files** (`.env`, `.yaml`, `.toml`, `.json`, `.ini`) for endpoint hosts | P1 |
-| A4 | Scan **TypeScript / JavaScript** (regex imports; tree‑sitter only if precision demands) | P2 |
-| A5 | Detect **vector DBs / data sinks** that imply cross‑border storage (Pinecone, etc.) | P2 |
-| A6 | Detect **observability/telemetry** endpoints that exfiltrate prompts/traces | P3 |
-| A7 | Detect **MCP servers / agent tool endpoints** by jurisdiction | P3 |
+| A1 | Detect AI provider **SDK imports** in Python (AST) | ✅ |
+| A2 | Detect AI provider **endpoint/base‑URL references** in Python string literals | ✅ |
+| A3 | Scan **config/text files** (`.env`, `.yaml`, `.toml`, `.json`, `.ini`) for endpoint hosts | ✅ |
+| A4 | Scan **TypeScript / JavaScript** (regex imports; tree‑sitter only if precision demands) | ✅ |
+| A5 | Detect **vector DBs / data sinks** that imply cross‑border storage (Pinecone, etc.) | next |
+| A6 | Detect **observability/telemetry** endpoints that exfiltrate prompts/traces | later |
+| A7 | Detect **MCP servers / agent tool endpoints** by jurisdiction | later |
 
 ### B. Classification — *locate each flow*
-| # | Capability | Phase |
+| # | Capability | Status |
 |---|---|---|
-| B1 | Map provider → **jurisdiction** via bundled knowledge base | P1 |
-| B2 | Honour **region‑specific endpoints** (e.g. `dashscope-intl` → SG vs `dashscope` → CN) | P1 |
-| B3 | Mark **region‑in‑endpoint** providers (Azure OpenAI, Bedrock) as *Unknown* with guidance | P1 |
-| B4 | Resolve **Azure/Bedrock region** from the endpoint host when present | P2 |
-| B5 | Tag flows with the **v1 regimes** — PDPO (HK), PIPL (Mainland/GBA), GBA scheme — relevant to the declared home base | P2 |
-| B6 | Resolve flows to **country codes (ccTLD/ISO)** + special tokens **CN-GBA** / **GBA**; **deny-by-default** for codes not on the policy list | P1 |
+| B1 | Map provider → **jurisdiction** via bundled knowledge base | ✅ |
+| B2 | Honour **region‑specific endpoints** (e.g. `dashscope-intl` → SG vs `dashscope` → CN) | ✅ |
+| B3 | Mark **region‑in‑endpoint** providers (Azure OpenAI, Bedrock) as *Unknown* with guidance | ✅ |
+| B4 | Resolve **Azure/Bedrock region** from the endpoint host when present | ✅ |
+| B5 | Tag flows with the **v1 regimes** — PDPO (HK), PIPL (Mainland/GBA), GBA scheme — relevant to the declared home base | ✅ |
+| B6 | Resolve flows to **country codes (ccTLD/ISO)** + special tokens **CN-GBA** / **GBA**; **deny-by-default** for codes not on the policy list | ✅ |
 ### C. Policy & governance — *decide what's allowed*
-| # | Capability | Phase |
+| # | Capability | Status |
 |---|---|---|
-| C1 | **Classification-keyed JSON policy** (the eval set): each data class → acceptable jurisdictions | P1 |
-| C2 | Provider **allow / deny lists** | P1 |
-| C3 | Configurable handling of **unknown jurisdiction** (`warn` \| `fail`) | P1 |
-| C4 | Configurable **`fail_on`** set (which findings break the build) | P1 |
-| C5 | **Inline annotations / waivers** to accept a specific flow with justification | P2 |
-| C6 | **Data‑class‑aware** rules (e.g. "personal data must stay in HK/SG", other data freer) | P1 |
-| C7 | Org‑level **shared/base policies** that repos extend | P3 |
-| C8 | Residency targets may be **discrete entities or zones** (e.g. `allow: [HK, GBA]`) | P1 |
-| C9 | Surface **relevant arrangement reference links** for a flagged flow as *context* — e.g. **GBA Standard Contract**; reference only, not enforced (applicability depends on the user's home jurisdiction & data scope) | P2 |
-| C10 | Declare **home base / regime** — HK·PDPO or GBA/Mainland·PIPL — so defaults & surfaced references adapt | P1 |
+| C1 | **Classification-keyed JSON policy** (the eval set): each data class → acceptable jurisdictions | ✅ |
+| C2 | Provider **allow / deny lists** | ✅ |
+| C3 | Configurable handling of **unknown jurisdiction** (`warn` \| `fail`) | ✅ |
+| C4 | Configurable **`fail_on`** set (which findings break the build) | ✅ |
+| C5 | **Inline annotations / waivers** to accept a specific flow with justification | ✅ |
+| C6 | **Data‑class‑aware** rules (e.g. "personal data must stay in HK/SG", other data freer) | ✅ |
+| C7 | Org‑level **shared/base policies** that repos extend | later |
+| C8 | Residency targets may be **discrete entities or zones** (e.g. `allow: [HK, GBA]`) | ✅ |
+| C9 | Surface **relevant arrangement reference links** for a flagged flow as *context* — e.g. **GBA Standard Contract**; reference only, not enforced (applicability depends on the user's home jurisdiction & data scope) | ✅ |
+| C10 | Declare **home base / regime** — HK·PDPO or GBA/Mainland·PIPL — so defaults & surfaced references adapt | ✅ |
 
 ### D. Reporting & output
-| # | Capability | Phase |
+| # | Capability | Status |
 |---|---|---|
-| D1 | Human‑readable **CLI report** grouped by provider + jurisdiction | P1 |
-| D2 | **JSON** output for tooling | P1 |
-| D3 | **Mermaid** data‑flow map (app → providers, by jurisdiction) | P1 |
-| D4 | **SARIF** output (surfaces in GitHub code‑scanning) | P2 |
-| D5 | **Inventory / "AI data‑flow SBOM"** export | P2 |
-| D6 | Diff mode: *what new cross‑border flows did this PR introduce?* | P3 |
+| D1 | Human‑readable **CLI report** grouped by provider + jurisdiction | ✅ |
+| D2 | **JSON** output for tooling | ✅ |
+| D3 | **Mermaid** data‑flow map (app → providers, by jurisdiction) | ✅ |
+| D4 | **SARIF** output (surfaces in GitHub code‑scanning) | ✅ |
+| D5 | **Inventory / "AI data‑flow SBOM"** export | ✅ |
+| D6 | Diff mode: *what new cross‑border flows did this PR introduce?* | ✅ |
 
 ### E. Integration
-| # | Capability | Phase |
+| # | Capability | Status |
 |---|---|---|
-| E1 | `borderlint scan <path>` CLI with non‑zero **exit code** on violations | P1 |
-| E2 | Zero‑config **inventory mode** when no policy file is present | P1 |
-| E3 | Ready‑made **GitHub Action** | P2 |
-| E4 | **pre‑commit** hook | P2 |
-| E5 | GitLab CI / generic CI recipes | P3 |
-| E6 | Per-run **`--classification`** input (the data class on the scanned path) | P1 |
-| E7 | **Supply-chain / container scan mode** (JFrog-style SCA of dependencies & images) | P3 |
+| E1 | `borderlint scan <path>` CLI with non‑zero **exit code** on violations | ✅ |
+| E2 | Zero‑config **inventory mode** when no policy file is present | ✅ |
+| E3 | Ready‑made **GitHub Action** | ✅ |
+| E4 | **pre‑commit** hook | next |
+| E5 | GitLab CI / generic CI recipes (GitHub Actions + Jenkins recipes shipped; GitLab pending) | next |
+| E6 | Per-run **`--classification`** input (the data class on the scanned path) | ✅ |
+| E7 | **Supply-chain / container scan mode** (JFrog-style SCA of dependencies & images) | later |
 
 ### F. Knowledge base — *the crown jewel*
-| # | Capability | Phase |
+| # | Capability | Status |
 |---|---|---|
-| F1 | Bundled provider KB: SDKs, endpoints, jurisdictions (US/EU/CN/HK/SG/UK/…) | P1 |
-| F2 | Broad **east‑west coverage**: OpenAI, Anthropic, Google, Azure, Bedrock, Mistral, Cohere + **Tencent Hunyuan, Alibaba Qwen/DashScope, DeepSeek, Moonshot, Zhipu, Baidu** | P1 |
-| F3 | **User‑supplied / override** KB (`--providers custom.yaml`) | P1 |
-| F4 | Community contribution workflow (add a provider via PR) | P2 |
-| F5 | Versioned KB with provenance/date stamps | P3 |
-| F6 | **Arrangements reference list** — links + one-line summaries of cross-border schemes (GBA Standard Contract; PIPL standard contract; GDPR SCCs / adequacy). Reference only — no enforcement logic | P2 |
+| F1 | Bundled provider KB: SDKs, endpoints, jurisdictions (US/EU/CN/HK/SG/UK/…) | ✅ |
+| F2 | Broad **east‑west coverage**: OpenAI, Anthropic, Google, Azure, Bedrock, Mistral, Cohere + **Tencent Hunyuan, Alibaba Qwen/DashScope, DeepSeek, Moonshot, Zhipu, Baidu** | ✅ |
+| F3 | **User‑supplied / override** KB (`--providers custom.json`) | ✅ |
+| F4 | Community contribution workflow (add a provider via PR) | next |
+| F5 | Versioned KB with provenance/date stamps | ✅ |
+| F6 | **Arrangements reference list** — links + one-line summaries of cross-border schemes (GBA Standard Contract; PIPL standard contract; GDPR SCCs / adequacy). Reference only — no enforcement logic | ✅ |
 
 ### G. Optional AI enrichment *(uses spare Claude capacity; never required)*
-| # | Capability | Phase |
+| # | Capability | Status |
 |---|---|---|
-| G1 | Classify "does this payload likely carry **personal data**?" | P2 |
-| G2 | Plain‑language **explanation + remediation** hint per violation | P2 |
-| G3 | Suggest a starter **policy** from a repo's current flows | P3 |
+| G1 | Classify "does this payload likely carry **personal data**?" | later |
+| G2 | Plain‑language **explanation + remediation** hint per violation | next |
+| G3 | Suggest a starter **policy** from a repo's current flows | later |
 
 ### H. Companion (separate repo, same family)
-| # | Capability | Phase |
+| # | Capability | Status |
 |---|---|---|
 | H1 | **borderlint‑bench** — living eval: *do frontier models honour the residency & tool‑scope constraints you set?* | later |
 
