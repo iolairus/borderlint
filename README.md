@@ -107,7 +107,7 @@ borderlint scan examples/gba-resident-app \
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v0.12.0
+- uses: iolairus/borderlint@v0.12.1
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -117,7 +117,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v0.12.0
+  rev: v0.12.1
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
