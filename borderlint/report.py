@@ -185,8 +185,13 @@ def _manifest(root: str):
 
 def _git_tag(root: str):
     try:  # best-effort: git absent / not a repo / no tags / timeout -> None, never fails the scan
-        r = subprocess.run(["git", "-C", root, "describe", "--tags", "--abbrev=0"],
-                           capture_output=True, text=True, timeout=2)
+        # The scanned repo may be untrusted; -c overrides neutralise its .git/config (a malicious
+        # core.fsmonitor / hooksPath is an RCE vector). GIT_OPTIONAL_LOCKS=0 avoids index writes.
+        r = subprocess.run(
+            ["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+             "-C", root, "describe", "--tags", "--abbrev=0"],
+            capture_output=True, text=True, timeout=2,
+            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
         out = r.stdout.strip()
         return out if r.returncode == 0 and out else None
     except Exception:
