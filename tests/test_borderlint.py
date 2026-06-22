@@ -580,3 +580,13 @@ def test_mermaid_multi_jurisdiction_provider():
     assert 'subgraph j_us["us"]' in out and 'subgraph j_de["de"]' in out   # zones titled by code
     assert "aws_bedrock__us[" in out and "aws_bedrock__de[" in out          # distinct node per zone
     assert "app --> aws_bedrock__us" in out and "app --> aws_bedrock__de" in out  # an edge to each
+
+
+def test_precommit_hook_definition():
+    # The hook wraps `borderlint scan` and must NOT pass pre-commit's staged-file list — borderlint
+    # resolves/de-dups at directory granularity (ci-integration spec: "scans the path, not the list").
+    import os
+    txt = open(os.path.join(os.path.dirname(__file__), "..", ".pre-commit-hooks.yaml"), encoding="utf-8").read()
+    assert "id: borderlint" in txt
+    assert "entry: borderlint scan" in txt
+    assert "pass_filenames: false" in txt

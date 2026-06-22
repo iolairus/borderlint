@@ -176,7 +176,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | E1 | `borderlint scan <path>` CLI with non‑zero **exit code** on violations | ✅ |
 | E2 | Zero‑config **inventory mode** when no policy file is present | ✅ |
 | E3 | Ready‑made **GitHub Action** | ✅ |
-| E4 | **pre‑commit** hook | next |
+| E4 | **pre‑commit** hook | ✅ |
 | E5 | GitLab CI / generic CI recipes (GitHub Actions + Jenkins recipes shipped; GitLab pending) | next |
 | E6 | Per-run **`--classification`** input (the data class on the scanned path) | ✅ |
 | E7 | **Supply-chain / container scan mode** (JFrog-style SCA of dependencies & images) | later |
@@ -187,7 +187,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | F1 | Bundled provider KB: SDKs, endpoints, jurisdictions (US/EU/CN/HK/SG/UK/…) | ✅ |
 | F2 | Broad **east‑west coverage**: OpenAI, Anthropic, Google, Azure, Bedrock, Mistral, Cohere + **Tencent Hunyuan, Alibaba Qwen/DashScope, DeepSeek, Moonshot, Zhipu, Baidu** | ✅ |
 | F3 | **User‑supplied / override** KB (`--providers custom.json`) | ✅ |
-| F4 | Community contribution workflow (add a provider via PR) | next |
+| F4 | Community contribution workflow (add a provider via PR) | ✅ |
 | F5 | Versioned KB with provenance/date stamps | ✅ |
 | F6 | **Arrangements reference list** — links + one-line summaries of cross-border schemes (GBA Standard Contract; PIPL standard contract; GDPR SCCs / adequacy). Reference only — no enforcement logic | ✅ |
 
