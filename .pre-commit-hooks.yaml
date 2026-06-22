@@ -1,0 +1,9 @@
+- id: borderlint
+  name: borderlint
+  description: Map and govern where your AI data flows against a residency policy.
+  entry: borderlint scan
+  language: python
+  # Scan the configured path (repo root by default), not pre-commit's staged-file list:
+  # borderlint resolves and de-duplicates flows at directory granularity.
+  pass_filenames: false
+  require_serial: true
