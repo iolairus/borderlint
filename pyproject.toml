@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "borderlint"
-version = "0.10.1"
+version = "0.11.0"
 description = "Map and govern where your AI data and traffic flow — east-west / APAC lens."
 readme = "README.md"
 license = "MIT"
