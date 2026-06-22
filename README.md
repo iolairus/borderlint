@@ -51,9 +51,12 @@ Macao)*, PIPL cross-border, or GDPR SCCs — as reference links, never adjudicat
 - **Languages:** Python (AST) and TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
   plus endpoint references in config/text files and **OpenAI-compatible `/v1/chat/completions` calls**
   — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
-- **Providers:** 13+ across the east-west boundary (OpenAI, Anthropic, Google, Azure, Bedrock,
-  Mistral, Cohere + Tencent, Alibaba, DeepSeek, Moonshot, Zhipu, Baidu), with Python and JS/TS
-  package names and the **Vercel AI SDK** (`@ai-sdk/*`).
+- **Providers:** 20+ across the east-west boundary (OpenAI, Anthropic, Google, Azure, Bedrock,
+  Mistral, Cohere, Cerebras, Fireworks, DeepInfra, Baseten, fal, FriendliAI, Databricks + Tencent,
+  Alibaba, DeepSeek, Moonshot, Zhipu, Baidu), with Python and JS/TS package names and the
+  **Vercel AI SDK** (`@ai-sdk/*`).
+- **Vector stores (data sinks):** Pinecone, Weaviate Cloud, Qdrant Cloud, Zilliz/Milvus — flagged
+  as `vector_store` and governed for residency (region is per-cluster, so default `unknown`).
 - **Aggregators:** litellm, langchain, LlamaIndex, aisuite, Vercel AI core (`ai`) → `unknown`
   (runtime-routed), so `on_unknown: fail` blocks them for sensitive classes.
 - **Jurisdictions:** ccTLD/ISO codes + `CN-GBA` / `GBA`; **AWS/Azure region resolved from the
@@ -67,9 +70,9 @@ Macao)*, PIPL cross-border, or GDPR SCCs — as reference links, never adjudicat
 
 ## Scope
 
-For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: vector-DB / storage residency, CycloneDX /
-SPDX SBOM export, and optional LLM enrichment. Per-capability status — shipped vs. next vs. later — is
-tracked in [`CAPABILITIES.md`](CAPABILITIES.md).
+For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: CycloneDX / SPDX SBOM export and optional
+LLM enrichment. Per-capability status — shipped vs. next vs. later — is tracked in
+[`CAPABILITIES.md`](CAPABILITIES.md).
 
 ## Internal endpoints
 

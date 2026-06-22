@@ -590,3 +590,30 @@ def test_precommit_hook_definition():
     assert "id: borderlint" in txt
     assert "entry: borderlint scan" in txt
     assert "pass_filenames: false" in txt
+
+
+def test_vector_store_detection():
+    # A managed vector DBaaS import is detected as a data sink: category vector_store, jurisdiction unknown.
+    d = {x.provider_id: x for x in dets('import pinecone\nimport qdrant_client\n')}
+    assert d["pinecone"].jurisdiction == "unknown" and kb.category("pinecone") == "vector_store"
+    assert d["qdrant"].jurisdiction == "unknown" and kb.category("qdrant") == "vector_store"
+    assert kb.category("openai") == "inference"  # default for an inference provider
+
+
+def test_new_inference_providers_resolve():
+    by = {d.provider_id: d.jurisdiction for d in dets(
+        'import cerebras\nimport baseten\na = "https://api.fireworks.ai/inference/v1"\n')}
+    assert by["cerebras"] == "us"
+    assert by["baseten"] == "us"
+    assert by["fireworks_ai"] == "us"
+
+
+def test_category_in_output_does_not_change_verdict():
+    from borderlint.report import as_json, sbom, text
+    import json as _json
+    # Same flow scanned with on_unknown warn -> a vector store resolves unknown but must not fail.
+    f = evaluate(dets('import pinecone\n'), _pol(["hk"], on_unknown="warn"), "customer-pii", kb)
+    assert all(x.severity != "fail" for x in f)              # category doesn't gate; unknown+warn -> warn
+    assert "(vector store)" in text(f, kb)                   # text annotates the sink
+    assert _json.loads(as_json(f, kb))["findings"][0]["category"] == "vector_store"
+    assert _json.loads(sbom(f, kb))["components"][0]["category"] == "vector_store"
