@@ -67,9 +67,9 @@ Macao)*, PIPL cross-border, or GDPR SCCs — as reference links, never adjudicat
 
 ## Scope
 
-For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: vector-DB / storage residency, a pre-commit
-hook, CycloneDX / SPDX SBOM export, and optional LLM enrichment. Per-capability status — shipped vs.
-next vs. later — is tracked in [`CAPABILITIES.md`](CAPABILITIES.md).
+For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: vector-DB / storage residency, CycloneDX /
+SPDX SBOM export, and optional LLM enrichment. Per-capability status — shipped vs. next vs. later — is
+tracked in [`CAPABILITIES.md`](CAPABILITIES.md).
 
 ## Internal endpoints
 
@@ -110,11 +110,25 @@ Same command in any pipeline. GitHub Actions (composite action):
 
 Jenkins / anything else: `pip install borderlint && borderlint scan . --policy residency.json --classification customer-pii` — a non-zero exit fails the stage. Full examples in `examples/ci/`.
 
+pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`):
+
+```yaml
+- repo: https://github.com/iolairus/borderlint
+  rev: v0.10.1
+  hooks:
+    - id: borderlint
+      args: [--policy, residency.json, --classification, customer-pii]
+```
+
+The hook runs `borderlint scan` over the repo (the `args` are required for a real gate; without a
+policy it runs inventory mode and always passes).
+
 ## Keeping the KB fresh
 
 A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) diffs the bundled provider KB against
 litellm's registry and opens an issue listing providers we don't yet cover — jurisdictions are
 assigned **by hand**, never auto-merged. `borderlint --version` shows the KB's last-reviewed date.
+To add or correct a provider, see [`CONTRIBUTING.md`](CONTRIBUTING.md) (KB schema + PR workflow).
 
 ## Development
 
