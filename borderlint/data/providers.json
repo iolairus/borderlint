@@ -13,7 +13,7 @@
     {"id": "deepinfra", "name": "DeepInfra", "sdks": [], "npm": ["@ai-sdk/deepinfra"], "endpoints": ["api.deepinfra.com"], "jurisdiction": "us"},
     {"id": "fal_ai", "name": "fal", "sdks": ["fal_client"], "npm": ["@fal-ai/client", "@ai-sdk/fal"], "endpoints": ["fal.run", "fal.ai"], "jurisdiction": "us"},
     {"id": "baseten", "name": "Baseten", "sdks": ["baseten"], "npm": [], "endpoints": ["baseten.co"], "jurisdiction": "us"},
-    {"id": "friendliai", "name": "FriendliAI", "sdks": ["friendli"], "npm": ["@friendliai/ai-provider"], "endpoints": ["friendli.ai"], "jurisdiction": "us", "note": "serverless endpoint is US-served; dedicated deployments may sit elsewhere"},
+    {"id": "friendliai", "name": "FriendliAI", "sdks": ["friendli"], "npm": ["@friendliai/ai-provider"], "endpoints": ["friendli.ai"], "jurisdiction": "unknown", "note": "multi-cloud, multi-region by design; serverless region not fixed or documented (HQ US + South Korea)"},
     {"id": "databricks", "name": "Databricks", "sdks": ["databricks"], "npm": [], "endpoints": ["cloud.databricks.com", "azuredatabricks.net", "gcp.databricks.com"], "jurisdiction": "unknown", "note": "model-serving region = the workspace's cloud region; not resolvable from the host"},
     {"id": "deepseek", "name": "DeepSeek", "sdks": [], "npm": ["@ai-sdk/deepseek"], "endpoints": ["api.deepseek.com"], "jurisdiction": "cn"},
     {"id": "tencent_hunyuan", "name": "Tencent Hunyuan", "sdks": ["tencentcloud"], "npm": [], "endpoints": ["hunyuan.tencentcloudapi.com"], "jurisdiction": "cn"},
