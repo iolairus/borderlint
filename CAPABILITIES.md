@@ -133,7 +133,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | A2 | Detect AI provider **endpoint/base‑URL references** in Python string literals | ✅ |
 | A3 | Scan **config/text files** (`.env`, `.yaml`, `.toml`, `.json`, `.ini`) for endpoint hosts | ✅ |
 | A4 | Scan **TypeScript / JavaScript** (regex imports; tree‑sitter only if precision demands) | ✅ |
-| A5 | Detect **vector DBs / data sinks** that imply cross‑border storage (Pinecone, etc.) | next |
+| A5 | Detect **vector DBs / data sinks** that imply cross‑border storage (Pinecone, etc.) | ✅ |
 | A6 | Detect **observability/telemetry** endpoints that exfiltrate prompts/traces | later |
 | A7 | Detect **MCP servers / agent tool endpoints** by jurisdiction | later |
 

@@ -8,19 +8,32 @@
     {"id": "aws_bedrock", "name": "AWS Bedrock", "sdks": [], "npm": ["@aws-sdk/client-bedrock-runtime", "@ai-sdk/amazon-bedrock"], "endpoints": ["bedrock-runtime"], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region is in the host: bedrock-runtime.<region>.amazonaws.com"},
     {"id": "mistral", "name": "Mistral AI", "sdks": ["mistralai"], "npm": ["@mistralai/mistralai", "@ai-sdk/mistral"], "endpoints": ["api.mistral.ai"], "jurisdiction": "eu"},
     {"id": "cohere", "name": "Cohere", "sdks": ["cohere"], "npm": ["cohere-ai", "@ai-sdk/cohere"], "endpoints": ["api.cohere.com", "api.cohere.ai"], "jurisdiction": "us"},
+    {"id": "cerebras", "name": "Cerebras", "sdks": ["cerebras", "cerebras_cloud_sdk"], "npm": ["@cerebras/cerebras_cloud_sdk", "@ai-sdk/cerebras"], "endpoints": ["api.cerebras.ai"], "jurisdiction": "us"},
+    {"id": "fireworks_ai", "name": "Fireworks AI", "sdks": ["fireworks"], "npm": ["@ai-sdk/fireworks"], "endpoints": ["api.fireworks.ai"], "jurisdiction": "us"},
+    {"id": "deepinfra", "name": "DeepInfra", "sdks": [], "npm": ["@ai-sdk/deepinfra"], "endpoints": ["api.deepinfra.com"], "jurisdiction": "us"},
+    {"id": "fal_ai", "name": "fal", "sdks": ["fal_client"], "npm": ["@fal-ai/client", "@ai-sdk/fal"], "endpoints": ["fal.run", "fal.ai"], "jurisdiction": "us"},
+    {"id": "baseten", "name": "Baseten", "sdks": ["baseten"], "npm": [], "endpoints": ["baseten.co"], "jurisdiction": "us"},
+    {"id": "friendliai", "name": "FriendliAI", "sdks": ["friendli"], "npm": ["@friendliai/ai-provider"], "endpoints": ["friendli.ai"], "jurisdiction": "us", "note": "serverless endpoint is US-served; dedicated deployments may sit elsewhere"},
+    {"id": "databricks", "name": "Databricks", "sdks": ["databricks"], "npm": [], "endpoints": ["cloud.databricks.com", "azuredatabricks.net", "gcp.databricks.com"], "jurisdiction": "unknown", "note": "model-serving region = the workspace's cloud region; not resolvable from the host"},
     {"id": "deepseek", "name": "DeepSeek", "sdks": [], "npm": ["@ai-sdk/deepseek"], "endpoints": ["api.deepseek.com"], "jurisdiction": "cn"},
     {"id": "tencent_hunyuan", "name": "Tencent Hunyuan", "sdks": ["tencentcloud"], "npm": [], "endpoints": ["hunyuan.tencentcloudapi.com"], "jurisdiction": "cn"},
     {"id": "alibaba_dashscope", "name": "Alibaba DashScope", "sdks": ["dashscope"], "npm": [], "endpoints": ["dashscope-intl.aliyuncs.com", "dashscope.aliyuncs.com"], "jurisdiction": "cn", "endpoint_jurisdictions": {"dashscope-intl.aliyuncs.com": "sg"}},
     {"id": "moonshot", "name": "Moonshot (Kimi)", "sdks": [], "npm": [], "endpoints": ["api.moonshot.cn"], "jurisdiction": "cn"},
     {"id": "zhipu", "name": "Zhipu GLM", "sdks": ["zhipuai"], "npm": [], "endpoints": ["open.bigmodel.cn"], "jurisdiction": "cn"},
     {"id": "baidu_ernie", "name": "Baidu ERNIE", "sdks": [], "npm": [], "endpoints": ["aip.baidubce.com"], "jurisdiction": "cn"},
+
+    {"id": "pinecone", "name": "Pinecone", "category": "vector_store", "sdks": ["pinecone"], "npm": ["@pinecone-database/pinecone"], "endpoints": ["pinecone.io"], "jurisdiction": "unknown", "note": "vector cluster region is chosen per index; not resolvable from the host"},
+    {"id": "weaviate", "name": "Weaviate Cloud", "category": "vector_store", "sdks": ["weaviate"], "npm": ["weaviate-client", "weaviate-ts-client"], "endpoints": ["weaviate.cloud", "weaviate.network"], "jurisdiction": "unknown", "note": "cluster region chosen at creation; SDK may also target a self-hosted instance"},
+    {"id": "qdrant", "name": "Qdrant Cloud", "category": "vector_store", "sdks": ["qdrant_client"], "npm": ["@qdrant/js-client-rest"], "endpoints": ["qdrant.io"], "jurisdiction": "unknown", "note": "cluster region chosen at creation; SDK may also target a self-hosted instance"},
+    {"id": "zilliz_milvus", "name": "Zilliz / Milvus", "category": "vector_store", "sdks": ["pymilvus"], "npm": ["@zilliz/milvus2-sdk-node"], "endpoints": ["zillizcloud.com"], "jurisdiction": "unknown", "note": "Zilliz Cloud cluster region chosen at creation; pymilvus may also target self-hosted Milvus"},
+
     {"id": "local", "name": "Local inference", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "local", "note": "loopback / on-host inference; not a cross-border transfer"},
     {"id": "custom_endpoint", "name": "Custom / OpenAI-compatible endpoint", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "unknown", "note": "host not in the KB; assert its jurisdiction via --providers"},
 
-    {"id": "litellm", "name": "LiteLLM (router)", "kind": "aggregator", "sdks": ["litellm"], "npm": [], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
-    {"id": "langchain", "name": "LangChain (router)", "kind": "aggregator", "sdks": ["langchain", "langchain_openai", "langchain_anthropic", "langchain_community", "langchain_google_genai", "langchain_aws", "langchain_mistralai"], "npm": ["langchain", "@langchain/openai", "@langchain/anthropic", "@langchain/community", "@langchain/google-genai", "@langchain/aws", "@langchain/mistralai"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
-    {"id": "llama_index", "name": "LlamaIndex (router)", "kind": "aggregator", "sdks": ["llama_index"], "npm": ["llamaindex"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
-    {"id": "aisuite", "name": "aisuite (router)", "kind": "aggregator", "sdks": ["aisuite"], "npm": ["aisuite"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
-    {"id": "vercel_ai", "name": "Vercel AI SDK (router)", "kind": "aggregator", "sdks": [], "npm": ["ai"], "endpoints": [], "jurisdiction": "unknown", "note": "provider-agnostic core; the @ai-sdk/<provider> adapter package determines the provider"}
+    {"id": "litellm", "name": "LiteLLM (router)", "category": "aggregator", "sdks": ["litellm"], "npm": [], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
+    {"id": "langchain", "name": "LangChain (router)", "category": "aggregator", "sdks": ["langchain", "langchain_openai", "langchain_anthropic", "langchain_community", "langchain_google_genai", "langchain_aws", "langchain_mistralai"], "npm": ["langchain", "@langchain/openai", "@langchain/anthropic", "@langchain/community", "@langchain/google-genai", "@langchain/aws", "@langchain/mistralai"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
+    {"id": "llama_index", "name": "LlamaIndex (router)", "category": "aggregator", "sdks": ["llama_index"], "npm": ["llamaindex"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
+    {"id": "aisuite", "name": "aisuite (router)", "category": "aggregator", "sdks": ["aisuite"], "npm": ["aisuite"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
+    {"id": "vercel_ai", "name": "Vercel AI SDK (router)", "category": "aggregator", "sdks": [], "npm": ["ai"], "endpoints": [], "jurisdiction": "unknown", "note": "provider-agnostic core; the @ai-sdk/<provider> adapter package determines the provider"}
   ]
 }

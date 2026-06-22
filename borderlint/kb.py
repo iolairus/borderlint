@@ -112,6 +112,10 @@ class KB:
     def default_jurisdiction(self, pid: str) -> str:
         return self.by_id.get(pid, {}).get("jurisdiction", "unknown")
 
+    def category(self, pid: str) -> str:
+        """Provider category: 'inference' (default), 'vector_store', or 'aggregator'."""
+        return self.by_id.get(pid, {}).get("category", "inference")
+
     def match_sdk(self, module: str) -> str | None:
         for _prio, s, pid in self._sdks:
             if module == s or module.startswith(s + "."):
