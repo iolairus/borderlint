@@ -12,6 +12,7 @@ IGNORE = {".git", "node_modules", "__pycache__", ".venv", "venv", "build", "dist
           ".mypy_cache", ".pytest_cache", ".tox", ".ruff_cache"}
 TEXT_EXT = {".env", ".ts", ".tsx", ".js", ".jsx", ".yaml", ".yml", ".toml", ".json", ".ini", ".cfg", ".sh"}
 JS_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
+MAX_FILE_BYTES = 5 * 1024 * 1024  # skip files larger than this; no source file is this big
 
 # AI endpoint declared via a config key or a base_url kwarg — anchored on the key, not the URL,
 # so arbitrary URLs are not flagged. Works across YAML/JSON/TOML and Python/JS code.
@@ -176,6 +177,8 @@ def scan(root, kb) -> list[Detection]:
         if not (is_py or is_js or is_text):
             continue
         try:
+            if p.stat().st_size > MAX_FILE_BYTES:  # don't read a huge file into memory (DoS guard)
+                continue
             src = p.read_text("utf-8", errors="ignore")
         except OSError:
             continue
