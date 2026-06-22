@@ -99,7 +99,8 @@ def text(findings, kb, policy=None) -> str:
         worst = max((f.severity for f in fs), key=lambda s: _RANK[s])
         mark = {"ok": " OK ", "waived": "WAIV", "warn": "WARN", "fail": "FAIL"}[worst]
         js = ", ".join(juris(x) for x in sorted({f.detection.jurisdiction for f in fs}))
-        lines.append(f"[{mark}] {kb.name(pid)} -> {js}")
+        tag = " (vector store)" if kb.category(pid) == "vector_store" else ""
+        lines.append(f"[{mark}] {kb.name(pid)}{tag} -> {js}")
         for f in fs:
             d = f.detection
             lines.append(f"        {d.file}:{d.line} ({d.kind}: {d.evidence})")
@@ -123,6 +124,7 @@ def text(findings, kb, policy=None) -> str:
 def as_json(findings, kb, policy=None) -> str:
     return json.dumps({
         "findings": [{"provider": f.detection.provider_id, "name": kb.name(f.detection.provider_id),
+                      "category": kb.category(f.detection.provider_id),
                       "jurisdiction": f.detection.jurisdiction, "severity": f.severity, "reasons": f.reasons,
                       "kind": f.detection.kind, "evidence": f.detection.evidence,
                       "file": f.detection.file, "line": f.detection.line,
@@ -266,7 +268,7 @@ def sbom(findings, kb, policy=None) -> str:
             ({"file": d.file, "line": d.line, "kind": d.kind, "evidence": d.evidence,
               "jurisdiction": d.jurisdiction} for d in ds),
             key=lambda s: (s["file"], s["line"], s["kind"], s["evidence"]))
-        components.append({"provider": pid, "name": kb.name(pid),
+        components.append({"provider": pid, "name": kb.name(pid), "category": kb.category(pid),
                            "jurisdictions": sorted({d.jurisdiction for d in ds}), "sites": sites})
     return json.dumps({
         "schema": "borderlint.ai-dataflow-sbom/1",
