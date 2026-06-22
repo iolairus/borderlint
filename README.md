@@ -1,9 +1,9 @@
 # borderlint
 
-**Map and govern where your AI data and traffic flow — east-west / APAC lens.**
+**Map and govern where your AI data and traffic flow.**
 
-A static, in-CI check for **HK / GBA entities**: does your AI data stay within the jurisdictions
-your PDPO / PIPL policy allows? borderlint statically scans your repo (**Python and
+A static, in-CI linter, initially for **HK / GBA entities**: does your AI data stay within the
+jurisdictions your PDPO / PIPL policy allows? borderlint statically scans your repo (**Python and
 TypeScript/JavaScript**) for AI provider usage, resolves each flow to a jurisdiction (ccTLD codes
 plus the `CN-GBA` / `GBA` tokens), and fails the build on any flow outside the allow-list for the
 data class you declare. Western and Chinese providers are treated evenly. **Zero runtime dependencies.**
@@ -41,9 +41,9 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 **Deny-by-default**: a flow to any code not on the list for the declared class fails — so `sg` is
 allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA` is shorthand for `hk` +
 `CN-GBA`. Declare your **`home_location`** (`hk`, `mo`, or `CN-GBA`) and a flagged flow is tagged with
-the **data-protection regimes** in play (PDPO / **Macao PDPA** / PIPL) and the relevant **cross-border
+the **data-protection regimes** in play (HK PDPO / Macao PDPA / CN PIPL) and the relevant **cross-border
 arrangement** — the matching GBA Standard Contract variant, *(Mainland, Hong Kong)* or *(Mainland,
-Macao)*, PIPL cross-border, or GDPR SCCs — as reference links, never adjudicated. (`home_regime`
+Macao)*, PIPL cross-border, or GDPR SCCs — as reference links. (`home_regime`
 `pdpo`/`pipl` is still accepted.)
 
 ## Capabilities
@@ -64,15 +64,15 @@ Macao)*, PIPL cross-border, or GDPR SCCs — as reference links, never adjudicat
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
   failure set, declared home regime.
 - **Regimes & arrangements:** home location `hk`/`mo`/`CN-GBA` → PDPO / Macao PDPA / PIPL tags, linked to
-  the matching GBA Standard Contract (HK or Macao), PIPL cross-border, or GDPR SCCs — reference only.
-- **Output & CI:** text / JSON / Mermaid / **SARIF** / **SBOM**, an SBOM **`diff`** gate for new
+  the matching GBA Standard Contract (GBA to/from HK or Macao), PIPL cross-border, or GDPR SCCs — reference only.
+- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM, an SBOM **`diff`** gate for new
   egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
 
 ## Scope
 
-For HK / GBA home bases under PDPO / PIPL / GBA. Not yet: CycloneDX / SPDX SBOM export and optional
-LLM enrichment. Per-capability status — shipped vs. next vs. later — is tracked in
-[`CAPABILITIES.md`](CAPABILITIES.md).
+For HK / CN / GBA / MO home bases under PDPO / PIPL / GBA / PDPA. Not yet: other jurisdictions;
+CycloneDX / SPDX SBOM export and optional LLM enrichment. Per-capability status — shipped vs. next
+vs. later — is tracked in [`CAPABILITIES.md`](CAPABILITIES.md).
 
 ## Internal endpoints
 
@@ -87,7 +87,7 @@ entries win on conflict):
 borderlint scan . --providers internal-endpoints.json --policy residency.json --classification customer-pii
 ```
 
-A configuration wired to the **wrong regional endpoint** — e.g. the CN endpoint for HK/SG-only
+A configuration wired to the **wrong regional endpoint** — e.g. the CN endpoint for HK-only
 customer PII — then fails the build, so you can't ship a service pointed at the wrong region.
 
 A runnable end-to-end example is in [`examples/gba-resident-app/`](examples/gba-resident-app/) — a
@@ -102,6 +102,11 @@ borderlint scan examples/gba-resident-app \
   --policy examples/gba-resident-app/residency-hk.json --classification customer-pii
 ```
 
+The same scan renders to a data-flow map grouped by jurisdiction — Mermaid source in
+[`dataflow.mmd`](examples/gba-resident-app/dataflow.mmd), rendered to PNG:
+
+![borderlint AI data-flow map for the GBA-resident sample app, grouped by jurisdiction](examples/gba-resident-app/dataflow.png)
+
 ## CI
 
 Same command in any pipeline. GitHub Actions (composite action):
@@ -111,7 +116,8 @@ Same command in any pipeline. GitHub Actions (composite action):
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
-Jenkins / anything else: `pip install borderlint && borderlint scan . --policy residency.json --classification customer-pii` — a non-zero exit fails the stage. Full examples in `examples/ci/`.
+Jenkins / anything else: `pip install borderlint && borderlint scan . --policy residency.json
+--classification customer-pii` — a non-zero exit fails the stage. Full examples in `examples/ci/`.
 
 pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`):
 
