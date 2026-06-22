@@ -112,7 +112,7 @@ The same scan renders to a data-flow map grouped by jurisdiction — Mermaid sou
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v0.12.1
+- uses: iolairus/borderlint@v1.0.0
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -123,7 +123,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v0.12.1
+  rev: v1.0.0
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
