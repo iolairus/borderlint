@@ -1,5 +1,8 @@
-name: borderlint
+name: borderlint AI Data-Residency Lint
 description: Map and govern where your AI data and traffic flow against a residency policy.
+branding:
+  icon: map
+  color: blue
 inputs:
   path:
     description: Path to scan
