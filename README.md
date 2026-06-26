@@ -1,5 +1,7 @@
 # borderlint
 
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-borderlint-2188ff?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/borderlint-ai-data-residency-lint)
+
 **Map and govern where your AI data and traffic flow.**
 
 A static, in-CI linter, initially for **HK / GBA entities**: does your AI data stay within the
