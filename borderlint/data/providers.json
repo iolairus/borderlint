@@ -1,5 +1,5 @@
 {
-  "updated": "2026-06-22",
+  "updated": "2026-06-29",
   "providers": [
     {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "npm": ["openai", "@ai-sdk/openai"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
     {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "npm": ["@anthropic-ai/sdk", "@ai-sdk/anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
@@ -24,7 +24,6 @@
     {"id": "baidu_ernie", "name": "Baidu ERNIE", "sdks": [], "npm": [], "endpoints": ["aip.baidubce.com"], "jurisdiction": "cn"},
     {"id": "volcengine", "name": "Volcengine Ark (Doubao)", "sdks": ["volcenginesdkarkruntime"], "npm": [], "endpoints": ["volces.com"], "jurisdiction": "cn", "note": "ByteDance; host carries the region, e.g. ark.cn-beijing.volces.com"},
     {"id": "minimax", "name": "MiniMax", "sdks": [], "npm": [], "endpoints": ["api.minimaxi.com", "api.minimax.io"], "jurisdiction": "cn", "endpoint_jurisdictions": {"api.minimax.io": "unknown"}, "note": "api.minimaxi.com = China; api.minimax.io = international, data location undocumented"},
-
     {"id": "groq", "name": "Groq", "sdks": ["groq"], "npm": ["groq-sdk", "@ai-sdk/groq"], "endpoints": ["api.groq.com"], "jurisdiction": "us"},
     {"id": "together_ai", "name": "Together AI", "sdks": ["together"], "npm": ["together-ai", "@ai-sdk/togetherai"], "endpoints": ["api.together.xyz", "api.together.ai"], "jurisdiction": "us"},
     {"id": "perplexity", "name": "Perplexity", "sdks": [], "npm": ["@ai-sdk/perplexity"], "endpoints": ["api.perplexity.ai"], "jurisdiction": "us"},
@@ -34,31 +33,56 @@
     {"id": "anyscale", "name": "Anyscale", "sdks": [], "npm": [], "endpoints": ["api.endpoints.anyscale.com"], "jurisdiction": "us"},
     {"id": "meta_llama", "name": "Meta Llama API", "sdks": [], "npm": [], "endpoints": ["api.llama.com"], "jurisdiction": "us"},
     {"id": "hyperbolic", "name": "Hyperbolic", "sdks": [], "npm": [], "endpoints": ["api.hyperbolic.xyz"], "jurisdiction": "us"},
-
     {"id": "gigachat", "name": "GigaChat (Sber)", "sdks": ["gigachat"], "npm": [], "endpoints": ["gigachat.devices.sberbank.ru", "giga.chat"], "jurisdiction": "ru", "note": "hosted on Sberbank infrastructure in Russia"},
     {"id": "sarvam", "name": "Sarvam AI", "sdks": ["sarvamai"], "npm": [], "endpoints": ["api.sarvam.ai"], "jurisdiction": "in", "note": "India sovereign AI; data residency in India"},
     {"id": "scaleway", "name": "Scaleway Generative APIs", "sdks": [], "npm": [], "endpoints": ["api.scaleway.ai"], "jurisdiction": "fr", "note": "hosted in Paris, France (OPCORE)"},
     {"id": "ovhcloud", "name": "OVHcloud AI Endpoints", "sdks": [], "npm": [], "endpoints": ["ai.cloud.ovh.net"], "jurisdiction": "fr", "note": "EU/France-hosted; GDPR"},
-
     {"id": "nebius", "name": "Nebius AI Studio", "sdks": [], "npm": [], "endpoints": ["api.studio.nebius.com", "api.studio.nebius.ai"], "jurisdiction": "unknown", "note": "EU (Finland/France) or US data centers, chosen per deployment; not in the host"},
     {"id": "novita", "name": "Novita AI", "sdks": [], "npm": [], "endpoints": ["api.novita.ai"], "jurisdiction": "unknown", "note": "global multi-region infrastructure; HQ US + Singapore entity"},
     {"id": "nvidia_nim", "name": "NVIDIA NIM", "sdks": [], "npm": [], "endpoints": ["integrate.api.nvidia.com"], "jurisdiction": "unknown", "endpoint_jurisdictions": {"integrate.api.nvidia.com": "us"}, "note": "hosted catalog = US DGX Cloud; NIM is often self-hosted (default unknown)"},
     {"id": "ollama", "name": "Ollama (local)", "sdks": ["ollama"], "npm": ["ollama"], "endpoints": [], "jurisdiction": "local", "note": "local-first inference server (localhost by default)"},
-
     {"id": "pinecone", "name": "Pinecone", "category": "vector_store", "sdks": ["pinecone"], "npm": ["@pinecone-database/pinecone"], "endpoints": ["pinecone.io"], "jurisdiction": "unknown", "note": "vector cluster region is chosen per index; not resolvable from the host"},
     {"id": "weaviate", "name": "Weaviate Cloud", "category": "vector_store", "sdks": ["weaviate"], "npm": ["weaviate-client", "weaviate-ts-client"], "endpoints": ["weaviate.cloud", "weaviate.network"], "jurisdiction": "unknown", "note": "cluster region chosen at creation; SDK may also target a self-hosted instance"},
     {"id": "qdrant", "name": "Qdrant Cloud", "category": "vector_store", "sdks": ["qdrant_client"], "npm": ["@qdrant/js-client-rest"], "endpoints": ["qdrant.io"], "jurisdiction": "unknown", "note": "cluster region chosen at creation; SDK may also target a self-hosted instance"},
     {"id": "zilliz_milvus", "name": "Zilliz / Milvus", "category": "vector_store", "sdks": ["pymilvus"], "npm": ["@zilliz/milvus2-sdk-node"], "endpoints": ["zillizcloud.com"], "jurisdiction": "unknown", "note": "Zilliz Cloud cluster region chosen at creation; pymilvus may also target self-hosted Milvus"},
-
     {"id": "local", "name": "Local inference", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "local", "note": "loopback / on-host inference; not a cross-border transfer"},
     {"id": "custom_endpoint", "name": "Custom / OpenAI-compatible endpoint", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "unknown", "note": "host not in the KB; assert its jurisdiction via --providers"},
-
     {"id": "litellm", "name": "LiteLLM (router)", "category": "aggregator", "sdks": ["litellm"], "npm": [], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
     {"id": "langchain", "name": "LangChain (router)", "category": "aggregator", "sdks": ["langchain", "langchain_openai", "langchain_anthropic", "langchain_community", "langchain_google_genai", "langchain_aws", "langchain_mistralai"], "npm": ["langchain", "@langchain/openai", "@langchain/anthropic", "@langchain/community", "@langchain/google-genai", "@langchain/aws", "@langchain/mistralai"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
     {"id": "llama_index", "name": "LlamaIndex (router)", "category": "aggregator", "sdks": ["llama_index"], "npm": ["llamaindex"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
     {"id": "aisuite", "name": "aisuite (router)", "category": "aggregator", "sdks": ["aisuite"], "npm": ["aisuite"], "endpoints": [], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
     {"id": "vercel_ai", "name": "Vercel AI SDK (router)", "category": "aggregator", "sdks": [], "npm": ["ai"], "endpoints": [], "jurisdiction": "unknown", "note": "provider-agnostic core; the @ai-sdk/<provider> adapter package determines the provider"},
     {"id": "openrouter", "name": "OpenRouter (router)", "category": "aggregator", "sdks": [], "npm": ["@openrouter/ai-sdk-provider"], "endpoints": ["openrouter.ai"], "jurisdiction": "unknown", "note": "multi-provider router; destination chosen at runtime"},
-    {"id": "vercel_ai_gateway", "name": "Vercel AI Gateway (router)", "category": "aggregator", "sdks": [], "npm": [], "endpoints": ["ai-gateway.vercel.sh"], "jurisdiction": "unknown", "note": "router/gateway; destination chosen at runtime"}
+    {"id": "vercel_ai_gateway", "name": "Vercel AI Gateway (router)", "category": "aggregator", "sdks": [], "npm": [], "endpoints": ["ai-gateway.vercel.sh"], "jurisdiction": "unknown", "note": "router/gateway; destination chosen at runtime"},
+    {"id": "ai21", "name": "AI21 Labs", "sdks": ["ai21"], "npm": [], "endpoints": ["api.ai21.com"], "jurisdiction": "il"},
+    {"id": "black_forest_labs", "name": "Black Forest Labs", "sdks": [], "npm": ["@ai-sdk/black-forest-labs"], "endpoints": ["api.bfl.ai", "api.us.bfl.ai", "api.eu.bfl.ai"], "jurisdiction": "de", "endpoint_jurisdictions": {"api.us.bfl.ai": "us", "api.eu.bfl.ai": "eu"}, "note": "Freiburg, Germany; api.bfl.ai is global, api.us/eu.bfl.ai are regional"},
+    {"id": "stability", "name": "Stability AI", "sdks": ["stability_sdk"], "npm": [], "endpoints": ["api.stability.ai"], "jurisdiction": "gb"},
+    {"id": "runwayml", "name": "Runway", "sdks": ["runwayml"], "npm": ["@runwayml/sdk"], "endpoints": ["api.dev.runwayml.com", "api.runwayml.com"], "jurisdiction": "us"},
+    {"id": "recraft", "name": "Recraft", "sdks": [], "npm": [], "endpoints": ["external.api.recraft.ai"], "jurisdiction": "us", "note": "image generation; SF (some legacy London refs)"},
+    {"id": "inception", "name": "Inception Labs", "sdks": [], "npm": [], "endpoints": ["api.inceptionlabs.ai"], "jurisdiction": "us", "note": "Mercury diffusion LLM"},
+    {"id": "v0", "name": "Vercel v0", "sdks": [], "npm": [], "endpoints": ["api.v0.dev"], "jurisdiction": "us"},
+    {"id": "jina_ai", "name": "Jina AI", "sdks": [], "npm": [], "endpoints": ["api.jina.ai"], "jurisdiction": "de", "note": "Berlin HQ; R&D also in China"},
+    {"id": "nlp_cloud", "name": "NLP Cloud", "sdks": ["nlpcloud"], "npm": [], "endpoints": ["api.nlpcloud.io"], "jurisdiction": "fr"},
+    {"id": "voyage", "name": "Voyage AI", "sdks": ["voyageai"], "npm": [], "endpoints": ["api.voyageai.com"], "jurisdiction": "us", "note": "embeddings/rerank (MongoDB)"},
+    {"id": "github_copilot", "name": "GitHub Models / Copilot", "sdks": [], "npm": [], "endpoints": ["models.github.ai", "api.githubcopilot.com"], "jurisdiction": "us", "note": "Microsoft/GitHub"},
+    {"id": "gmi", "name": "GMI Cloud", "sdks": [], "npm": [], "endpoints": ["api.gmi-serving.com"], "jurisdiction": "us", "note": "Mountain View HQ; multi-region DCs"},
+    {"id": "featherless_ai", "name": "Featherless AI", "sdks": [], "npm": [], "endpoints": ["api.featherless.ai"], "jurisdiction": "us"},
+    {"id": "lambda_ai", "name": "Lambda", "sdks": [], "npm": [], "endpoints": ["api.lambda.ai"], "jurisdiction": "us"},
+    {"id": "crusoe", "name": "Crusoe", "sdks": [], "npm": [], "endpoints": ["api.crusoe.ai"], "jurisdiction": "us"},
+    {"id": "wandb", "name": "Weights & Biases Inference", "sdks": [], "npm": [], "endpoints": ["inference.wandb.ai"], "jurisdiction": "us"},
+    {"id": "gradient_ai", "name": "DigitalOcean Gradient", "sdks": [], "npm": [], "endpoints": ["do-ai.run"], "jurisdiction": "us", "note": "serverless + agents inference (inference.do-ai.run)"},
+    {"id": "watsonx", "name": "IBM watsonx.ai", "sdks": ["ibm_watsonx_ai"], "npm": [], "endpoints": ["ml.cloud.ibm.com"], "jurisdiction": "unknown", "note": "region in host (<region>.ml.cloud.ibm.com); not resolved -> unknown"},
+    {"id": "oci", "name": "Oracle OCI Generative AI", "sdks": [], "npm": [], "endpoints": ["generativeai."], "jurisdiction": "unknown", "note": "region in host (inference.generativeai.<region>.oci.oraclecloud.com); not resolved -> unknown"},
+    {"id": "cloudflare", "name": "Cloudflare Workers AI", "sdks": [], "npm": [], "endpoints": ["gateway.ai.cloudflare.com"], "jurisdiction": "unknown", "note": "edge inference; location varies"},
+    {"id": "heroku", "name": "Heroku Managed Inference", "sdks": [], "npm": [], "endpoints": ["us.inference.heroku.com", "eu.inference.heroku.com", "inference.heroku.com"], "jurisdiction": "unknown", "endpoint_jurisdictions": {"us.inference.heroku.com": "us", "eu.inference.heroku.com": "eu"}, "note": "us/eu regional endpoints (Salesforce)"},
+    {"id": "nscale", "name": "Nscale", "sdks": [], "npm": [], "endpoints": ["inference.api.nscale.com"], "jurisdiction": "unknown", "note": "UK entity, inference in Norway/EU; not resolvable -> unknown"},
+    {"id": "libertai", "name": "LibertAI", "sdks": [], "npm": [], "endpoints": ["api.libertai.io"], "jurisdiction": "unknown", "note": "decentralized (Aleph); no single jurisdiction"},
+    {"id": "publicai", "name": "Public AI", "sdks": [], "npm": [], "endpoints": ["api.publicai.co"], "jurisdiction": "unknown", "note": "compute pooled across partners/jurisdictions (Apertus)"},
+    {"id": "aiml", "name": "AI/ML API (router)", "category": "aggregator", "sdks": [], "npm": [], "endpoints": ["api.aimlapi.com"], "jurisdiction": "unknown", "note": "multi-model router (Estonia HQ); destination chosen at runtime"},
+    {"id": "elevenlabs", "name": "ElevenLabs", "category": "speech", "sdks": ["elevenlabs"], "npm": [], "endpoints": ["api.elevenlabs.io"], "jurisdiction": "us"},
+    {"id": "deepgram", "name": "Deepgram", "category": "speech", "sdks": ["deepgram"], "npm": ["@deepgram/sdk"], "endpoints": ["api.deepgram.com"], "jurisdiction": "us"},
+    {"id": "assemblyai", "name": "AssemblyAI", "category": "speech", "sdks": ["assemblyai"], "npm": ["assemblyai"], "endpoints": ["api.assemblyai.com"], "jurisdiction": "us"},
+    {"id": "soniox", "name": "Soniox", "category": "speech", "sdks": [], "npm": [], "endpoints": ["api.soniox.com"], "jurisdiction": "us"},
+    {"id": "aws_polly", "name": "Amazon Polly", "category": "speech", "sdks": [], "npm": [], "endpoints": ["polly."], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region in host: polly.<region>.amazonaws.com"}
   ]
 }
