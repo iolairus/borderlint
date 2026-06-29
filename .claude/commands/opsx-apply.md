@@ -67,7 +67,7 @@ Implement tasks from an OpenSpec change.
    - read workflow.yaml to get the git.work_mode
    - if work_mode is feature ask for the jira-id.
    - if work_mode is feature and I am on main or develop, create the feature branch and change to it. 
-   - Show branch name following rule: feature/<change-name> o feature/<jira-id>-<change-name>
+   - Show branch name following rule: feature/<change-name> or feature/<jira-id>-<change-name>
 
 7. **Implement tasks (loop until done or blocked)**
 
