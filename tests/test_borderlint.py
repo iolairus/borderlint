@@ -254,6 +254,22 @@ def test_sarif_waived_suppressed():
     assert waived and waived[0]["level"] == "note"
 
 
+def test_drift26_new_providers_resolve():
+    def res(host):
+        m = kb.match_endpoint(host)
+        return (m[2], kb.category(m[0])) if m else None
+    assert res("api.ai21.com") == ("il", "inference")
+    assert res("api.stability.ai")[0] == "gb" and res("api.nlpcloud.io")[0] == "fr"
+    assert res("api.bfl.ai")[0] == "de"                 # global endpoint -> company seat
+    assert res("api.us.bfl.ai")[0] == "us" and res("api.eu.bfl.ai")[0] == "eu"  # regional split
+    assert res("api.deepgram.com") == ("us", "speech")  # speech category
+    assert res("polly.ap-east-1.amazonaws.com") == ("hk", "speech")  # aws region scheme
+    assert res("us.inference.heroku.com")[0] == "us" and res("inference.heroku.com")[0] == "unknown"
+    assert res("api.aimlapi.com") == ("unknown", "aggregator")
+    assert res("ml.cloud.ibm.com")[0] == "unknown" and res("api.libertai.io")[0] == "unknown"
+    assert kb.match_sdk("voyageai") == "voyage" and kb.match_sdk("elevenlabs") == "elevenlabs"
+
+
 def _ctx(juris, **polkw):
     """A single flagged flow to `juris` -> (findings, parsed JSON report)."""
     import json as _json

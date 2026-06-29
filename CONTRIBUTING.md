@@ -24,7 +24,7 @@ Each object in the `providers` array:
 |---|---|---|---|
 | `id` | yes | string | Stable internal id (snake_case), e.g. `alibaba_dashscope`. |
 | `name` | yes | string | Human-readable name shown in reports. |
-| `category` | no | `inference` \| `vector_store` \| `aggregator` | Provider type; defaults to `inference`. Use `vector_store` for a managed vector DBaaS (data-at-rest sink), `aggregator` for a multi-provider router. Surfaced in text/JSON/SBOM output. |
+| `category` | no | `inference` \| `vector_store` \| `aggregator` \| `speech` | Provider type; defaults to `inference`. Use `vector_store` for a managed vector DBaaS (data-at-rest sink), `aggregator` for a multi-provider router, `speech` for a speech-to-text / text-to-speech API. Surfaced in text/JSON/SBOM output. |
 | `jurisdiction` | yes | string | Default jurisdiction token for the provider (see tokens below). Use `unknown` when the host carries the region (Azure/Bedrock), the cluster region is chosen per-deployment (vector stores), or the provider is an aggregator. |
 | `sdks` | no | string[] | Python import roots, e.g. `["openai"]`. Matched on `import x` / `from x …` and `x.<sub>`. |
 | `npm` | no | string[] | JS/TS package names, e.g. `["@anthropic-ai/sdk"]`. Matched on import/require and `pkg/<sub>`. |
