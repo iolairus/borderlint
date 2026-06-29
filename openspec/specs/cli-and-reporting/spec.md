@@ -70,12 +70,16 @@ For a flagged cross-border flow, the report SHALL surface reference link(s) to t
 cross-border arrangement(s), drawn from a bundled arrangements list — each with a name, a URL, and a
 one-line summary — selected by the flow's jurisdictions and the declared home location or home regime,
 as context only and without adjudicating whether any applies. When a `home_location` is declared, the
-report SHALL surface the GBA Standard Contract variant matching the Special Administrative Region in the
-flow — the (Mainland, Hong Kong) contract for a flow spanning `hk` and `CN-GBA`, and the (Mainland,
-Macao) contract for a flow spanning `mo` and `CN-GBA` (a flow spanning both SARs surfaces both), where a
-flow "spans" the jurisdictions appearing among the home location and the flagged destinations. A plain
-`cn` destination SHALL NOT surface any GBA Standard Contract. When no `home_location` is declared, a
-declared `home_regime` SHALL surface the existing GBA Standard Contract reference exactly as before.
+report SHALL surface the cross-border arrangement reference(s) mapped to that home location in the
+bundled regime map; a home location that maps to no arrangement SHALL surface no home-derived
+reference. The Greater Bay Area facilitation is one such mapping: the report SHALL surface the GBA
+Standard Contract variant matching the Special Administrative Region in the flow — the (Mainland, Hong
+Kong) contract for a flow spanning `hk` and `CN-GBA`, and the (Mainland, Macao) contract for a flow
+spanning `mo` and `CN-GBA` (a flow spanning both SARs surfaces both), where a flow "spans" the
+jurisdictions appearing among the home location and the flagged destinations. A plain `cn` destination
+SHALL NOT surface any GBA Standard Contract. A flagged flow to an EU/EEA jurisdiction SHALL surface the
+GDPR transfers reference. When no `home_location` is declared, a declared `home_regime` SHALL surface
+the existing GBA Standard Contract reference exactly as before.
 
 #### Scenario: A Hong Kong–GBA flow surfaces the GBA Standard Contract
 - **WHEN** a flagged flow crosses between `hk` and `CN-GBA` under a declared home regime
@@ -96,6 +100,10 @@ declared `home_regime` SHALL surface the existing GBA Standard Contract referenc
 #### Scenario: An EU/EEA flow surfaces the GDPR reference
 - **WHEN** a flagged flow resolves to an EU/EEA jurisdiction (the `eu` token or an EU/EEA member country code)
 - **THEN** the report surfaces the GDPR transfers reference
+
+#### Scenario: A home location with no mapped arrangement surfaces none
+- **WHEN** the declared `home_location` maps to no cross-border arrangement in the bundled regime map and a flagged flow resolves to a non-EU/EEA destination
+- **THEN** no home-derived arrangement reference is surfaced and the flow is still reported
 
 ### Requirement: SARIF output
 The CLI SHALL emit findings as SARIF 2.1.0 when SARIF output is requested: a top-level object with
@@ -121,13 +129,14 @@ violation, and SHALL NOT contribute to the failure exit code. In SARIF, a waived
 - **THEN** its SARIF result has `level` `note` and a `suppressions` entry
 
 ### Requirement: Regime tags
-The report SHALL tag a flagged flow with the data-protection regime(s) implicated — drawn from the
-set {PDPO, PIPL, Macao PDPA} — as informational context. When a `home_location` is declared, the tags
-SHALL be derived from the home location and each flagged destination, where `hk` implies PDPO, `mo`
-implies Macao PDPA, and `cn` or `CN-GBA` implies PIPL. When no `home_location` is declared, the tags
-SHALL be derived from the declared `home_regime` and `cn`/`CN-GBA` destinations exactly as before
-(`pdpo` → PDPO, `pipl` or a `cn`/`CN-GBA` destination → PIPL). GDPR is surfaced as an arrangement
-reference only, never as a regime tag.
+The report SHALL tag a flagged flow with the data-protection regime(s) implicated, drawn from the
+bundled regime map, as informational context. When a `home_location` is declared, the tags SHALL be
+derived from the regime mapped to the home location and the regime mapped to each flagged destination;
+a jurisdiction with no mapped regime SHALL contribute no tag. The bundled map includes `hk` → PDPO,
+`mo` → Macao PDPA, and `cn`/`CN-GBA` → PIPL. When no `home_location` is declared, the tags SHALL be
+derived from the declared `home_regime` and `cn`/`CN-GBA` destinations exactly as before (`pdpo` →
+PDPO, `pipl` or a `cn`/`CN-GBA` destination → PIPL). GDPR is surfaced as an arrangement reference only,
+never as a regime tag.
 
 #### Scenario: HK entity sending to Mainland China
 - **WHEN** the declared home regime is `pdpo` and a flagged flow resolves to `cn` or `CN-GBA`
@@ -140,6 +149,10 @@ reference only, never as a regime tag.
 #### Scenario: A Macao destination implies the Macao regime
 - **WHEN** the declared home location is `hk` and a flagged flow resolves to `mo`
 - **THEN** the flow is tagged with PDPO and Macao PDPA
+
+#### Scenario: An unmapped jurisdiction contributes no regime tag
+- **WHEN** the declared home location maps to no regime and a flagged flow resolves to a destination that maps to no regime
+- **THEN** no regime tag is surfaced for that flow
 
 ### Requirement: Context does not change the verdict
 Regime tags and arrangement references SHALL NOT change a finding's severity or the exit code, and
@@ -248,25 +261,6 @@ Only the Mermaid root node is affected; other output formats are unchanged.
 - **WHEN** a resolved name contains a double quote, a `#`, or a newline
 - **THEN** the Mermaid application node label is escaped (`#`→`#35;`, `"`→`#quot;`) and rendered on a single line
 
-### Requirement: Home location within the GBA
-The report SHALL accept an optional `home_location` of `hk`, `mo`, or `CN-GBA` in the policy,
-identifying the entity's seat within the Greater Bay Area, and SHALL derive the home data-protection
-regime from it — `hk` → PDPO, `mo` → Macao PDPA (Law 8/2005), `CN-GBA` → PIPL — and select the GBA
-Standard Contract variant accordingly. When `home_location` is absent, the report SHALL use a declared
-`home_regime` (`pdpo` or `pipl`) with its existing regime-tag and arrangement behaviour unchanged.
-
-#### Scenario: A Macao home location implies the Macao regime and contract
-- **WHEN** the policy declares `home_location` `mo` and a flagged flow resolves to `CN-GBA`
-- **THEN** the flow is tagged Macao PDPA (home) and the report surfaces the (Mainland, Macao) Standard Contract
-
-#### Scenario: home_regime pdpo is unchanged
-- **WHEN** the policy declares `home_regime` `pdpo` and no `home_location`
-- **THEN** regime tags and arrangement references behave as before — PDPO home, the GBA Standard Contract for a `CN-GBA` flow
-
-#### Scenario: home_regime pipl is unchanged
-- **WHEN** the policy declares `home_regime` `pipl` and no `home_location`, and a flagged flow resolves to `CN-GBA`
-- **THEN** regime tags and arrangement references behave as before — a PIPL tag and the existing GBA Standard Contract reference
-
 ### Requirement: Provider category in output
 
 Reports SHALL surface a provider's category so a data-at-rest sink is distinguishable from an
@@ -287,4 +281,30 @@ pass/fail verdict.
 - **WHEN** the same flows are scanned
 - **THEN** adding the category changes no severity — pass/fail depends only on jurisdiction and
   provider rules
+
+### Requirement: Home location
+The report SHALL accept an optional `home_location` in the policy, expressed as a lowercase
+ccTLD/ISO-3166 country code or a recognised special token, identifying the entity's seat, and SHALL
+derive the home data-protection regime tag and cross-border arrangement reference(s) from the bundled
+regime map. The Greater Bay Area seats `hk`, `mo`, and `CN-GBA` map respectively to PDPO, Macao PDPA,
+and PIPL and select the GBA Standard Contract variant. A `home_location` with no entry in the bundled
+regime map SHALL derive no home regime tag and no home-derived arrangement reference, without failing
+the run. When `home_location` is absent, the report SHALL use a declared `home_regime` (`pdpo` or
+`pipl`) with its existing regime-tag and arrangement behaviour unchanged.
+
+#### Scenario: A Macao home location implies the Macao regime and contract
+- **WHEN** the policy declares `home_location` `mo` and a flagged flow resolves to `CN-GBA`
+- **THEN** the flow is tagged Macao PDPA (home) and the report surfaces the (Mainland, Macao) Standard Contract
+
+#### Scenario: home_regime pdpo is unchanged
+- **WHEN** the policy declares `home_regime` `pdpo` and no `home_location`
+- **THEN** regime tags and arrangement references behave as before — PDPO home, the GBA Standard Contract for a `CN-GBA` flow
+
+#### Scenario: home_regime pipl is unchanged
+- **WHEN** the policy declares `home_regime` `pipl` and no `home_location`, and a flagged flow resolves to `CN-GBA`
+- **THEN** regime tags and arrangement references behave as before — a PIPL tag and the existing GBA Standard Contract reference
+
+#### Scenario: An unmapped home location degrades gracefully
+- **WHEN** the policy declares `home_location` `uk` (an alias for `gb`, which has no entry in the bundled regime map in this change) and a flagged flow resolves to `us`
+- **THEN** no home regime tag and no GBA Standard Contract are surfaced, and the run is not failed on account of the unmapped home location
 

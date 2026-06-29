@@ -3,7 +3,20 @@
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass, field
+
+_JURIS_ALIAS = {"uk": "gb"}  # `.uk` is the ccTLD for ISO-3166 `GB`
+
+
+def _alias(j):
+    """Normalise a jurisdiction token (currently only uk -> gb)."""
+    return _JURIS_ALIAS.get(j, j)
+
+
+def _valid_home(j: str) -> bool:
+    """Format check for a home_location: a recognised special token or a ccTLD/ISO code."""
+    return j in ("CN-GBA", "GBA") or (len(j) == 2 and j.isalpha() and j.islower())
 
 
 @dataclass
@@ -19,11 +32,18 @@ def load_policy(path: str) -> dict:
     # Shorthand: a bare {classification: [jurisdictions]} map is the classifications block.
     if "classifications" not in data and data and all(isinstance(v, list) for v in data.values()):
         data = {"classifications": data}
+    loc = data.get("home_location")
+    if loc is not None:  # normalise + format-check; never fails (home_location is informational only)
+        loc = _alias(loc)
+        data["home_location"] = loc
+        if not _valid_home(loc):
+            print(f"warning: home_location '{loc}' is not a recognised jurisdiction code; "
+                  "regime tags and arrangement references will be omitted", file=sys.stderr)
     return data
 
 
 def _allowed(allow: list[str]) -> set[str]:
-    s = set(allow)
+    s = {_alias(x) for x in allow}  # uk -> gb so a `uk` allow-list entry matches a `gb` flow
     if "GBA" in s:  # GBA alias = hk + the nine Mainland GBA cities
         s.update({"hk", "CN-GBA"})
     return s

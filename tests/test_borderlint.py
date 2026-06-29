@@ -346,6 +346,42 @@ def test_mo_destination_no_macao_tag_under_home_regime():
     assert "Macao PDPA" not in reg
 
 
+def test_uk_allowlist_permits_gb_flow():  # uk is an alias for gb
+    f = evaluate([Detection("openai", "sdk_import", "openai", "f.py", 1, "gb")],
+                 _pol(["uk", "sg"]), "customer-pii", kb)
+    assert f[0].severity == "ok"
+
+
+def test_uk_home_location_normalises_to_gb():
+    import json, os, tempfile
+    from borderlint.policy import load_policy
+    p = os.path.join(tempfile.mkdtemp(), "pol.json")
+    with open(p, "w", encoding="utf-8") as fh:
+        json.dump({"classifications": {"customer-pii": ["hk"]}, "home_location": "uk"}, fh)
+    assert load_policy(p)["home_location"] == "gb"
+
+
+def test_unmapped_home_location_degrades_gracefully():
+    arr, reg = _ctx2(["us"], home_location="uk")  # gb has no regime entry in this change
+    assert arr == [] and reg == []
+
+
+def test_malformed_home_location_warns_not_fails(capsys):
+    import json, os, tempfile
+    from borderlint.policy import load_policy
+    p = os.path.join(tempfile.mkdtemp(), "pol.json")
+    with open(p, "w", encoding="utf-8") as fh:
+        json.dump({"classifications": {"customer-pii": ["hk"]}, "home_location": "United Kingdom"}, fh)
+    data = load_policy(p)  # must not raise
+    assert data["home_location"] == "United Kingdom"
+    assert "warning" in capsys.readouterr().err.lower()
+
+
+def test_unmapped_destination_no_regime_tag():
+    _, reg = _ctx2(["us"], home_location="hk")  # hk -> PDPO; us maps to no regime -> no tag
+    assert reg == ["PDPO"]
+
+
 def _two_flows():
     return evaluate([Detection("openai", "sdk_import", "openai", "a.py", 3, "us"),
                      Detection("deepseek", "sdk_import", "deepseek", "b.py", 1, "cn")],

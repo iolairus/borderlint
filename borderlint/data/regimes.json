@@ -1,0 +1,9 @@
+{
+  "updated": "2026-06-29",
+  "regimes": {
+    "hk": {"regime": "PDPO", "arrangements": []},
+    "mo": {"regime": "Macao PDPA", "arrangements": []},
+    "cn": {"regime": "PIPL", "arrangements": []},
+    "CN-GBA": {"regime": "PIPL", "arrangements": []}
+  }
+}
