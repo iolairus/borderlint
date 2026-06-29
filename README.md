@@ -53,15 +53,20 @@ Macao)*, PIPL cross-border, or GDPR SCCs — as reference links. (`home_regime`
 - **Languages:** Python (AST) and TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
   plus endpoint references in config/text files and **OpenAI-compatible `/v1/chat/completions` calls**
   — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
-- **Providers:** 40+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
+- **Providers:** 80+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
   AI**), Azure, Bedrock, Mistral, Cohere, Groq, Together, Perplexity, xAI, Cerebras, Fireworks,
   Replicate, SambaNova, Meta Llama + **Tencent, Alibaba, DeepSeek, Moonshot, Zhipu/Z.ai, Baidu,
-  Volcengine, MiniMax**, plus **GigaChat (RU), Sarvam (IN), Scaleway & OVHcloud (FR/EU)** — with
-  Python and JS/TS package names and the **Vercel AI SDK** (`@ai-sdk/*`).
+  Volcengine, MiniMax**, plus **AI21 (IL), Jina (DE), Voyage, GigaChat (RU), Sarvam (IN), Scaleway &
+  OVHcloud (FR/EU)** and region-selectable clouds (**IBM watsonx, Oracle OCI, Cloudflare Workers AI,
+  Heroku** → `unknown` until you pin a region) — with Python and JS/TS package names and the **Vercel
+  AI SDK** (`@ai-sdk/*`).
+- **Image / video / speech:** generation (**Stability AI, Black Forest Labs/Flux, Runway, Recraft**)
+  and **speech-to-text / TTS** (**ElevenLabs, Deepgram, AssemblyAI, Soniox, Amazon Polly**) — tagged
+  with their `category` and governed for residency like any other flow.
 - **Vector stores (data sinks):** Pinecone, Weaviate Cloud, Qdrant Cloud, Zilliz/Milvus — flagged
   as `vector_store` and governed for residency (region is per-cluster, so default `unknown`).
-- **Aggregators:** litellm, langchain, LlamaIndex, aisuite, OpenRouter, Vercel AI core & Gateway →
-  `unknown` (runtime-routed), so `on_unknown: fail` blocks them for sensitive classes.
+- **Aggregators / routers:** litellm, langchain, LlamaIndex, aisuite, OpenRouter, AI/ML API, Vercel
+  AI core & Gateway → `unknown` (runtime-routed), so `on_unknown: fail` blocks them for sensitive classes.
 - **Jurisdictions:** ccTLD/ISO codes + `CN-GBA` / `GBA`; **AWS / Azure / GCP-Vertex region resolved
   from the endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` and
   `asia-east2-aiplatform.googleapis.com` → `hk`).
@@ -117,7 +122,7 @@ rendered to PNG:
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v1.1.1
+- uses: iolairus/borderlint@v1.1.2
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -128,7 +133,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v1.1.1
+  rev: v1.1.2
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
