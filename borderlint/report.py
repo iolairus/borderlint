@@ -7,6 +7,8 @@ import os
 import re
 import subprocess
 
+from .policy import _alias
+
 JURIS = {"us": "United States", "eu": "European Union", "cn": "Mainland China", "hk": "Hong Kong",
          "sg": "Singapore", "gb": "United Kingdom", "mo": "Macao", "my": "Malaysia",
          "ru": "Russia", "in": "India", "fr": "France", "nl": "Netherlands", "de": "Germany",
@@ -24,6 +26,8 @@ _RANK = {"ok": 0, "waived": 1, "warn": 2, "fail": 3}
 
 with open(os.path.join(os.path.dirname(__file__), "data", "arrangements.json"), encoding="utf-8") as _fh:
     _ARRANGEMENTS = {a["id"]: a for a in json.load(_fh)["arrangements"]}
+with open(os.path.join(os.path.dirname(__file__), "data", "regimes.json"), encoding="utf-8") as _fh:
+    _REGIMES = json.load(_fh)["regimes"]  # jurisdiction -> {regime, arrangements[]}
 # EU/EEA jurisdictions that trigger the GDPR reference (the `eu` token + member country codes).
 _EU = frozenset("eu at be bg hr cy cz dk ee fi fr de gr hu ie it lv lt lu mt nl pl pt ro sk si es se is li no".split())
 
@@ -37,7 +41,10 @@ def _ref(aid: str) -> str:
     return f"{a['name']} — {a['summary']} {a['url']}"
 
 
-_REGIME_OF = {"hk": "PDPO", "mo": "Macao PDPA", "cn": "PIPL", "CN-GBA": "PIPL"}
+def regime_of(j: str):
+    """Data-protection regime tag for a jurisdiction, or None if the KB maps none."""
+    entry = _REGIMES.get(j)
+    return entry.get("regime") if entry else None
 
 
 def _flagged_dests(findings) -> set:
@@ -48,8 +55,8 @@ def _arrangements(findings, policy) -> list[str]:
     """Cross-border arrangement reference(s) for flagged flows — context only, never adjudicated."""
     policy = policy or {}
     dests = _flagged_dests(findings)
-    loc = policy.get("home_location")
-    if loc in ("hk", "mo", "CN-GBA"):  # home-location path: span-based GBA Standard Contract variant
+    loc = _alias(policy.get("home_location")) if policy.get("home_location") else None
+    if loc:  # home-location path: GBA span + destination specials, then home-driven refs from the map
         span = {loc} | dests
         out = []
         if {"hk", "CN-GBA"} <= span:
@@ -60,6 +67,10 @@ def _arrangements(findings, policy) -> list[str]:
             out.append(_ref("pipl"))
         if dests & _EU:
             out.append(_ref("gdpr"))
+        for aid in _REGIMES.get(loc, {}).get("arrangements", []):  # seeded empty for hk/mo/cn/CN-GBA
+            ref = _ref(aid)
+            if ref not in out:
+                out.append(ref)
         return out
     # legacy home_regime path — unchanged
     regime = policy.get("home_regime")
@@ -79,9 +90,9 @@ def _regimes(findings, policy) -> list[str]:
     dests = _flagged_dests(findings)
     if not dests:
         return []
-    loc = policy.get("home_location")
-    if loc in ("hk", "mo", "CN-GBA"):  # home-location path: regime of the home + each destination
-        tags = {_REGIME_OF.get(loc)} | {_REGIME_OF.get(d) for d in dests}
+    loc = _alias(policy.get("home_location")) if policy.get("home_location") else None
+    if loc:  # home-location path: regime of the home + each destination, from the map
+        tags = {regime_of(loc)} | {regime_of(d) for d in dests}
         tags.discard(None)
         return sorted(tags)
     # legacy home_regime path — unchanged
