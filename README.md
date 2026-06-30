@@ -42,11 +42,11 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 
 **Deny-by-default**: a flow to any code not on the list for the declared class fails — so `sg` is
 allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA` is shorthand for `hk` +
-`CN-GBA`. Declare your **`home_location`** (`hk`, `mo`, or `CN-GBA`) and a flagged flow is tagged with
-the **data-protection regimes** in play (HK PDPO / Macao PDPA / CN PIPL) and the relevant **cross-border
-arrangement** — the matching GBA Standard Contract variant, *(Mainland, Hong Kong)* or *(Mainland,
-Macao)*, PIPL cross-border, or GDPR SCCs — as reference links. (`home_regime`
-`pdpo`/`pipl` is still accepted.)
+`CN-GBA`. Declare your **`home_location`** — a GBA seat (`hk`/`mo`/`CN-GBA`) or an APAC/EMEA seat
+(`jp`, `kr`, `sg`, `au`, `uk`, `eu`, `my`) — and a flagged flow is tagged with the **data-protection
+regime** in play and linked to the relevant **cross-border arrangement** (the matching GBA Standard
+Contract variant, PIPL cross-border, GDPR, the UK IDTA, APPI Art. 28, PIPA Art. 28-8, PDPA s.26/s.129,
+APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
 
 ## Capabilities
 
@@ -126,7 +126,7 @@ rendered to PNG:
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v1.1.2
+- uses: iolairus/borderlint@v1.1.3
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -137,7 +137,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v1.1.2
+  rev: v1.1.3
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
