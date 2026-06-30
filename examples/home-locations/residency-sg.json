@@ -1,0 +1,9 @@
+{
+  "home_location": "sg",
+  "classifications": {
+    "customer-pii": ["sg"],
+    "employee-pii": ["sg"],
+    "non-pii": ["sg", "us", "eu", "gb", "au", "jp"]
+  },
+  "on_unknown": "fail"
+}

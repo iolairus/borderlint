@@ -72,14 +72,18 @@ Macao)*, PIPL cross-border, or GDPR SCCs — as reference links. (`home_regime`
   `asia-east2-aiplatform.googleapis.com` → `hk`).
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
   failure set, declared home regime.
-- **Regimes & arrangements:** home location `hk`/`mo`/`CN-GBA` → PDPO / Macao PDPA / PIPL tags, linked to
-  the matching GBA Standard Contract (GBA to/from HK or Macao), PIPL cross-border, or GDPR SCCs — reference only.
+- **Regimes & arrangements:** declared home location → data-protection regime tag + the cross-border
+  mechanism reference for a flagged flow (context only, never adjudicated). GBA seats `hk`/`mo`/`CN-GBA`
+  → PDPO / Macao PDPA / PIPL + the matching GBA Standard Contract; **APAC/EMEA seats `jp` (APPI), `kr`
+  (PIPA), `sg`/`my` (PDPA s.26 / s.129), `au` (APP 8), `uk` (UK IDTA), `eu` (GDPR)** → their transfer
+  mechanism. PIPL cross-border and GDPR are also surfaced for those destinations.
 - **Output & CI:** text / JSON / Mermaid / SARIF / SBOM, an SBOM **`diff`** gate for new
   egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
 
 ## Scope
 
-For HK / CN / GBA / MO home bases under PDPO / PIPL / GBA / PDPA. Not yet: other jurisdictions;
+For HK / CN / GBA / MO plus **JP / KR / SG / AU / UK / EU / MY** home bases (regime tags + cross-border
+references). Not yet: AE / IN / ID (cross-border instruments not yet operational); other jurisdictions;
 CycloneDX / SPDX SBOM export and optional LLM enrichment. Per-capability status — shipped vs. next
 vs. later — is tracked in [`CAPABILITIES.md`](CAPABILITIES.md).
 
