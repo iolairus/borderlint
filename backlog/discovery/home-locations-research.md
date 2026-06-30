@@ -30,11 +30,18 @@ detail is high except where a column says otherwise.
 | `uk` (=`gb`) | UK GDPR / DPA 2018 | Chapter V / Art. 46 — adequacy regulations **or** appropriate safeguards: **UK IDTA** or the **UK Addendum** to the EU SCCs | In force (IDTA 21 Mar 2022) | high |
 | `eu` | GDPR | Chapter V — adequacy decision **or** SCCs / BCRs / derogations *(already in KB as `gdpr`)* | In force | high |
 | `my` | PDPA (MY) | Amended **s.129** — destination with "substantially similar" law **or** "adequate level of protection"; CBPDT Guidelines | In force **1 Apr 2025**; whitelist abolished | high |
-| `in` | DPDP Act 2023 | **s.16** + Rule 15 — negative-list: transfer to **any** country except those the Central Government restricts | Rules notified Nov 2025; **no restricted list yet**; s.16 operational **~May 2027** | high (model) |
-| `ae` | PDPL (UAE) | Art. 22-23 — adequacy (UAE Data Office approval) **or** appropriate safeguards (SCCs/contract/consent) | Law in force; **Executive Regulations unpublished**; compliance by 1 Jan 2027; free zones differ | moderate |
-| `id` | UU PDP | Art. 56 — destination with equal/higher protection, **or** adequate & binding safeguards, **or** consent | Law in force; **implementing regulation pending** | high (law) / moderate (instrument) |
+| `in` ⏸ | DPDP Act 2023 | **s.16** + Rule 15 — negative-list: transfer to **any** country except those the Central Government restricts | Rules notified Nov 2025; **no restricted list yet**; s.16 operational **~May 2027** · **deferred** | high (model) |
+| `ae` ⏸ | PDPL (UAE) | Art. 22-23 — adequacy (UAE Data Office approval) **or** appropriate safeguards (SCCs/contract/consent) | Law in force; **Executive Regulations unpublished**; free zones differ · **deferred** | moderate |
+| `id` ⏸ | UU PDP | Art. 56 — destination with equal/higher protection, **or** adequate & binding safeguards, **or** consent | Law in force; **implementing regulation pending** · **deferred** | high (law) / moderate (instrument) |
 
-## Proposed `regimes.json` additions (for change 3)
+## Scope decision
+
+**Change 3 wires 7 home locations.** `ae`, `in`, `id` are **deferred** — their cross-border
+instruments are enacted but not yet operational (AE Executive Regulations unpublished; IN s.16
+operational ~May 2027 with no restricted list; ID implementing regulation pending). Their verified
+research is preserved below under "Deferred"; revisit when the instruments land.
+
+## Proposed `regimes.json` additions (for change 3 — 7 of 10)
 
 Each maps the home jurisdiction → its regime tag + the home-driven arrangement id(s) the engine
 surfaces for any flagged cross-border flow. `gb` doubles as `uk` via the existing alias.
@@ -46,15 +53,12 @@ surfaces for any flagged cross-border flow. `gb` doubles as `uk` via the existin
 "au": { "regime": "Privacy Act / APPs", "arrangements": ["au_app8"] },
 "gb": { "regime": "UK GDPR / DPA 2018", "arrangements": ["uk_idta"] },
 "eu": { "regime": "GDPR", "arrangements": ["gdpr"] },
-"my": { "regime": "PDPA (MY)", "arrangements": ["my_pdpa_xborder"] },
-"in": { "regime": "DPDP Act", "arrangements": ["in_dpdp_s16"] },
-"ae": { "regime": "PDPL (UAE)", "arrangements": ["ae_pdpl_xborder"] },
-"id": { "regime": "UU PDP", "arrangements": ["id_uupdp_xborder"] }
+"my": { "regime": "PDPA (MY)", "arrangements": ["my_pdpa_xborder"] }
 ```
 
-## Proposed `arrangements.json` additions (for change 3)
+## Proposed `arrangements.json` additions (for change 3 — 6 new)
 
-`gdpr` already exists. Eight new entries (`eu` reuses `gdpr`):
+`gdpr` already exists; `eu` reuses it. Six new entries:
 
 ```json
 { "id": "appi_xborder", "name": "APPI cross-border transfer (Art. 28)",
@@ -74,13 +78,27 @@ surfaces for any flagged cross-border flow. `gb` doubles as `uk` via the existin
   "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/international-transfers/" },
 { "id": "my_pdpa_xborder", "name": "Malaysia PDPA cross-border transfer (s.129)",
   "summary": "Malaysia PDPA (amended, in force 1 Apr 2025): a destination with substantially similar law or an adequate level of protection; see the CBPDT Guidelines.",
-  "url": "https://www.pdp.gov.my/" },
+  "url": "https://www.pdp.gov.my/" }
+```
+
+## Deferred from change 3 (revisit when operational)
+
+`ae`, `in`, `id` are researched and ready, but their cross-border instruments are not yet operational
+(see Status). Held out of change 3 by decision; wire them in a later change once the instruments land.
+
+```json
+// regimes.json
+"in": { "regime": "DPDP Act", "arrangements": ["in_dpdp_s16"] },
+"ae": { "regime": "PDPL (UAE)", "arrangements": ["ae_pdpl_xborder"] },
+"id": { "regime": "UU PDP", "arrangements": ["id_uupdp_xborder"] }
+
+// arrangements.json
 { "id": "in_dpdp_s16", "name": "DPDP Act cross-border transfer (s.16)",
   "summary": "India DPDP Act 2023 + Rule 15: transfer permitted to any country except those restricted by the Central Government (no restricted list issued yet; s.16 operational ~May 2027).",
-  "url": "https://www.meity.gov.in/data-protection-framework" },
+  "url": "https://www.meity.gov.in/data-protection-framework" }
 { "id": "ae_pdpl_xborder", "name": "UAE PDPL cross-border transfer (Art. 22-23)",
   "summary": "UAE PDPL: transfer to an adequate jurisdiction (UAE Data Office) or under appropriate safeguards; Executive Regulations not yet published. DIFC and ADGM free zones have separate regimes.",
-  "url": "https://uaelegislation.gov.ae/en/legislations/1972" },
+  "url": "https://uaelegislation.gov.ae/en/legislations/1972" }
 { "id": "id_uupdp_xborder", "name": "Indonesia UU PDP cross-border transfer (Art. 56)",
   "summary": "Indonesia PDP Law (Law 27/2022): destination with equal/higher protection, adequate & binding safeguards, or data-subject consent; implementing regulation pending.",
   "url": "https://www.dlapiperdataprotection.com/?t=transfer&c=ID" }
@@ -92,8 +110,9 @@ surfaces for any flagged cross-border flow. `gb` doubles as `uk` via the existin
   federal PDPL. The `ae` entry's note must say "federal PDPL; DIFC/ADGM differ" rather than imply one.
 - **`eu` is coarse.** One token ignores member-state specifics; acceptable for reference-only output.
   GDPR is EU-wide so the regime tag holds.
-- **Not-yet-operational mechanisms** (IN s.16 ~2027, AE Executive Regs, ID implementing reg): cite the
-  framework; the summary records the status. Revisit when the instruments land.
+- **Not-yet-operational mechanisms** (IN s.16 ~2027, AE Executive Regs, ID implementing reg):
+  **deferred from change 3** by decision; research preserved under "Deferred". Revisit when the
+  instruments land.
 - **`uk` vs `gb`.** Map under `gb`; the shipped `uk`→`gb` alias makes `home_location: uk` resolve here.
 - **Regime tag collisions.** "PDPA" is disambiguated as `PDPA (SG)` / `PDPA (MY)` vs the existing
   `Macao PDPA` / `PDPO`.
