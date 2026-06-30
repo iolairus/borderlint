@@ -1,0 +1,9 @@
+{
+  "home_location": "uk",
+  "classifications": {
+    "customer-pii": ["uk", "eu"],
+    "employee-pii": ["uk"],
+    "non-pii": ["uk", "eu", "us", "sg", "au"]
+  },
+  "on_unknown": "fail"
+}

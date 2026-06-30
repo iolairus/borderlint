@@ -1,5 +1,5 @@
 {
-  "updated": "2026-06-21",
+  "updated": "2026-06-30",
   "arrangements": [
     {
       "id": "gba",
@@ -24,6 +24,42 @@
       "name": "GDPR Chapter V transfers",
       "summary": "EU/EEA personal-data transfers: adequacy decision or Standard Contractual Clauses (SCCs).",
       "url": "https://commission.europa.eu/law/law-topic/data-protection/international-dimension-data-protection/rules-international-data-transfers_en"
+    },
+    {
+      "id": "appi_xborder",
+      "name": "APPI cross-border transfer (Art. 28)",
+      "summary": "Japan APPI: prior consent, a PPC-designated equivalent country (EU, UK), or a recipient with equivalent safeguards / APEC CBPR.",
+      "url": "https://www.ppc.go.jp/en/"
+    },
+    {
+      "id": "pipa_xborder",
+      "name": "PIPA overseas transfer (Art. 28-8)",
+      "summary": "Korea PIPA: consent, a law or treaty, contract-necessity with notice, or a PIPC-recognised certification.",
+      "url": "https://www.pipc.go.kr/eng/"
+    },
+    {
+      "id": "sg_pdpa_transfer",
+      "name": "PDPA Transfer Limitation Obligation (s.26)",
+      "summary": "Singapore PDPA: ensure the recipient provides a standard of protection comparable to the PDPA via an enforceable contract, BCR, or certification.",
+      "url": "https://www.pdpc.gov.sg/"
+    },
+    {
+      "id": "au_app8",
+      "name": "Australian Privacy Principle 8 (cross-border disclosure)",
+      "summary": "Australia Privacy Act: the disclosing entity stays accountable (s.16C) unless the recipient is bound by a substantially similar law with enforceable mechanisms.",
+      "url": "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-guidelines/chapter-8-app-8-cross-border-disclosure-of-personal-information"
+    },
+    {
+      "id": "uk_idta",
+      "name": "UK international data transfer (IDTA / Addendum)",
+      "summary": "UK GDPR Chapter V: an adequacy regulation, or appropriate safeguards via the UK IDTA or the UK Addendum to the EU SCCs.",
+      "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/international-transfers/"
+    },
+    {
+      "id": "my_pdpa_xborder",
+      "name": "Malaysia PDPA cross-border transfer (s.129)",
+      "summary": "Malaysia PDPA (amended, in force 1 Apr 2025): a destination with substantially similar law or an adequate level of protection; see the CBPDT Guidelines.",
+      "url": "https://www.pdp.gov.my/"
     }
   ]
 }

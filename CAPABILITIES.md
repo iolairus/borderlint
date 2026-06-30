@@ -60,6 +60,13 @@ Beijing (`CN`, outside the zone) and treating Macao on its own footing. General 
 "China vs not-China"; borderlint can express the GBA carve-out that teams running Guangdong and
 Hong Kong together actually rely on.
 
+**APAC/EMEA home locations (shipped).** Beyond the GBA, a declared `home_location` of `jp`, `kr`,
+`sg`, `au`, `uk` (= `gb`), `eu`, or `my` surfaces that regime's cross-border mechanism as a reference
+for a flagged flow — APPI Art. 28, PIPA Art. 28-8, Singapore PDPA s.26, Australia APP 8, the UK IDTA,
+GDPR Chapter V, and Malaysia PDPA s.129 respectively (`eu` surfaces the GDPR reference; GDPR stays a
+reference, never a regime tag). `ae` / `in` / `id` are researched but **deferred** until their
+cross-border instruments become operational.
+
 **Scope note (reference, not adjudication):** borderlint *surfaces* the relevant arrangement as
 a reference link; it does **not** decide whether an arrangement legally applies to you — that
 depends on your home jurisdiction, the data classes involved, and where your users sit. You

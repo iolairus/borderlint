@@ -378,8 +378,35 @@ def test_uk_home_location_normalises_to_gb():
 
 
 def test_unmapped_home_location_degrades_gracefully():
-    arr, reg = _ctx2(["us"], home_location="uk")  # gb has no regime entry in this change
+    arr, reg = _ctx2(["us"], home_location="br")  # br (Brazil) has no entry in the regime map
     assert arr == [] and reg == []
+
+
+def test_apac_emea_home_locations():
+    arr, reg = _ctx2(["us"], home_location="jp")
+    assert reg == ["APPI"] and any("APPI cross-border" in a for a in arr)
+    arr, reg = _ctx2(["us"], home_location="uk")  # alias -> gb
+    assert reg == ["UK GDPR / DPA 2018"] and any("IDTA" in a for a in arr)
+    _, reg = _ctx2(["us"], home_location="kr")
+    assert reg == ["PIPA"]
+    arr, reg = _ctx2(["us"], home_location="au")
+    assert reg == ["Privacy Act / APPs"] and any("Australian Privacy Principle 8" in a for a in arr)
+    arr, reg = _ctx2(["sg"], home_location="my")
+    assert "PDPA (MY)" in reg and any("s.129" in a for a in arr)
+
+
+def test_eu_home_surfaces_gdpr_reference_not_tag():
+    arr, reg = _ctx2(["us"], home_location="eu")     # GDPR is a reference, never a regime tag
+    assert reg == [] and any("GDPR" in a for a in arr)
+    arr2, reg2 = _ctx2(["de"], home_location="eu")   # eu home + eu dest: GDPR ref once, still no tag
+    assert reg2 == [] and sum("GDPR" in a for a in arr2) == 1
+
+
+def test_home_location_does_not_change_verdict():
+    d = [Detection("openai", "sdk_import", "openai", "f.py", 1, "us")]
+    base = evaluate(d, _pol(["hk"]), "customer-pii", kb)
+    homed = evaluate(d, _pol(["hk"], home_location="jp"), "customer-pii", kb)
+    assert base[0].severity == homed[0].severity == "fail"  # home_location is context only
 
 
 def test_malformed_home_location_warns_not_fails(capsys):

@@ -1,9 +1,16 @@
 {
-  "updated": "2026-06-29",
+  "updated": "2026-06-30",
   "regimes": {
     "hk": {"regime": "PDPO", "arrangements": []},
     "mo": {"regime": "Macao PDPA", "arrangements": []},
     "cn": {"regime": "PIPL", "arrangements": []},
-    "CN-GBA": {"regime": "PIPL", "arrangements": []}
+    "CN-GBA": {"regime": "PIPL", "arrangements": []},
+    "jp": {"regime": "APPI", "arrangements": ["appi_xborder"]},
+    "kr": {"regime": "PIPA", "arrangements": ["pipa_xborder"]},
+    "sg": {"regime": "PDPA (SG)", "arrangements": ["sg_pdpa_transfer"]},
+    "au": {"regime": "Privacy Act / APPs", "arrangements": ["au_app8"]},
+    "gb": {"regime": "UK GDPR / DPA 2018", "arrangements": ["uk_idta"]},
+    "eu": {"regime": null, "arrangements": ["gdpr"]},
+    "my": {"regime": "PDPA (MY)", "arrangements": ["my_pdpa_xborder"]}
   }
 }
