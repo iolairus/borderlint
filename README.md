@@ -4,11 +4,14 @@
 
 **Map and govern where your AI data and traffic flow.**
 
-A static, in-CI linter, initially for **HK / GBA entities**: does your AI data stay within the
-jurisdictions your PDPO / PIPL policy allows? borderlint statically scans your repo (**Python and
-TypeScript/JavaScript**) for AI provider usage, resolves each flow to a jurisdiction (ccTLD codes
-plus the `CN-GBA` / `GBA` tokens), and fails the build on any flow outside the allow-list for the
-data class you declare. Western and Chinese providers are treated evenly. **Zero runtime dependencies.**
+A static, in-CI linter for **AI data residency across APAC & EMEA**, with first-class **HK / GBA**
+support: does your AI data stay within the jurisdictions your residency policy allows? borderlint
+statically scans your repo (**Python and TypeScript/JavaScript**) for AI provider usage, resolves each
+flow to a jurisdiction (ccTLD/ISO codes plus the `CN-GBA` / `GBA` tokens), and fails the build on any
+flow outside the allow-list for the data class you declare. Declare a home base — **HK, Macao, the GBA,
+Japan, Korea, Singapore, Australia, the UK, the EU, or Malaysia** — and flagged flows are tagged with
+the matching regime (PDPO, PIPL, APPI, PIPA, PDPA, the Privacy Act, GDPR …) and its cross-border
+reference. Western and Chinese providers are treated evenly. **Zero runtime dependencies.**
 
 ## Use
 
