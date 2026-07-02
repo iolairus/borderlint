@@ -10,7 +10,7 @@ _JURIS_ALIAS = {"uk": "gb"}  # `.uk` is the ccTLD for ISO-3166 `GB`
 
 # Sovereignty bloc vocabulary (mirrors borderlint.kb._SOVEREIGNTY_BLOCS; duplicated here to
 # avoid a circular import — policy must not depend on kb at module load).
-_SOVEREIGNTY_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "local", "unknown"})
+_SOVEREIGNTY_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "local", "unknown"})
 
 
 def _valid_sovereignty(token: str) -> bool:
@@ -56,7 +56,7 @@ def load_policy(path: str) -> dict:
                 if not _valid_sovereignty(b):
                     raise ValueError(
                         f"invalid sovereignty bloc '{b}' in classification '{cls}' "
-                        "(use one of us, eu, cn, uk, ru, in, il, local, unknown)")
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, local, unknown)")
     return data
 
 
@@ -120,5 +120,5 @@ def _severity(reasons: list[str], fail_on: set[str], on_unknown: str, sov_on_unk
             or ("residency" in reasons and "residency" in fail_on)
             or ("unknown" in reasons and on_unknown == "fail")
             or ("sovereignty" in reasons and "sovereignty" in fail_on)
-            or ("sovereignty_unknown" in reasons and sov_on_unknown == "fail" and "sovereignty" in fail_on))
+            or ("sovereignty_unknown" in reasons and sov_on_unknown == "fail"))
     return "fail" if fail else "warn"
