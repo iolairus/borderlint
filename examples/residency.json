@@ -1,11 +1,17 @@
 {
   "home_regime": "pdpo",
   "on_unknown": "warn",
-  "fail_on": ["residency", "denied_provider"],
+  "fail_on": ["residency", "denied_provider", "sovereignty"],
   "providers": { "deny": [], "allow": [] },
   "classifications": {
     "non-pii":      ["hk", "CN-GBA", "cn", "mo", "sg", "us", "gb"],
     "employee-pii": ["hk", "CN-GBA"],
     "customer-pii": ["hk", "CN-GBA", "sg"]
+  },
+  "sovereignty": {
+    "on_unknown": "warn",
+    "classifications": {
+      "customer-pii": ["eu", "uk", "local"]
+    }
   }
 }

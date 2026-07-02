@@ -44,6 +44,7 @@ class Detection:
     line: int
     jurisdiction: str
     waiver: str | None = None  # justification, if an inline `borderlint: allow` waiver applies
+    sovereignty: str = "unknown"  # compelled-disclosure bloc; resolved in scan() from the provider KB
 
 
 def _scan_py(path: str, src: str, kb) -> list[Detection]:
@@ -163,6 +164,16 @@ def _apply_waiver(d: Detection, waivers: dict) -> Detection:
     return d
 
 
+def _resolve_sovereignty(detections, kb) -> list[Detection]:
+    """Populate the sovereignty bloc on each detection from the provider KB (D3).
+
+    Sovereignty is derived from the provider (its home legal regime), not the endpoint region;
+    region-in-endpoint providers inherit the provider sovereignty regardless of resolved residency.
+    """
+    return [replace(d, sovereignty=kb.resolve_sovereignty(d.provider_id, d.evidence, d.jurisdiction))
+            for d in detections]
+
+
 def scan(root, kb) -> list[Detection]:
     root = Path(root)
     paths = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
@@ -200,4 +211,4 @@ def scan(root, kb) -> list[Detection]:
             if key not in seen:
                 seen.add(key)
                 out.append(d)
-    return [_apply_waiver(d, waivers) for d in out]
+    return _resolve_sovereignty([_apply_waiver(d, waivers) for d in out], kb)

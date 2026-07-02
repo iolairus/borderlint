@@ -8,6 +8,15 @@ from dataclasses import dataclass, field
 
 _JURIS_ALIAS = {"uk": "gb"}  # `.uk` is the ccTLD for ISO-3166 `GB`
 
+# Sovereignty bloc vocabulary (mirrors borderlint.kb._SOVEREIGNTY_BLOCS; duplicated here to
+# avoid a circular import — policy must not depend on kb at module load).
+_SOVEREIGNTY_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "local", "unknown"})
+
+
+def _valid_sovereignty(token: str) -> bool:
+    """A sovereignty bloc must be one of the fixed vocabulary."""
+    return token in _SOVEREIGNTY_BLOCS
+
 
 def _alias(j):
     """Normalise a jurisdiction token (currently only uk -> gb)."""
@@ -39,6 +48,15 @@ def load_policy(path: str) -> dict:
         if not _valid_home(loc):
             print(f"warning: home_location '{loc}' is not a recognised jurisdiction code; "
                   "regime tags and arrangement references will be omitted", file=sys.stderr)
+    # Sovereignty block is opt-in. Validate bloc tokens when present; never fails the run on shape.
+    sov = data.get("sovereignty")
+    if sov and isinstance(sov, dict):
+        for cls, blocs in sov.get("classifications", {}).items():
+            for b in blocs:
+                if not _valid_sovereignty(b):
+                    raise ValueError(
+                        f"invalid sovereignty bloc '{b}' in classification '{cls}' "
+                        "(use one of us, eu, cn, uk, ru, in, il, local, unknown)")
     return data
 
 
@@ -59,6 +77,13 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
     on_unknown = policy.get("on_unknown", "warn")
     fail_on = set(policy.get("fail_on", ["residency", "denied_provider"]))
 
+    # Sovereignty is opt-in: only evaluate when the policy declares a sovereignty block AND a
+    # sovereignty allow-list for the active classification. Absent → no sovereignty reason, ever.
+    sov_block = policy.get("sovereignty") or {}
+    sov_classes = sov_block.get("classifications", {}) if isinstance(sov_block, dict) else {}
+    sov_allow = set(sov_classes.get(classification, [])) if classification in sov_classes else None
+    sov_on_unknown = sov_block.get("on_unknown", "warn") if isinstance(sov_block, dict) else "warn"
+
     findings = []
     for d in detections:
         reasons = []
@@ -70,8 +95,17 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
             pass  # local inference is not a cross-border transfer; never a residency violation
         elif d.jurisdiction not in allow:
             reasons.append("residency")
-        sev = _severity(reasons, fail_on, on_unknown)
-        if sev == "fail" and d.waiver:  # a justified waiver downgrades a residency/unknown failure
+        # Sovereignty dimension (opt-in): evaluate only when an allow-list is declared for this class.
+        if sov_allow is not None:
+            sov = getattr(d, "sovereignty", "unknown")
+            if sov == "local":
+                pass  # self-hosted → no external sovereign; exempt, mirroring residency `local`
+            elif sov == "unknown":
+                reasons.append("sovereignty_unknown")  # governed by sov_on_unknown
+            elif sov not in sov_allow:
+                reasons.append("sovereignty")  # an allow-list mismatch
+        sev = _severity(reasons, fail_on, on_unknown, sov_on_unknown)
+        if sev == "fail" and d.waiver:  # a justified waiver downgrades a residency/unknown/sovereignty failure
             blocking = "denied_provider" in reasons and "denied_provider" in fail_on
             if not blocking:  # ...but never an explicit provider deny
                 sev = "waived"
@@ -79,10 +113,12 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
     return findings
 
 
-def _severity(reasons: list[str], fail_on: set[str], on_unknown: str) -> str:
+def _severity(reasons: list[str], fail_on: set[str], on_unknown: str, sov_on_unknown: str = "warn") -> str:
     if not reasons:
         return "ok"
     fail = (("denied_provider" in reasons and "denied_provider" in fail_on)
             or ("residency" in reasons and "residency" in fail_on)
-            or ("unknown" in reasons and on_unknown == "fail"))
+            or ("unknown" in reasons and on_unknown == "fail")
+            or ("sovereignty" in reasons and "sovereignty" in fail_on)
+            or ("sovereignty_unknown" in reasons and sov_on_unknown == "fail" and "sovereignty" in fail_on))
     return "fail" if fail else "warn"

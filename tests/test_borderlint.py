@@ -1,6 +1,6 @@
 """Smallest checks that fail if the core logic breaks (one per key spec scenario)."""
 
-from borderlint.detect import Detection, _scan_config_endpoints, _scan_js, _scan_py, _scan_text
+from borderlint.detect import Detection, _scan_config_endpoints, _scan_js, _scan_py, _scan_text, _resolve_sovereignty
 from borderlint.kb import load_kb
 from borderlint.policy import evaluate
 
@@ -27,7 +27,7 @@ def _scan_file(content, suffix=".py"):
 
 
 def dets(src):
-    return _scan_py("x.py", src, kb)
+    return _resolve_sovereignty(_scan_py("x.py", src, kb), kb)
 
 
 def test_detect_import_and_endpoint():
@@ -93,7 +93,7 @@ def test_azure_regional_host_resolves():
 
 
 def js(src):
-    return _scan_js("x.ts", src, kb)
+    return _resolve_sovereignty(_scan_js("x.ts", src, kb), kb)
 
 
 def test_ts_import_detection():
@@ -123,7 +123,7 @@ def test_vercel_ai_sdk():
 
 
 def cfg(src, path="config.yaml"):
-    return _scan_config_endpoints(path, src, kb)
+    return _resolve_sovereignty(_scan_config_endpoints(path, src, kb), kb)
 
 
 def test_config_custom_host_unknown():
@@ -583,7 +583,7 @@ def test_mermaid_labels_are_quoted():
                  _pol(["hk"]), "customer-pii", kb)
     out = mermaid(f, kb)
     assert 'app(["Your application"])' in out
-    assert '["Custom / OpenAI-compatible endpoint"]' in out  # provider label: slash inside the quotes
+    assert '["Custom / OpenAI-compatible endpoint (Unknown)"]' in out  # provider label + sovereignty bloc
     assert 'subgraph j_unknown["unknown"]' in out             # zone titled by the jurisdiction code
     assert "custom_endpoint__unknown[" in out                 # node id is per (provider, jurisdiction)
 
@@ -732,3 +732,133 @@ def test_drift_providers_resolve():
 def test_minimax_split_endpoints():
     assert kb.match_endpoint("api.minimaxi.com")[2] == "cn"          # China endpoint
     assert kb.match_endpoint("api.minimax.io")[2] == "unknown"       # intl endpoint, DC undocumented
+
+
+# --- Sovereignty dimension ---------------------------------------------------
+
+def _det(pid="openai", juris="us", evidence="openai"):
+    sov = kb.resolve_sovereignty(pid, evidence, juris)
+    return Detection(pid, "sdk_import", evidence, "f.py", 1, juris, sovereignty=sov)
+
+
+def _sov_pol(allow, **kw):
+    """A policy with a sovereignty allow-list for customer-pii."""
+    return {"classifications": {"customer-pii": ["hk", "CN-GBA", "sg", "us", "gb", "eu", "uk"]},
+            "sovereignty": {"classifications": {"customer-pii": allow}}, **kw}
+
+
+def test_sovereignty_resolution():
+    # Bedrock ap-east-1 -> residency hk, sovereignty us (provider's home sovereign, not the region's)
+    d = dets('u = "https://bedrock-runtime.ap-east-1.amazonaws.com/m"\n')[0]
+    assert d.jurisdiction == "hk" and d.sovereignty == "us"
+    # Provider sovereignty matches residency for home-sovereign providers
+    assert dets('a = "https://api.deepseek.com"\n')[0].sovereignty == "cn"
+    assert dets('a = "https://api.stability.ai"\n')[0].sovereignty == "uk"
+    assert dets('a = "https://gigachat.devices.sberbank.ru"\n')[0].sovereignty == "ru"
+    assert dets('a = "https://api.sarvam.ai"\n')[0].sovereignty == "in"
+    assert dets('a = "https://api.ai21.com"\n')[0].sovereignty == "il"
+    assert dets('import mistralai\n')[0].sovereignty == "eu"
+    # Loopback / self-hosted -> local sovereignty (no external sovereign)
+    assert cfg("base_url: http://localhost:8080\n")[0].sovereignty == "local"
+    assert dets('import ollama\n')[0].sovereignty == "local"
+    # Aggregators and custom endpoints -> unknown sovereignty
+    assert dets('import litellm\n')[0].sovereignty == "unknown"
+    assert cfg("base_url: https://llm.acme.cn/v1\n")[0].sovereignty == "unknown"
+
+
+def test_sovereignty_host_override():
+    # AWS China regions (Sinnet/NWCD) override the provider sovereignty us -> cn
+    d = dets('u = "https://bedrock-runtime.cn-north-1.amazonaws.com.cn/m"\n')[0]
+    assert d.jurisdiction == "cn" and d.sovereignty == "cn"
+    d2 = dets('u = "bedrock-runtime.cn-northwest-1.amazonaws.com.cn"\n')[0]
+    assert d2.sovereignty == "cn"
+
+
+def test_sovereignty_policy_absent():
+    # No sovereignty block -> no sovereignty reason, exit behaviour unchanged (regression guard)
+    pol = {"classifications": {"customer-pii": ["hk"]}}
+    f = evaluate([_det("openai", "us")], pol, "customer-pii", kb)
+    assert f[0].severity == "fail"
+    assert "sovereignty" not in f[0].reasons and "sovereignty_unknown" not in f[0].reasons
+
+
+def test_sovereignty_evaluation():
+    allow = ["eu", "uk", "local"]
+    # us-sovereignty flow -> sovereignty reason (mismatch)
+    f = evaluate([_det("openai", "us")], _sov_pol(allow), "customer-pii", kb)
+    assert "sovereignty" in f[0].reasons
+    # eu-sovereignty flow -> passes sovereignty check
+    f = evaluate([_det("mistral", "eu", "mistralai")], _sov_pol(allow), "customer-pii", kb)
+    assert "sovereignty" not in f[0].reasons and f[0].severity == "ok"
+    # local-sovereignty flow -> exempt regardless of allow-list
+    f = evaluate([Detection("ollama", "sdk_import", "ollama", "f.py", 1, "local")],
+                 _sov_pol(allow), "customer-pii", kb)
+    assert "sovereignty" not in f[0].reasons
+    # unknown-sovereignty flow -> warns under on_unknown: warn
+    f = evaluate([_det("litellm", "unknown", "litellm")], _sov_pol(allow, **{"on_unknown": "warn"}),
+                 "customer-pii", kb)
+    assert "sovereignty_unknown" in f[0].reasons and f[0].severity == "warn"
+
+
+def test_sovereignty_fail_on():
+    allow = ["eu", "uk", "local"]
+    # With fail_on including sovereignty -> a mismatch fails
+    pol_fail = _sov_pol(allow, fail_on=["residency", "denied_provider", "sovereignty"])
+    f = evaluate([_det("openai", "us")], pol_fail, "customer-pii", kb)
+    assert f[0].severity == "fail"
+    # Without sovereignty in fail_on -> the same mismatch only warns
+    pol_warn = _sov_pol(allow, fail_on=["residency", "denied_provider"])
+    f = evaluate([_det("openai", "us")], pol_warn, "customer-pii", kb)
+    assert f[0].severity == "warn"
+
+
+def test_sovereignty_waiver():
+    allow = ["eu", "uk", "local"]
+    pol = _sov_pol(allow, fail_on=["residency", "denied_provider", "sovereignty"])
+    d = Detection("openai", "sdk_import", "openai", "f.py", 1, "us",
+                  waiver="CLOUD Act review done", sovereignty="us")
+    f = evaluate([d], pol, "customer-pii", kb)
+    assert f[0].severity == "waived"  # justified waiver downgrades the sovereignty failure
+    # A provider deny-list entry is NOT waived
+    pol_deny = _sov_pol(allow, fail_on=["residency", "denied_provider", "sovereignty"],
+                        providers={"deny": ["openai"]})
+    f = evaluate([d], pol_deny, "customer-pii", kb)
+    assert f[0].severity == "fail"
+
+
+def test_sovereignty_reporting():
+    import json as _json
+    from borderlint.report import as_json, text, mermaid
+    allow = ["eu", "uk", "local"]
+    pol = _sov_pol(allow, fail_on=["sovereignty"])
+    f = evaluate([_det("openai", "us")], pol, "customer-pii", kb)
+    # Text report: sovereignty column present
+    txt = text(f, kb, pol)
+    assert "sovereignty:" in txt.lower() and "United States" in txt
+    # JSON report: sovereignty field per finding
+    doc = _json.loads(as_json(f, kb, pol))
+    assert doc["findings"][0]["sovereignty"] == "us"
+    # Mermaid: node label includes the sovereignty bloc
+    mm = mermaid(f, kb, pol)
+    assert "(United States)" in mm
+
+
+def test_sovereignty_invalid_token():
+    # A user-supplied sovereignty map with an unrecognised bloc is rejected
+    try:
+        load_kb(_kb_file({"sovereignty": {"openai": "overseas"}}))
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+    # And an invalid bloc in a policy sovereignty block is rejected at load time
+    import json, os, tempfile
+    from borderlint.policy import load_policy
+    p = os.path.join(tempfile.mkdtemp(), "pol.json")
+    with open(p, "w", encoding="utf-8") as fh:
+        json.dump({"classifications": {"customer-pii": ["hk"]},
+                   "sovereignty": {"classifications": {"customer-pii": ["mars"]}}}, fh)
+    try:
+        load_policy(p)
+        assert False, "expected ValueError"
+    except ValueError:
+        pass

@@ -21,7 +21,12 @@ JURIS = {"us": "United States", "eu": "European Union", "cn": "Mainland China", 
          "unknown": "Unknown (region-dependent)"}
 REASON = {"denied_provider": "provider denied by policy",
           "residency": "jurisdiction outside the allow-list for this data class",
-          "unknown": "jurisdiction could not be determined"}
+          "unknown": "jurisdiction could not be determined",
+          "sovereignty": "sovereignty outside the allow-list for this data class",
+          "sovereignty_unknown": "sovereignty could not be determined"}
+SOVEREIGNTY = {"us": "United States", "eu": "European Union", "cn": "Mainland China",
+               "uk": "United Kingdom", "ru": "Russia", "in": "India", "il": "Israel",
+               "local": "Local", "unknown": "Unknown"}
 _RANK = {"ok": 0, "waived": 1, "warn": 2, "fail": 3}
 
 with open(os.path.join(os.path.dirname(__file__), "data", "arrangements.json"), encoding="utf-8") as _fh:
@@ -34,6 +39,11 @@ _EU = frozenset("eu at be bg hr cy cz dk ee fi fr de gr hu ie it lv lt lu mt nl 
 
 def juris(j: str) -> str:
     return JURIS.get(j, j)
+
+
+def sov(b: str) -> str:
+    """Display label for a sovereignty bloc."""
+    return SOVEREIGNTY.get(b, b)
 
 
 def _ref(aid: str) -> str:
@@ -118,7 +128,8 @@ def text(findings, kb, policy=None) -> str:
         mark = {"ok": " OK ", "waived": "WAIV", "warn": "WARN", "fail": "FAIL"}[worst]
         js = ", ".join(juris(x) for x in sorted({f.detection.jurisdiction for f in fs}))
         tag = " (vector store)" if kb.category(pid) == "vector_store" else ""
-        lines.append(f"[{mark}] {kb.name(pid)}{tag} -> {js}")
+        sovs = ", ".join(sov(x) for x in sorted({getattr(f.detection, "sovereignty", "unknown") for f in fs}))
+        lines.append(f"[{mark}] {kb.name(pid)}{tag} -> {js} | sovereignty: {sovs}")
         for f in fs:
             d = f.detection
             lines.append(f"        {d.file}:{d.line} ({d.kind}: {d.evidence})")
@@ -143,7 +154,9 @@ def as_json(findings, kb, policy=None) -> str:
     return json.dumps({
         "findings": [{"provider": f.detection.provider_id, "name": kb.name(f.detection.provider_id),
                       "category": kb.category(f.detection.provider_id),
-                      "jurisdiction": f.detection.jurisdiction, "severity": f.severity, "reasons": f.reasons,
+                      "jurisdiction": f.detection.jurisdiction,
+                      "sovereignty": getattr(f.detection, "sovereignty", "unknown"),
+                      "severity": f.severity, "reasons": f.reasons,
                       "kind": f.detection.kind, "evidence": f.detection.evidence,
                       "file": f.detection.file, "line": f.detection.line,
                       "waiver": f.detection.waiver} for f in findings],
@@ -233,14 +246,18 @@ def project_label(root) -> str:
 
 def mermaid(findings, kb, policy=None, app_label="Your application") -> str:
     by_j = {}
+    sov_by_pj = {}  # (provider, jurisdiction) → sovereignty bloc, for the node label
     for f in findings:
         by_j.setdefault(f.detection.jurisdiction, set()).add(f.detection.provider_id)
+        sov_by_pj[(f.detection.provider_id, f.detection.jurisdiction)] = getattr(
+            f.detection, "sovereignty", "unknown")
     lines = ["flowchart LR", f"  app([{_mlabel(app_label)}])"]
     for j, pids in by_j.items():
         js = j.replace("-", "_")
         lines.append(f"  subgraph j_{js}[{_mlabel(j)}]")  # zone titled by the jurisdiction code
         for pid in sorted(pids):
-            lines.append(f"    {pid}__{js}[{_mlabel(kb.name(pid))}]")  # one node per (provider, jurisdiction)
+            bloc = sov_by_pj.get((pid, j), "unknown")
+            lines.append(f"    {pid}__{js}[{_mlabel(f'{kb.name(pid)} ({sov(bloc)})')}]")  # sovereignty appended
         lines.append("  end")
         for pid in sorted(pids):
             lines.append(f"  app --> {pid}__{js}")
@@ -259,7 +276,7 @@ def sarif(findings, kb, policy=None) -> str:
         result = {
             "ruleId": f.reasons[0] if f.reasons else "ai-data-flow",
             "level": _SARIF_LEVEL[f.severity],
-            "message": {"text": f"{kb.name(d.provider_id)} -> {juris(d.jurisdiction)}: {detail}"},
+            "message": {"text": f"{kb.name(d.provider_id)} -> {juris(d.jurisdiction)} (sovereignty {sov(getattr(d, 'sovereignty', 'unknown'))}): {detail}"},
             "locations": [{"physicalLocation": {
                 "artifactLocation": {"uri": d.file},
                 "region": {"startLine": d.line}}}],
@@ -289,10 +306,13 @@ def sbom(findings, kb, policy=None) -> str:
         ds = by[pid]
         sites = sorted(
             ({"file": d.file, "line": d.line, "kind": d.kind, "evidence": d.evidence,
-              "jurisdiction": d.jurisdiction} for d in ds),
+              "jurisdiction": d.jurisdiction,
+              "sovereignty": getattr(d, "sovereignty", "unknown")} for d in ds),
             key=lambda s: (s["file"], s["line"], s["kind"], s["evidence"]))
         components.append({"provider": pid, "name": kb.name(pid), "category": kb.category(pid),
-                           "jurisdictions": sorted({d.jurisdiction for d in ds}), "sites": sites})
+                           "jurisdictions": sorted({d.jurisdiction for d in ds}),
+                           "sovereignties": sorted({getattr(d, "sovereignty", "unknown") for d in ds}),
+                           "sites": sites})
     return json.dumps({
         "schema": "borderlint.ai-dataflow-sbom/1",
         "borderlint": __version__,

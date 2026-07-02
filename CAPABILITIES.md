@@ -86,6 +86,46 @@ user declares their **home regime** — a HK entity under PDPO, or a GBA / Mainl
 PIPL — and borderlint surfaces the regime and arrangement references relevant to a flagged flow.
 Other regimes (e.g. GDPR) are reference-only and not a v1 focus.
 
+### 3.1 Sovereignty — compelled disclosure, orthogonal to residency
+
+Residency (above) answers *where the bytes rest*. **Sovereignty** answers a different question:
+*which government can compel disclosure of that data*, regardless of where the endpoint sits. A
+US-headquartered provider (AWS, Azure, GCP, OpenAI, Anthropic) is subject to US
+compelled-disclosure law (CLOUD Act 2018, FISA 702, Patriot Act §215) irrespective of the region
+the endpoint is hosted in. So a flow to AWS Bedrock `ap-east-1` is residency-clean for a PDPO
+policy (residency `hk`) yet remains under **US sovereignty** for disclosure. Residency alone
+cannot express "customer PII may rest in `hk` but must not be under US compelled-disclosure
+jurisdiction" — a posture many HK/GBA and EU entities in fact hold.
+
+**Sovereignty blocs.** borderlint models a small set of blocs, not per-country sovereigns:
+`us`, `eu` (the EU/EEA as a single compelled-disclosure unit), `cn`, `uk` (post-Brexit, distinct
+from EU), `ru`, `in`, `il`, `local` (self-hosted — no external sovereign), and `unknown`
+(aggregators, custom endpoints, or unmapped providers). Sovereignty is derived from the
+**provider** (its home legal regime), not the endpoint region; region-in-endpoint providers
+(Bedrock, Azure OpenAI, Vertex) inherit the provider's sovereignty regardless of the resolved
+residency.
+
+**Opt-in policy block.** Sovereignty is opt-in and non-breaking. A policy may declare an optional
+`sovereignty` block with per-classification allow-lists of blocs, an `on_unknown` setting, and
+inclusion of `sovereignty` in `fail_on`. When the block is absent, no sovereignty evaluation
+occurs and behaviour is identical to before. The default `fail_on` does **not** include
+`sovereignty` (warns only unless explicitly opted in). `local` sovereignty is exempt from the
+allow-list, mirroring the residency `local` exemption.
+
+```json
+"sovereignty": {
+  "on_unknown": "warn",
+  "classifications": { "customer-pii": ["eu", "uk", "local"] }
+}
+```
+
+**Scope note (advisory, not adjudicative).** The bundled sovereignty map surfaces
+compelled-disclosure exposure; it does **not** decide whether a given statute legally applies to
+any specific flow — that depends on the provider's corporate structure, the data classes, and the
+operator's own jurisdiction. borderlint surfaces the bloc; the policy decides. Open-weights
+provenance (export-control / supply-chain risk for downloaded weights) is a distinct concern and
+is explicitly out of scope for this dimension.
+
 ## 4. Policy & execution model
 
 **The policy is the eval set — a JSON file the user provides**, mapping each **data

@@ -79,6 +79,31 @@ def _valid_jurisdiction(token: str) -> bool:
     return token in _SPECIAL_TOKENS or (len(token) == 2 and token.isalpha() and token.islower())
 
 
+# --- Sovereignty dimension ----------------------------------------------------
+# Sovereignty blocs: which government can compel disclosure of a flow's data, derived from the
+# provider's home legal regime (not the endpoint region). Distinct from residency.
+_SOVEREIGNTY_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "local", "unknown"})
+
+
+def _valid_sovereignty(token: str) -> bool:
+    """A sovereignty bloc must be one of the fixed vocabulary."""
+    return token in _SOVEREIGNTY_BLOCS
+
+
+def _load_sovereignty_map() -> dict:
+    """Bundled provider id → sovereignty bloc map (advisory; never adjudicates legality)."""
+    return json.loads(files("borderlint").joinpath("data/sovereignty.json").read_text("utf-8"))
+
+
+_LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+
+
+def _is_loopback_evidence(evidence: str) -> bool:
+    """True if the evidence string references a loopback host (self-hosted → local sovereignty)."""
+    low = evidence.lower()
+    return any(h in low for h in _LOOPBACK_HOSTS) or ".localhost" in low
+
+
 def _endpoints_provider(endpoints: dict) -> dict:
     for host, juris in endpoints.items():
         if not _valid_jurisdiction(juris):
@@ -94,6 +119,8 @@ def load_kb(path: str | None = None) -> "KB":
     """Load the bundled KB; if a user file is given, merge it on top (user entries win)."""
     bundled = json.loads(files("borderlint").joinpath("data/providers.json").read_text("utf-8"))
     providers = list(bundled.get("providers", []))
+    sov_doc = _load_sovereignty_map()
+    sov_map = dict(sov_doc.get("providers", {}))  # bundled provider id → bloc (copy; user merges in)
     if path:
         with open(path, encoding="utf-8") as fh:
             user = json.load(fh)
@@ -101,8 +128,20 @@ def load_kb(path: str | None = None) -> "KB":
         if user.get("endpoints"):
             user_providers.append(_endpoints_provider(user["endpoints"]))
         providers = user_providers + providers  # user first → precedence
+        # User sovereignty overrides: a top-level "sovereignty" map (provider id → bloc) takes
+        # precedence over the bundled map; validated against the bloc vocabulary.
+        user_sov = user.get("sovereignty", {})
+        if isinstance(user_sov, dict):
+            for pid, bloc in user_sov.items():
+                if not _valid_sovereignty(bloc):
+                    raise ValueError(
+                        f"invalid sovereignty bloc '{bloc}' for provider '{pid}' "
+                        "(use one of us, eu, cn, uk, ru, in, il, local, unknown)")
+                sov_map[pid] = bloc  # user wins
     kb = KB(providers)
     kb.updated = bundled.get("updated")
+    kb.sovereignty_map = sov_map
+    kb.sovereignty_updated = sov_doc.get("updated")
     return kb
 
 
@@ -127,12 +166,44 @@ class KB:
         self._eps = sorted(eps, key=lambda x: (x[0], -len(x[1])))
         self.region_scheme = {p["id"]: p["region_scheme"] for p in providers if p.get("region_scheme")}
         self.updated: str | None = None  # KB last-reviewed date, set by load_kb
+        self.sovereignty_map: dict = {}  # provider id → sovereignty bloc, set by load_kb
+        self.sovereignty_updated: str | None = None  # sovereignty map last-reviewed date
 
     def name(self, pid: str) -> str:
         return self.by_id.get(pid, {}).get("name", pid)
 
     def default_jurisdiction(self, pid: str) -> str:
         return self.by_id.get(pid, {}).get("jurisdiction", "unknown")
+
+    def default_sovereignty(self, pid: str) -> str:
+        """Provider-level sovereignty bloc from the (merged) sovereignty map; 'unknown' if unmapped."""
+        return self.sovereignty_map.get(pid, "unknown")
+
+    def resolve_sovereignty(self, provider_id: str, evidence: str = "", jurisdiction: str = "") -> str:
+        """Resolve a flow's sovereignty bloc.
+
+        Precedence: host/region-level override on the provider KB entry → provider-level value
+        from the sovereignty map → 'unknown'. Loopback evidence → 'local'. Region-in-endpoint
+        providers (Bedrock, Azure OpenAI, Vertex) inherit the provider sovereignty regardless of
+        the resolved residency (D3): the endpoint region determines residency, not sovereignty.
+        A host-level override keys off the resolved jurisdiction (e.g. AWS China regions resolve
+        to jurisdiction 'cn', which maps to sovereignty 'cn' via the Sinnet ring-fence override).
+        """
+        if evidence and _is_loopback_evidence(evidence):
+            return "local"
+        entry = self.by_id.get(provider_id, {})
+        # Host/region-level override (e.g. AWS China regions operated by Sinnet → cn). The
+        # override keys off the resolved jurisdiction, since the region is already encoded there
+        # for region-in-endpoint providers, and off the evidence text for host-token overrides.
+        overrides = entry.get("sovereignty_overrides", {})
+        if overrides:
+            if jurisdiction and jurisdiction in overrides:
+                return overrides[jurisdiction]
+            if evidence:
+                for token, bloc in overrides.items():
+                    if token in evidence:
+                        return bloc
+        return self.default_sovereignty(provider_id)
 
     def category(self, pid: str) -> str:
         """Provider category: 'inference' (default), 'vector_store', or 'aggregator'."""

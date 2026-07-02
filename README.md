@@ -51,6 +51,22 @@ regime** in play and linked to the relevant **cross-border arrangement** (the ma
 Contract variant, PIPL cross-border, GDPR, the UK IDTA, APPI Art. 28, PIPA Art. 28-8, PDPA s.26/s.129,
 APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
 
+### Sovereignty (opt-in, orthogonal to residency)
+
+Residency says *where the bytes rest*; **sovereignty** says *which government can compel
+disclosure* — a US provider (AWS, Azure, GCP, OpenAI) is subject to the CLOUD Act regardless of
+the endpoint region. Add an optional `sovereignty` block to constrain it per class:
+
+```json
+"sovereignty": {
+  "on_unknown": "warn",
+  "classifications": { "customer-pii": ["eu", "uk", "local"] }
+}
+```
+
+Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `local`, `unknown`. Absent the block,
+behaviour is unchanged. See [CAPABILITIES.md §3.1](CAPABILITIES.md) for the full model.
+
 ## Capabilities
 
 - **Languages:** Python (AST) and TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
