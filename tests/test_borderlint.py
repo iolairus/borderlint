@@ -758,6 +758,9 @@ def test_sovereignty_resolution():
     assert dets('a = "https://api.sarvam.ai"\n')[0].sovereignty == "in"
     assert dets('a = "https://api.ai21.com"\n')[0].sovereignty == "il"
     assert dets('import mistralai\n')[0].sovereignty == "eu"
+    # Cohere: US endpoint (residency us) but Canadian-headquartered → sovereignty ca (orthogonal)
+    c = dets('import cohere\n')[0]
+    assert c.jurisdiction == "us" and c.sovereignty == "ca"
     # Loopback / self-hosted -> local sovereignty (no external sovereign)
     assert cfg("base_url: http://localhost:8080\n")[0].sovereignty == "local"
     assert dets('import ollama\n')[0].sovereignty == "local"
@@ -772,6 +775,15 @@ def test_sovereignty_host_override():
     assert d.jurisdiction == "cn" and d.sovereignty == "cn"
     d2 = dets('u = "bedrock-runtime.cn-northwest-1.amazonaws.com.cn"\n')[0]
     assert d2.sovereignty == "cn"
+
+
+def test_sovereignty_unknown_fail():
+    # sovereignty.on_unknown: "fail" fails an unknown-sovereignty flow on its own — symmetric with
+    # residency on_unknown, and no longer requires "sovereignty" in fail_on as a second gate.
+    pol = {"classifications": {"customer-pii": ["hk", "CN-GBA", "sg", "us", "gb", "eu", "uk"]},
+           "sovereignty": {"on_unknown": "fail", "classifications": {"customer-pii": ["eu"]}}}
+    f = evaluate([_det("litellm", "unknown", "litellm")], pol, "customer-pii", kb)
+    assert "sovereignty_unknown" in f[0].reasons and f[0].severity == "fail"
 
 
 def test_sovereignty_policy_absent():

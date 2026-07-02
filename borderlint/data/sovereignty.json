@@ -9,6 +9,7 @@
     "ru": "SORM; FSB access under Russian law.",
     "in": "DPDP Act 2023 + IT Act 2000.",
     "il": "Israeli privacy law and surveillance framework.",
+    "ca": "PIPEDA + the CSIS/RCMP production-order regime — Canadian-headquartered providers are subject to Canadian compelled-disclosure process.",
     "local": "Self-hosted inference — no external sovereign; the operator's own jurisdiction governs.",
     "unknown": "Sovereignty not statically determinable (aggregator/router or unmapped host)."
   },
@@ -20,7 +21,7 @@
     "azure_openai": "us",
     "aws_bedrock": "us",
     "mistral": "eu",
-    "cohere": "us",
+    "cohere": "ca",
     "cerebras": "us",
     "fireworks_ai": "us",
     "deepinfra": "us",

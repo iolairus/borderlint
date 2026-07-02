@@ -64,8 +64,8 @@ so `sg` is allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA`
 **Sovereignty — opt-in, orthogonal to residency.** Residency says *where the bytes rest*;
 **sovereignty** says *which government can compel disclosure* — a US provider (AWS, Azure, GCP,
 OpenAI) is subject to the CLOUD Act regardless of the endpoint region. Add a `sovereignty` block
-to constrain it per class. Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `local`,
-`unknown`. Absent the block, behaviour is unchanged (sovereignty is reported as a column but never
+to constrain it per class. Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`,
+`local`, `unknown`. Absent the block, behaviour is unchanged (sovereignty is reported as a column but never
 gates). `local` sovereignty is exempt (self-hosted = no external sovereign). See
 [CAPABILITIES.md §3.1](CAPABILITIES.md) for the full model.
 

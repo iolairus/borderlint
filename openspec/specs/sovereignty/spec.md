@@ -24,7 +24,7 @@ endpoint region alone.
 
 ### Requirement: Sovereignty bloc vocabulary
 The system SHALL express sovereignty using the blocs `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`,
-`local`, and `unknown`. The `eu` bloc represents the EU/EEA as a single compelled-disclosure
+`ca`, `local`, and `unknown`. The `eu` bloc represents the EU/EEA as a single compelled-disclosure
 unit. The `local` bloc represents self-hosted inference with no external sovereign. The `unknown`
 bloc represents a sovereignty that cannot be statically determined. The system SHALL NOT emit any
 sovereignty bloc outside this vocabulary.

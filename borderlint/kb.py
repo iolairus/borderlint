@@ -82,7 +82,7 @@ def _valid_jurisdiction(token: str) -> bool:
 # --- Sovereignty dimension ----------------------------------------------------
 # Sovereignty blocs: which government can compel disclosure of a flow's data, derived from the
 # provider's home legal regime (not the endpoint region). Distinct from residency.
-_SOVEREIGNTY_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "local", "unknown"})
+_SOVEREIGNTY_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "local", "unknown"})
 
 
 def _valid_sovereignty(token: str) -> bool:
@@ -136,7 +136,7 @@ def load_kb(path: str | None = None) -> "KB":
                 if not _valid_sovereignty(bloc):
                     raise ValueError(
                         f"invalid sovereignty bloc '{bloc}' for provider '{pid}' "
-                        "(use one of us, eu, cn, uk, ru, in, il, local, unknown)")
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, local, unknown)")
                 sov_map[pid] = bloc  # user wins
     kb = KB(providers)
     kb.updated = bundled.get("updated")
@@ -192,17 +192,13 @@ class KB:
         if evidence and _is_loopback_evidence(evidence):
             return "local"
         entry = self.by_id.get(provider_id, {})
-        # Host/region-level override (e.g. AWS China regions operated by Sinnet → cn). The
-        # override keys off the resolved jurisdiction, since the region is already encoded there
-        # for region-in-endpoint providers, and off the evidence text for host-token overrides.
+        # Region-level override keyed off the resolved jurisdiction (e.g. AWS China regions,
+        # operated by Sinnet/NWCD, resolve to jurisdiction 'cn' → sovereignty 'cn'). The region
+        # is already encoded in the jurisdiction for region-in-endpoint providers, so an exact
+        # jurisdiction lookup is enough — no substring matching against raw evidence.
         overrides = entry.get("sovereignty_overrides", {})
-        if overrides:
-            if jurisdiction and jurisdiction in overrides:
-                return overrides[jurisdiction]
-            if evidence:
-                for token, bloc in overrides.items():
-                    if token in evidence:
-                        return bloc
+        if jurisdiction and jurisdiction in overrides:
+            return overrides[jurisdiction]
         return self.default_sovereignty(provider_id)
 
     def category(self, pid: str) -> str:

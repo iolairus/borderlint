@@ -99,7 +99,7 @@ jurisdiction" — a posture many HK/GBA and EU entities in fact hold.
 
 **Sovereignty blocs.** borderlint models a small set of blocs, not per-country sovereigns:
 `us`, `eu` (the EU/EEA as a single compelled-disclosure unit), `cn`, `uk` (post-Brexit, distinct
-from EU), `ru`, `in`, `il`, `local` (self-hosted — no external sovereign), and `unknown`
+from EU), `ru`, `in`, `il`, `ca`, `local` (self-hosted — no external sovereign), and `unknown`
 (aggregators, custom endpoints, or unmapped providers). Sovereignty is derived from the
 **provider** (its home legal regime), not the endpoint region; region-in-endpoint providers
 (Bedrock, Azure OpenAI, Vertex) inherit the provider's sovereignty regardless of the resolved
