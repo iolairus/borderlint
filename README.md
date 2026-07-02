@@ -2,16 +2,25 @@
 
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-borderlint-2188ff?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/borderlint-ai-data-residency-lint)
 
-**Map and govern where your AI data and traffic flow.**
+**Map and govern where your AI data and traffic flow — and who can compel its disclosure.**
 
-A static, in-CI linter for **AI data residency across APAC & EMEA**, with first-class **HK / GBA**
-support: does your AI data stay within the jurisdictions your residency policy allows? borderlint
-statically scans your repo (**Python and TypeScript/JavaScript**) for AI provider usage, resolves each
-flow to a jurisdiction (ccTLD/ISO codes plus the `CN-GBA` / `GBA` tokens), and fails the build on any
-flow outside the allow-list for the data class you declare. Declare a home base — **HK, Macao, the GBA,
-Japan, Korea, Singapore, Australia, the UK, the EU, or Malaysia** — and flagged flows are tagged with
-the matching regime (PDPO, PIPL, APPI, PIPA, PDPA, the Privacy Act, GDPR …) and its cross-border
-reference. Western and Chinese providers are treated evenly. **Zero runtime dependencies.**
+A static, in-CI linter for **AI data residency and sovereignty across APAC & EMEA**, with
+first-class **HK / GBA** support. borderlint statically scans your repo (**Python and
+TypeScript/JavaScript**) for AI provider usage and evaluates each flow against two orthogonal
+dimensions:
+
+- **Residency** — *where the bytes rest*. Each flow resolves to a jurisdiction (ccTLD/ISO codes
+  plus the `CN-GBA` / `GBA` tokens); a flow outside the allow-list for the declared data class
+  fails the build.
+- **Sovereignty** — *which government can compel disclosure*. A US-headquartered provider (AWS,
+  Azure, GCP, OpenAI, Anthropic) is subject to the CLOUD Act regardless of the endpoint region;
+  a flow to AWS Bedrock `ap-east-1` is residency-clean for a PDPO policy (residency `hk`) yet
+  remains under **US sovereignty**. An optional `sovereignty` block constrains this per class.
+
+Declare a home base — **HK, Macao, the GBA, Japan, Korea, Singapore, Australia, the UK, the EU,
+or Malaysia** — and flagged flows are tagged with the matching regime (PDPO, PIPL, APPI, PIPA,
+PDPA, the Privacy Act, GDPR …) and its cross-border reference. Western and Chinese providers are
+treated evenly. **Zero runtime dependencies.**
 
 ## Use
 
@@ -30,7 +39,8 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 
 ## Policy (the eval-set)
 
-`residency.json` maps each data class to the jurisdictions you accept:
+`residency.json` maps each data class to the jurisdictions you accept, and optionally to the
+**sovereignty blocs** you accept for compelled-disclosure exposure:
 
 ```json
 {
@@ -39,33 +49,31 @@ python -m borderlint scan ./service --policy residency.json --classification cus
     "customer-pii": ["hk", "CN-GBA", "sg"],
     "employee-pii": ["hk", "CN-GBA"],
     "non-pii":      ["hk", "CN-GBA", "cn", "mo", "sg", "us", "gb"]
+  },
+  "sovereignty": {
+    "on_unknown": "warn",
+    "classifications": { "customer-pii": ["eu", "uk", "local"] }
   }
 }
 ```
 
-**Deny-by-default**: a flow to any code not on the list for the declared class fails — so `sg` is
-allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA` is shorthand for `hk` +
-`CN-GBA`. Declare your **`home_location`** — a GBA seat (`hk`/`mo`/`CN-GBA`) or an APAC/EMEA seat
+**Residency — deny-by-default**: a flow to any code not on the list for the declared class fails —
+so `sg` is allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA` is shorthand for
+`hk` + `CN-GBA`.
+
+**Sovereignty — opt-in, orthogonal to residency.** Residency says *where the bytes rest*;
+**sovereignty** says *which government can compel disclosure* — a US provider (AWS, Azure, GCP,
+OpenAI) is subject to the CLOUD Act regardless of the endpoint region. Add a `sovereignty` block
+to constrain it per class. Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `local`,
+`unknown`. Absent the block, behaviour is unchanged (sovereignty is reported as a column but never
+gates). `local` sovereignty is exempt (self-hosted = no external sovereign). See
+[CAPABILITIES.md §3.1](CAPABILITIES.md) for the full model.
+
+Declare your **`home_location`** — a GBA seat (`hk`/`mo`/`CN-GBA`) or an APAC/EMEA seat
 (`jp`, `kr`, `sg`, `au`, `uk`, `eu`, `my`) — and a flagged flow is tagged with the **data-protection
 regime** in play and linked to the relevant **cross-border arrangement** (the matching GBA Standard
 Contract variant, PIPL cross-border, GDPR, the UK IDTA, APPI Art. 28, PIPA Art. 28-8, PDPA s.26/s.129,
 APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
-
-### Sovereignty (opt-in, orthogonal to residency)
-
-Residency says *where the bytes rest*; **sovereignty** says *which government can compel
-disclosure* — a US provider (AWS, Azure, GCP, OpenAI) is subject to the CLOUD Act regardless of
-the endpoint region. Add an optional `sovereignty` block to constrain it per class:
-
-```json
-"sovereignty": {
-  "on_unknown": "warn",
-  "classifications": { "customer-pii": ["eu", "uk", "local"] }
-}
-```
-
-Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `local`, `unknown`. Absent the block,
-behaviour is unchanged. See [CAPABILITIES.md §3.1](CAPABILITIES.md) for the full model.
 
 ## Capabilities
 
@@ -89,6 +97,10 @@ behaviour is unchanged. See [CAPABILITIES.md §3.1](CAPABILITIES.md) for the ful
 - **Jurisdictions:** ccTLD/ISO codes + `CN-GBA` / `GBA`; **AWS / Azure / GCP-Vertex region resolved
   from the endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` and
   `asia-east2-aiplatform.googleapis.com` → `hk`).
+- **Sovereignty:** a per-flow bloc (`us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `local`, `unknown`)
+  derived from the provider's home legal regime — orthogonal to residency. Opt-in policy block;
+  reported in every output format; host-level overrides for ring-fenced subsidiaries (e.g. AWS
+  China / Sinnet → `cn`).
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
   failure set, declared home regime.
 - **Regimes & arrangements:** declared home location → data-protection regime tag + the cross-border
