@@ -87,7 +87,22 @@
     "olmo2": {"org": "Allen Institute for AI", "bloc": "us"},
     "nemotron": {"org": "NVIDIA", "bloc": "us"},
     "starcoder": {"org": "BigCode (Hugging Face / ServiceNow)", "bloc": "us"},
-    "aya-": {"org": "Cohere", "bloc": "ca"}
+    "aya-": {"org": "Cohere", "bloc": "ca"},
+    "google.": {"org": "Google", "bloc": "us"},
+    "openai.": {"org": "OpenAI", "bloc": "us"},
+    "nvidia.": {"org": "NVIDIA", "bloc": "us"},
+    "moonshotai.": {"org": "Moonshot AI", "bloc": "cn"},
+    "moonshot.": {"org": "Moonshot AI", "bloc": "cn"},
+    "zai.": {"org": "Zhipu AI", "bloc": "cn"},
+    "minimax.": {"org": "MiniMax", "bloc": "cn"},
+    "stability.": {"org": "Stability AI", "bloc": "uk"},
+    "voxtral-": {"org": "Mistral AI", "bloc": "eu"},
+    "devstral-": {"org": "Mistral AI", "bloc": "eu"},
+    "ministral-": {"org": "Mistral AI", "bloc": "eu"},
+    "pixtral-": {"org": "Mistral AI", "bloc": "eu"},
+    "gemma4": {"org": "Google", "bloc": "us"},
+    "glm5": {"org": "Zhipu AI", "bloc": "cn"},
+    "minimax-": {"org": "MiniMax", "bloc": "cn"}
   },
   "passthrough_orgs_note": "Quantizer / community-conversion hubs (GGUF, MLX). The org carries no provenance — the model family in the repo name does — so the org prefix is stripped and the remainder matched against the family patterns. Families whose developer bloc is outside the vocabulary (Falcon/TII, EXAONE/LG, Solar/Upstage) are deliberately absent from the patterns: absence resolves 'unknown' without generating standalone noise findings.",
   "passthrough_orgs": [
