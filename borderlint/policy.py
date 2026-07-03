@@ -18,6 +18,16 @@ def _valid_sovereignty(token: str) -> bool:
     return token in _SOVEREIGNTY_BLOCS
 
 
+# Provenance bloc vocabulary (mirrors borderlint.kb._PROVENANCE_BLOCS; duplicated for the same
+# circular-import reason). The sovereignty vocabulary minus `local` — weights always have a developer.
+_PROVENANCE_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "unknown"})
+
+
+def _valid_provenance(token: str) -> bool:
+    """A provenance bloc must be one of the fixed vocabulary."""
+    return token in _PROVENANCE_BLOCS
+
+
 def _alias(j):
     """Normalise a jurisdiction token (currently only uk -> gb)."""
     return _JURIS_ALIAS.get(j, j)
@@ -57,6 +67,15 @@ def load_policy(path: str) -> dict:
                     raise ValueError(
                         f"invalid sovereignty bloc '{b}' in classification '{cls}' "
                         "(use one of us, eu, cn, uk, ru, in, il, ca, local, unknown)")
+    # Provenance block is opt-in. Validate bloc tokens when present, same posture as sovereignty.
+    mprov = data.get("provenance")
+    if mprov and isinstance(mprov, dict):
+        for cls, blocs in mprov.get("classifications", {}).items():
+            for b in blocs:
+                if not _valid_provenance(b):
+                    raise ValueError(
+                        f"invalid provenance bloc '{b}' in classification '{cls}' "
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, unknown)")
     return data
 
 
@@ -84,27 +103,42 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
     sov_allow = set(sov_classes.get(classification, [])) if classification in sov_classes else None
     sov_on_unknown = sov_block.get("on_unknown", "warn") if isinstance(sov_block, dict) else "warn"
 
+    # Provenance (model weights) is opt-in with the same shape. `mprov` to avoid clashing with the
+    # provider allow-list above.
+    mprov_block = policy.get("provenance") or {}
+    mprov_classes = mprov_block.get("classifications", {}) if isinstance(mprov_block, dict) else {}
+    mprov_allow = set(mprov_classes.get(classification, [])) if classification in mprov_classes else None
+    mprov_on_unknown = mprov_block.get("on_unknown", "warn") if isinstance(mprov_block, dict) else "warn"
+
     findings = []
     for d in detections:
         reasons = []
-        if d.provider_id in deny or (prov_allow and d.provider_id not in prov_allow):
-            reasons.append("denied_provider")
-        if d.jurisdiction == "unknown":
-            reasons.append("unknown")
-        elif d.jurisdiction == "local":
-            pass  # local inference is not a cross-border transfer; never a residency violation
-        elif d.jurisdiction not in allow:
-            reasons.append("residency")
-        # Sovereignty dimension (opt-in): evaluate only when an allow-list is declared for this class.
-        if sov_allow is not None:
-            sov = getattr(d, "sovereignty", "unknown")
-            if sov == "local":
-                pass  # self-hosted → no external sovereign; exempt, mirroring residency `local`
-            elif sov == "unknown":
-                reasons.append("sovereignty_unknown")  # governed by sov_on_unknown
-            elif sov not in sov_allow:
-                reasons.append("sovereignty")  # an allow-list mismatch
-        sev = _severity(reasons, fail_on, on_unknown, sov_on_unknown)
+        if d.kind != "model_reference":  # a standalone model reference is a weights signal, not a flow
+            if d.provider_id in deny or (prov_allow and d.provider_id not in prov_allow):
+                reasons.append("denied_provider")
+            if d.jurisdiction == "unknown":
+                reasons.append("unknown")
+            elif d.jurisdiction == "local":
+                pass  # local inference is not a cross-border transfer; never a residency violation
+            elif d.jurisdiction not in allow:
+                reasons.append("residency")
+            # Sovereignty dimension (opt-in): evaluate only when an allow-list is declared for this class.
+            if sov_allow is not None:
+                sov = getattr(d, "sovereignty", "unknown")
+                if sov == "local":
+                    pass  # self-hosted → no external sovereign; exempt, mirroring residency `local`
+                elif sov == "unknown":
+                    reasons.append("sovereignty_unknown")  # governed by sov_on_unknown
+                elif sov not in sov_allow:
+                    reasons.append("sovereignty")  # an allow-list mismatch
+        # Provenance dimension (opt-in): applies to flows and standalone model references alike.
+        if mprov_allow is not None:
+            mp = getattr(d, "provenance", "unknown")
+            if mp == "unknown":
+                reasons.append("provenance_unknown")  # governed by mprov_on_unknown
+            elif mp not in mprov_allow:
+                reasons.append("provenance")  # an allow-list mismatch
+        sev = _severity(reasons, fail_on, on_unknown, sov_on_unknown, mprov_on_unknown)
         if sev == "fail" and d.waiver:  # a justified waiver downgrades a residency/unknown/sovereignty failure
             blocking = "denied_provider" in reasons and "denied_provider" in fail_on
             if not blocking:  # ...but never an explicit provider deny
@@ -113,12 +147,15 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
     return findings
 
 
-def _severity(reasons: list[str], fail_on: set[str], on_unknown: str, sov_on_unknown: str = "warn") -> str:
+def _severity(reasons: list[str], fail_on: set[str], on_unknown: str, sov_on_unknown: str = "warn",
+              mprov_on_unknown: str = "warn") -> str:
     if not reasons:
         return "ok"
     fail = (("denied_provider" in reasons and "denied_provider" in fail_on)
             or ("residency" in reasons and "residency" in fail_on)
             or ("unknown" in reasons and on_unknown == "fail")
             or ("sovereignty" in reasons and "sovereignty" in fail_on)
-            or ("sovereignty_unknown" in reasons and sov_on_unknown == "fail"))
+            or ("sovereignty_unknown" in reasons and sov_on_unknown == "fail")
+            or ("provenance" in reasons and "provenance" in fail_on)
+            or ("provenance_unknown" in reasons and mprov_on_unknown == "fail"))
     return "fail" if fail else "warn"

@@ -69,6 +69,12 @@ to constrain it per class. Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, 
 gates). `local` sovereignty is exempt (self-hosted = no external sovereign). See
 [CAPABILITIES.md §3.1](CAPABILITIES.md) for the full model.
 
+**Provenance — opt-in, the third axis.** *Whose model weights* a flow runs, resolved from model
+references in code — so Bedrock `ap-east-1` serving DeepSeek-R1 (residency `hk`, sovereignty
+`us`, provenance `cn`) and self-hosted Qwen (residency/sovereignty `local`, provenance `cn`)
+become expressible. An optional `provenance` block mirrors the sovereignty shape; vocabulary is
+the same minus `local`. See [CAPABILITIES.md §3.2](CAPABILITIES.md).
+
 Declare your **`home_location`** — a GBA seat (`hk`/`mo`/`CN-GBA`) or an APAC/EMEA seat
 (`jp`, `kr`, `sg`, `au`, `uk`, `eu`, `my`) — and a flagged flow is tagged with the **data-protection
 regime** in play and linked to the relevant **cross-border arrangement** (the matching GBA Standard
@@ -97,10 +103,14 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
 - **Jurisdictions:** ccTLD/ISO codes + `CN-GBA` / `GBA`; **AWS / Azure / GCP-Vertex region resolved
   from the endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` and
   `asia-east2-aiplatform.googleapis.com` → `hk`).
-- **Sovereignty:** a per-flow bloc (`us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `local`, `unknown`)
-  derived from the provider's home legal regime — orthogonal to residency. Opt-in policy block;
-  reported in every output format; host-level overrides for ring-fenced subsidiaries (e.g. AWS
-  China / Sinnet → `cn`).
+- **Sovereignty:** a per-flow bloc (`us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `local`,
+  `unknown`) derived from the provider's home legal regime — orthogonal to residency. Opt-in
+  policy block; reported in every output format; host-level overrides for ring-fenced
+  subsidiaries (e.g. AWS China / Sinnet → `cn`).
+- **Provenance:** whose model weights a flow runs — a third orthogonal bloc resolved from model
+  references in code (`anthropic.claude-…`, `qwen2.5-72b`, `deepseek/deepseek-r1`, `Qwen/…`) or
+  the provider's first-party default. Bedrock `ap-east-1` serving DeepSeek-R1 is residency `hk`,
+  sovereignty `us`, provenance `cn`. Opt-in `provenance` policy block, same shape as sovereignty.
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
   failure set, declared home regime.
 - **Regimes & arrangements:** declared home location → data-protection regime tag + the cross-border

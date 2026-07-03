@@ -34,17 +34,23 @@ _JS_IMPORT = re.compile(
 _API_PATH = re.compile(
     r"""(?:https?://(?P<host>[^\s'"`/]+))?(?P<path>/v1/(?:chat/completions|completions|responses|embeddings))\b""")
 
+# Quoted string literals, any language — candidates for model-reference matching. The KB does the
+# anchoring (model-id charset + known prefix), so this can stay permissive.
+_STR_LITERAL = re.compile(r"""['"]([^'"\n]{3,100})['"]""")
+
 
 @dataclass(frozen=True)
 class Detection:
     provider_id: str
-    kind: str  # "sdk_import" | "endpoint_reference" | "config_endpoint" | "api_call"
+    kind: str  # "sdk_import" | "endpoint_reference" | "config_endpoint" | "api_call" | "model_reference"
     evidence: str
     file: str
     line: int
     jurisdiction: str
     waiver: str | None = None  # justification, if an inline `borderlint: allow` waiver applies
     sovereignty: str = "unknown"  # compelled-disclosure bloc; resolved in scan() from the provider KB
+    provenance: str = "unknown"  # model-weights bloc; bound model reference or first-party default
+    model: str | None = None  # the bound model identifier, when one resolved the provenance
 
 
 def _scan_py(path: str, src: str, kb) -> list[Detection]:
@@ -174,6 +180,41 @@ def _resolve_sovereignty(detections, kb) -> list[Detection]:
             for d in detections]
 
 
+def _scan_model_refs(src: str, kb) -> list[tuple[int, str, str]]:
+    """(line, identifier, bloc) for each string literal matching the model-ID prefix map."""
+    out = []
+    for m in _STR_LITERAL.finditer(src):
+        hit = kb.match_model(m.group(1))
+        if hit:
+            out.append((src.count("\n", 0, m.start()) + 1, hit[0], hit[1]))
+    return out
+
+
+def _attach_models(path: str, src: str, dets: list[Detection], kb) -> list[Detection]:
+    """Bind model references to same-file provider detections (D4).
+
+    Refs resolving to exactly one distinct bloc bind to the file's provider detections; otherwise
+    (no provider in file, or ambiguous blocs) each ref stands alone as a `model_reference` finding
+    with residency `unknown` — it is a weights-origin signal, not a network flow.
+    """
+    refs = _scan_model_refs(src, kb)
+    if not refs:
+        return dets
+    blocs = {b for _, _, b in refs}
+    if dets and len(blocs) == 1:
+        # ponytail: first ref represents same-bloc siblings; per-ref pairing needs call-site AST
+        return [replace(d, provenance=refs[0][2], model=refs[0][1]) for d in dets]
+    return dets + [Detection("model_reference", "model_reference", ref, path, line, "unknown",
+                             provenance=bloc, model=ref) for line, ref, bloc in refs]
+
+
+def _resolve_provenance(detections, kb) -> list[Detection]:
+    """Tier-2 provenance (D3): unbound flows on first-party-only providers get the org's bloc."""
+    return [replace(d, provenance=kb.default_provenance(d.provider_id))
+            if d.provenance == "unknown" and d.kind != "model_reference" else d
+            for d in detections]
+
+
 def scan(root, kb) -> list[Detection]:
     root = Path(root)
     paths = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
@@ -206,9 +247,10 @@ def scan(root, kb) -> list[Detection]:
         # one detection per flow per line: drop an api_call already produced by another scanner on its line
         anchored = {(d.provider_id, d.jurisdiction, d.line) for d in dets if d.kind != "api_call"}
         dets = [d for d in dets if d.kind != "api_call" or (d.provider_id, d.jurisdiction, d.line) not in anchored]
+        dets = _attach_models(str(p), src, dets, kb)  # bind model refs → provenance (per file)
         for d in dets:
             key = (d.provider_id, d.kind, d.evidence, d.file, d.line)
             if key not in seen:
                 seen.add(key)
                 out.append(d)
-    return _resolve_sovereignty([_apply_waiver(d, waivers) for d in out], kb)
+    return _resolve_provenance(_resolve_sovereignty([_apply_waiver(d, waivers) for d in out], kb), kb)

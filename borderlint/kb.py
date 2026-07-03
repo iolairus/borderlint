@@ -104,6 +104,27 @@ def _is_loopback_evidence(evidence: str) -> bool:
     return any(h in low for h in _LOOPBACK_HOSTS) or ".localhost" in low
 
 
+# --- Provenance dimension -----------------------------------------------------
+# Provenance blocs: the legal regime of the model's developer (whose weights), derived from model
+# references found statically in code. The sovereignty vocabulary minus `local` — weights always
+# have a developer. Distinct from residency and sovereignty.
+_PROVENANCE_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "unknown"})
+
+# A model identifier: no spaces, model-id punctuation only. Anchors prefix matching so prose
+# strings that merely start with a model name ("gpt-4 is great") are never flagged.
+_MODEL_ID = re.compile(r"^[A-Za-z0-9._/:-]{3,100}$")
+
+
+def _valid_provenance(token: str) -> bool:
+    """A provenance bloc must be one of the fixed vocabulary."""
+    return token in _PROVENANCE_BLOCS
+
+
+def _load_provenance_map() -> dict:
+    """Bundled model-ID prefix → bloc map + first-party provider defaults (advisory)."""
+    return json.loads(files("borderlint").joinpath("data/provenance.json").read_text("utf-8"))
+
+
 def _endpoints_provider(endpoints: dict) -> dict:
     for host, juris in endpoints.items():
         if not _valid_jurisdiction(juris):
@@ -121,6 +142,8 @@ def load_kb(path: str | None = None) -> "KB":
     providers = list(bundled.get("providers", []))
     sov_doc = _load_sovereignty_map()
     sov_map = dict(sov_doc.get("providers", {}))  # bundled provider id → bloc (copy; user merges in)
+    prov_doc = _load_provenance_map()
+    prov_patterns = {pat.lower(): entry["bloc"] for pat, entry in prov_doc.get("patterns", {}).items()}
     if path:
         with open(path, encoding="utf-8") as fh:
             user = json.load(fh)
@@ -138,10 +161,23 @@ def load_kb(path: str | None = None) -> "KB":
                         f"invalid sovereignty bloc '{bloc}' for provider '{pid}' "
                         "(use one of us, eu, cn, uk, ru, in, il, ca, local, unknown)")
                 sov_map[pid] = bloc  # user wins
+        # User provenance overrides: a top-level "provenance" map (model-ID prefix → bloc) takes
+        # precedence over the bundled patterns; validated against the bloc vocabulary.
+        user_prov = user.get("provenance", {})
+        if isinstance(user_prov, dict):
+            for pat, bloc in user_prov.items():
+                if not _valid_provenance(bloc):
+                    raise ValueError(
+                        f"invalid provenance bloc '{bloc}' for model pattern '{pat}' "
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, unknown)")
+                prov_patterns[pat.lower()] = bloc  # user wins
     kb = KB(providers)
     kb.updated = bundled.get("updated")
     kb.sovereignty_map = sov_map
     kb.sovereignty_updated = sov_doc.get("updated")
+    kb.provenance_defaults = dict(prov_doc.get("provider_defaults", {}))
+    kb.provenance_updated = prov_doc.get("updated")
+    kb.set_provenance_patterns(prov_patterns)
     return kb
 
 
@@ -168,6 +204,13 @@ class KB:
         self.updated: str | None = None  # KB last-reviewed date, set by load_kb
         self.sovereignty_map: dict = {}  # provider id → sovereignty bloc, set by load_kb
         self.sovereignty_updated: str | None = None  # sovereignty map last-reviewed date
+        self.provenance_defaults: dict = {}  # provider id → bloc for first-party-only providers
+        self.provenance_updated: str | None = None  # provenance map last-reviewed date
+        self._prov_prefixes: list = []  # (prefix, bloc), longest first, set via set_provenance_patterns
+
+    def set_provenance_patterns(self, patterns: dict) -> None:
+        """Install the (merged) model-ID prefix → bloc map; longest prefix wins."""
+        self._prov_prefixes = sorted(patterns.items(), key=lambda x: -len(x[0]))
 
     def name(self, pid: str) -> str:
         return self.by_id.get(pid, {}).get("name", pid)
@@ -200,6 +243,25 @@ class KB:
         if jurisdiction and jurisdiction in overrides:
             return overrides[jurisdiction]
         return self.default_sovereignty(provider_id)
+
+    def match_model(self, literal: str) -> tuple[str, str] | None:
+        """Match a string literal against the model-ID prefix map → (identifier, bloc) or None.
+
+        Anchored: the whole literal must look like a model identifier (no spaces, model-id
+        charset) and start with a known prefix. Longest prefix wins.
+        """
+        s = literal.strip()
+        if not _MODEL_ID.match(s):
+            return None
+        low = s.lower()
+        for prefix, bloc in self._prov_prefixes:
+            if low.startswith(prefix):
+                return s, bloc
+        return None
+
+    def default_provenance(self, pid: str) -> str:
+        """Tier-2 provenance: the org's bloc for providers that serve only their own models."""
+        return self.provenance_defaults.get(pid, "unknown")
 
     def category(self, pid: str) -> str:
         """Provider category: 'inference' (default), 'vector_store', or 'aggregator'."""

@@ -23,7 +23,9 @@ REASON = {"denied_provider": "provider denied by policy",
           "residency": "jurisdiction outside the allow-list for this data class",
           "unknown": "jurisdiction could not be determined",
           "sovereignty": "sovereignty outside the allow-list for this data class",
-          "sovereignty_unknown": "sovereignty could not be determined"}
+          "sovereignty_unknown": "sovereignty could not be determined",
+          "provenance": "model provenance outside the allow-list for this data class",
+          "provenance_unknown": "model provenance could not be determined"}
 SOVEREIGNTY = {"us": "United States", "eu": "European Union", "cn": "Mainland China",
                "uk": "United Kingdom", "ru": "Russia", "in": "India", "il": "Israel",
                "ca": "Canada", "local": "Local", "unknown": "Unknown"}
@@ -42,7 +44,7 @@ def juris(j: str) -> str:
 
 
 def sov(b: str) -> str:
-    """Display label for a sovereignty bloc."""
+    """Display label for a sovereignty or provenance bloc (shared vocabulary)."""
     return SOVEREIGNTY.get(b, b)
 
 
@@ -129,10 +131,13 @@ def text(findings, kb, policy=None) -> str:
         js = ", ".join(juris(x) for x in sorted({f.detection.jurisdiction for f in fs}))
         tag = " (vector store)" if kb.category(pid) == "vector_store" else ""
         sovs = ", ".join(sov(x) for x in sorted({getattr(f.detection, "sovereignty", "unknown") for f in fs}))
-        lines.append(f"[{mark}] {kb.name(pid)}{tag} -> {js} | sovereignty: {sovs}")
+        provs = ", ".join(sov(x) for x in sorted({getattr(f.detection, "provenance", "unknown") for f in fs}))
+        lines.append(f"[{mark}] {kb.name(pid)}{tag} -> {js} | sovereignty: {sovs} | weights: {provs}")
         for f in fs:
             d = f.detection
-            lines.append(f"        {d.file}:{d.line} ({d.kind}: {d.evidence})")
+            model = getattr(d, "model", None)
+            suffix = f" [model: {model}]" if model and d.kind != "model_reference" else ""
+            lines.append(f"        {d.file}:{d.line} ({d.kind}: {d.evidence}){suffix}")
             for r in f.reasons:
                 lines.append(f"           ! {REASON.get(r, r)}")
             if f.severity == "waived":
@@ -156,6 +161,8 @@ def as_json(findings, kb, policy=None) -> str:
                       "category": kb.category(f.detection.provider_id),
                       "jurisdiction": f.detection.jurisdiction,
                       "sovereignty": getattr(f.detection, "sovereignty", "unknown"),
+                      "provenance": getattr(f.detection, "provenance", "unknown"),
+                      "model": getattr(f.detection, "model", None),
                       "severity": f.severity, "reasons": f.reasons,
                       "kind": f.detection.kind, "evidence": f.detection.evidence,
                       "file": f.detection.file, "line": f.detection.line,
@@ -247,17 +254,24 @@ def project_label(root) -> str:
 def mermaid(findings, kb, policy=None, app_label="Your application") -> str:
     by_j = {}
     sov_by_pj = {}  # (provider, jurisdiction) → sovereignty bloc, for the node label
+    prov_by_pj = {}  # (provider, jurisdiction) → provenance bloc, shown when it differs
     for f in findings:
         by_j.setdefault(f.detection.jurisdiction, set()).add(f.detection.provider_id)
         sov_by_pj[(f.detection.provider_id, f.detection.jurisdiction)] = getattr(
             f.detection, "sovereignty", "unknown")
+        prov_by_pj[(f.detection.provider_id, f.detection.jurisdiction)] = getattr(
+            f.detection, "provenance", "unknown")
     lines = ["flowchart LR", f"  app([{_mlabel(app_label)}])"]
     for j, pids in by_j.items():
         js = j.replace("-", "_")
         lines.append(f"  subgraph j_{js}[{_mlabel(j)}]")  # zone titled by the jurisdiction code
         for pid in sorted(pids):
             bloc = sov_by_pj.get((pid, j), "unknown")
-            lines.append(f"    {pid}__{js}[{_mlabel(f'{kb.name(pid)} ({sov(bloc)})')}]")  # sovereignty appended
+            pb = prov_by_pj.get((pid, j), "unknown")
+            # provenance appended only when it diverges from sovereignty — the interesting case
+            label = f"{kb.name(pid)} ({sov(bloc)}, weights {sov(pb)})" if pb not in (bloc, "unknown") \
+                else f"{kb.name(pid)} ({sov(bloc)})"
+            lines.append(f"    {pid}__{js}[{_mlabel(label)}]")
         lines.append("  end")
         for pid in sorted(pids):
             lines.append(f"  app --> {pid}__{js}")
@@ -276,7 +290,7 @@ def sarif(findings, kb, policy=None) -> str:
         result = {
             "ruleId": f.reasons[0] if f.reasons else "ai-data-flow",
             "level": _SARIF_LEVEL[f.severity],
-            "message": {"text": f"{kb.name(d.provider_id)} -> {juris(d.jurisdiction)} (sovereignty {sov(getattr(d, 'sovereignty', 'unknown'))}): {detail}"},
+            "message": {"text": f"{kb.name(d.provider_id)} -> {juris(d.jurisdiction)} (sovereignty {sov(getattr(d, 'sovereignty', 'unknown'))}, weights {sov(getattr(d, 'provenance', 'unknown'))}): {detail}"},
             "locations": [{"physicalLocation": {
                 "artifactLocation": {"uri": d.file},
                 "region": {"startLine": d.line}}}],
@@ -307,11 +321,14 @@ def sbom(findings, kb, policy=None) -> str:
         sites = sorted(
             ({"file": d.file, "line": d.line, "kind": d.kind, "evidence": d.evidence,
               "jurisdiction": d.jurisdiction,
-              "sovereignty": getattr(d, "sovereignty", "unknown")} for d in ds),
+              "sovereignty": getattr(d, "sovereignty", "unknown"),
+              "provenance": getattr(d, "provenance", "unknown"),
+              "model": getattr(d, "model", None)} for d in ds),
             key=lambda s: (s["file"], s["line"], s["kind"], s["evidence"]))
         components.append({"provider": pid, "name": kb.name(pid), "category": kb.category(pid),
                            "jurisdictions": sorted({d.jurisdiction for d in ds}),
                            "sovereignties": sorted({getattr(d, "sovereignty", "unknown") for d in ds}),
+                           "provenances": sorted({getattr(d, "provenance", "unknown") for d in ds}),
                            "sites": sites})
     return json.dumps({
         "schema": "borderlint.ai-dataflow-sbom/1",

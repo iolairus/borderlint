@@ -874,3 +874,173 @@ def test_sovereignty_invalid_token():
         assert False, "expected ValueError"
     except ValueError:
         pass
+
+
+# --- Provenance dimension ----------------------------------------------------
+
+def _mprov_pol(allow, **kw):
+    """A policy with a provenance allow-list for customer-pii."""
+    return {"classifications": {"customer-pii": ["hk", "CN-GBA", "sg", "us", "gb", "eu", "uk"]},
+            "provenance": {"classifications": {"customer-pii": allow}}, **kw}
+
+
+def test_provenance_resolution():
+    # Tier 1 — one per ID form: managed-platform, bare API name, aggregator-qualified, hub repo
+    assert kb.match_model("anthropic.claude-sonnet-4-6")[1] == "us"
+    assert kb.match_model("deepseek.r1-v1:0")[1] == "cn"
+    assert kb.match_model("claude-sonnet-4-6")[1] == "us"
+    assert kb.match_model("qwen2.5-72b-instruct")[1] == "cn"
+    assert kb.match_model("mixtral-8x22b")[1] == "eu"
+    assert kb.match_model("deepseek/deepseek-r1")[1] == "cn"
+    assert kb.match_model("Qwen/Qwen2.5-72B-Instruct")[1] == "cn"  # case-insensitive hub id
+    assert kb.match_model("stabilityai/stable-diffusion-3.5")[1] == "uk"
+    # Anchoring: prose and non-model strings never match
+    assert kb.match_model("gpt-4 is great for this") is None
+    assert kb.match_model("unrelated-string") is None
+    # Tier 2 — first-party default vs multi-model host
+    assert kb.default_provenance("openai") == "us"
+    assert kb.default_provenance("deepseek") == "cn"
+    assert kb.default_provenance("aws_bedrock") == "unknown"
+    assert kb.default_provenance("litellm") == "unknown"
+    # Longest prefix wins: a longer user pattern overrides the bundled shorter one
+    k = load_kb(_kb_file({"provenance": {"qwen-inhouse-": "eu"}}))
+    assert k.match_model("qwen-inhouse-7b")[1] == "eu"   # longer user prefix
+    assert k.match_model("qwen2.5-72b")[1] == "cn"       # bundled prefix still applies
+
+
+def test_provenance_binding():
+    # Same-file binding: provider flow carries the model reference's provenance + identifier
+    ds = _scan_file('import openai\nm = "gpt-4o"\n')
+    assert len(ds) == 1 and ds[0].kind == "sdk_import"
+    assert ds[0].provenance == "us" and ds[0].model == "gpt-4o"
+    # The headline divergence: Bedrock ap-east-1 serving DeepSeek -> hk / us / cn
+    ds = _scan_file('u = "https://bedrock-runtime.ap-east-1.amazonaws.com/m"\nm = "deepseek.r1-v1:0"\n')
+    d = [x for x in ds if x.kind != "model_reference"][0]
+    assert (d.jurisdiction, d.sovereignty, d.provenance) == ("hk", "us", "cn")
+    # Self-hosted weights: local flow + qwen model -> local / local / cn
+    ds = _scan_file('base_url: "http://localhost:11434"\nmodel: "qwen2.5"\n', suffix=".yaml")
+    d = [x for x in ds if x.kind == "config_endpoint"][0]
+    assert (d.jurisdiction, d.sovereignty, d.provenance) == ("local", "local", "cn")
+    # Standalone: a model reference with no provider in the file stands alone
+    ds = _scan_file('MODEL = "deepseek/deepseek-r1"\n')
+    assert len(ds) == 1 and ds[0].kind == "model_reference"
+    assert ds[0].provider_id == "model_reference" and ds[0].provenance == "cn"
+    assert ds[0].jurisdiction == "unknown" and ds[0].model == "deepseek/deepseek-r1"
+    # Ambiguous blocs: providers stay unbound (tier-2), refs fall back to standalone rows
+    ds = _scan_file('import openai\na = "gpt-4o"\nb = "deepseek-r1"\n')
+    prov_det = [x for x in ds if x.kind == "sdk_import"][0]
+    assert prov_det.model is None and prov_det.provenance == "us"  # tier-2 first-party default
+    assert len([x for x in ds if x.kind == "model_reference"]) == 2
+    # No false positive on prose
+    assert _scan_file('note = "gpt-4 is great for this"\n') == []
+
+
+def test_provenance_policy_absent():
+    # No provenance block -> no provenance reason, exit behaviour unchanged (regression guard)
+    pol = {"classifications": {"customer-pii": ["hk"]}}
+    f = evaluate([_det("openai", "us")], pol, "customer-pii", kb)
+    assert "provenance" not in f[0].reasons and "provenance_unknown" not in f[0].reasons
+    # A standalone model reference is a weights signal, not a flow: no residency reasons either
+    d = Detection("model_reference", "model_reference", "deepseek-r1", "f.py", 1, "unknown",
+                  provenance="cn", model="deepseek-r1")
+    f = evaluate([d], pol, "customer-pii", kb)
+    assert f[0].severity == "ok" and f[0].reasons == []
+
+
+def test_provenance_evaluation():
+    allow = ["us", "eu"]
+    mk = lambda prov: Detection("openai", "sdk_import", "openai", "f.py", 1, "us",
+                                sovereignty="us", provenance=prov)
+    # cn-provenance flow -> provenance reason (mismatch)
+    f = evaluate([mk("cn")], _mprov_pol(allow), "customer-pii", kb)
+    assert "provenance" in f[0].reasons
+    # eu-provenance flow -> passes
+    f = evaluate([mk("eu")], _mprov_pol(allow), "customer-pii", kb)
+    assert "provenance" not in f[0].reasons and f[0].severity == "ok"
+    # unknown-provenance flow -> warns under on_unknown: warn (default)
+    f = evaluate([mk("unknown")], _mprov_pol(allow), "customer-pii", kb)
+    assert "provenance_unknown" in f[0].reasons and f[0].severity == "warn"
+    # A standalone model reference IS provenance-evaluated
+    d = Detection("model_reference", "model_reference", "deepseek-r1", "f.py", 1, "unknown",
+                  provenance="cn", model="deepseek-r1")
+    f = evaluate([d], _mprov_pol(allow), "customer-pii", kb)
+    assert "provenance" in f[0].reasons and "unknown" not in f[0].reasons
+
+
+def test_provenance_fail_on():
+    allow = ["us", "eu"]
+    d = Detection("openai", "sdk_import", "openai", "f.py", 1, "us", sovereignty="us", provenance="cn")
+    # With fail_on including provenance -> a mismatch fails
+    f = evaluate([d], _mprov_pol(allow, fail_on=["residency", "denied_provider", "provenance"]),
+                 "customer-pii", kb)
+    assert f[0].severity == "fail"
+    # Without provenance in fail_on -> the same mismatch only warns
+    f = evaluate([d], _mprov_pol(allow, fail_on=["residency", "denied_provider"]), "customer-pii", kb)
+    assert f[0].severity == "warn"
+    # Symmetric unknown gate: on_unknown fail gates on its own, no second fail_on gate needed
+    du = Detection("litellm", "sdk_import", "litellm", "f.py", 1, "unknown", provenance="unknown")
+    pol = {"classifications": {"customer-pii": ["hk", "CN-GBA", "sg", "us", "gb", "eu", "uk"]},
+           "provenance": {"on_unknown": "fail", "classifications": {"customer-pii": allow}}}
+    f = evaluate([du], pol, "customer-pii", kb)
+    assert "provenance_unknown" in f[0].reasons and f[0].severity == "fail"
+
+
+def test_provenance_waiver():
+    allow = ["us", "eu"]
+    pol = _mprov_pol(allow, fail_on=["residency", "denied_provider", "provenance"])
+    d = Detection("openai", "sdk_import", "openai", "f.py", 1, "us",
+                  waiver="weights origin reviewed", sovereignty="us", provenance="cn")
+    f = evaluate([d], pol, "customer-pii", kb)
+    assert f[0].severity == "waived"  # justified waiver downgrades the provenance failure
+    # A provider deny-list entry is NOT waived
+    pol_deny = _mprov_pol(allow, fail_on=["residency", "denied_provider", "provenance"],
+                          providers={"deny": ["openai"]})
+    f = evaluate([d], pol_deny, "customer-pii", kb)
+    assert f[0].severity == "fail"
+
+
+def test_provenance_reporting():
+    import json as _json
+    from borderlint.report import as_json, text, mermaid, sarif, sbom
+    allow = ["us", "eu"]
+    pol = _mprov_pol(allow, fail_on=["provenance"])
+    d = Detection("aws_bedrock", "endpoint_reference", "bedrock-runtime.ap-east-1.amazonaws.com",
+                  "f.py", 1, "hk", sovereignty="us", provenance="cn", model="deepseek.r1-v1:0")
+    f = evaluate([d], pol, "customer-pii", kb)
+    # Text: weights segment + model on the site line
+    txt = text(f, kb, pol)
+    assert "weights:" in txt and "Mainland China" in txt and "[model: deepseek.r1-v1:0]" in txt
+    # JSON: provenance + model fields
+    doc = _json.loads(as_json(f, kb, pol))
+    assert doc["findings"][0]["provenance"] == "cn" and doc["findings"][0]["model"] == "deepseek.r1-v1:0"
+    # Mermaid: provenance appended only when it diverges from sovereignty
+    assert "(United States, weights Mainland China)" in mermaid(f, kb, pol)
+    same = evaluate([Detection("openai", "sdk_import", "openai", "f.py", 1, "us",
+                               sovereignty="us", provenance="us")], pol, "customer-pii", kb)
+    assert "weights" not in mermaid(same, kb, pol)
+    # SARIF: provenance in the message
+    assert "weights Mainland China" in sarif(f, kb, pol)
+    # SBOM: provenances aggregated per component
+    bom = _json.loads(sbom(f, kb, pol))
+    assert bom["components"][0]["provenances"] == ["cn"]
+
+
+def test_provenance_invalid_token():
+    # A user-supplied provenance map with an unrecognised bloc is rejected
+    try:
+        load_kb(_kb_file({"provenance": {"gpt-": "overseas"}}))
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+    # `local` is not a provenance bloc (weights always have a developer)
+    import json, os, tempfile
+    from borderlint.policy import load_policy
+    p = os.path.join(tempfile.mkdtemp(), "pol.json")
+    with open(p, "w", encoding="utf-8") as fh:
+        json.dump({"classifications": {"customer-pii": ["hk"]},
+                   "provenance": {"classifications": {"customer-pii": ["local"]}}}, fh)
+    try:
+        load_policy(p)
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
