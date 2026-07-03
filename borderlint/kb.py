@@ -147,6 +147,7 @@ def load_kb(path: str | None = None) -> "KB":
     sov_map = dict(sov_doc.get("providers", {}))  # bundled provider id → bloc (copy; user merges in)
     prov_doc = _load_provenance_map()
     prov_patterns = {pat.lower(): entry["bloc"] for pat, entry in prov_doc.get("patterns", {}).items()}
+    user_prov_patterns: dict = {}
     if path:
         with open(path, encoding="utf-8") as fh:
             user = json.load(fh)
@@ -165,7 +166,8 @@ def load_kb(path: str | None = None) -> "KB":
                         "(use one of us, eu, cn, uk, ru, in, il, ca, local, unknown)")
                 sov_map[pid] = bloc  # user wins
         # User provenance overrides: a top-level "provenance" map (model-ID prefix → bloc) takes
-        # precedence over the bundled patterns; validated against the bloc vocabulary.
+        # precedence over the bundled patterns — even shorter user prefixes beat longer bundled
+        # ones, mirroring the provider KB; validated against the bloc vocabulary.
         user_prov = user.get("provenance", {})
         if isinstance(user_prov, dict):
             for pat, bloc in user_prov.items():
@@ -173,7 +175,7 @@ def load_kb(path: str | None = None) -> "KB":
                     raise ValueError(
                         f"invalid provenance bloc '{bloc}' for model pattern '{pat}' "
                         "(use one of us, eu, cn, uk, ru, in, il, ca, unknown)")
-                prov_patterns[pat.lower()] = bloc  # user wins
+                user_prov_patterns[pat.lower()] = bloc
     kb = KB(providers)
     kb.updated = bundled.get("updated")
     kb.sovereignty_map = sov_map
@@ -181,7 +183,7 @@ def load_kb(path: str | None = None) -> "KB":
     kb.provenance_defaults = dict(prov_doc.get("provider_defaults", {}))
     kb.provenance_passthrough = [o.lower() for o in prov_doc.get("passthrough_orgs", [])]
     kb.provenance_updated = prov_doc.get("updated")
-    kb.set_provenance_patterns(prov_patterns)
+    kb.set_provenance_patterns(prov_patterns, user_prov_patterns)
     return kb
 
 
@@ -213,9 +215,16 @@ class KB:
         self.provenance_updated: str | None = None  # provenance map last-reviewed date
         self._prov_prefixes: list = []  # (prefix, bloc), longest first, set via set_provenance_patterns
 
-    def set_provenance_patterns(self, patterns: dict) -> None:
-        """Install the (merged) model-ID prefix → bloc map; longest prefix wins."""
-        self._prov_prefixes = sorted(patterns.items(), key=lambda x: -len(x[0]))
+    def set_provenance_patterns(self, patterns: dict, user_patterns: dict | None = None) -> None:
+        """Install the model-ID prefix → bloc maps.
+
+        User patterns take precedence over bundled ones — even a shorter user prefix beats a
+        longer bundled prefix, mirroring the provider KB. Within a source, longest prefix wins.
+        """
+        user = user_patterns or {}
+        items = [(0, p, b) for p, b in user.items()] + \
+                [(1, p, b) for p, b in patterns.items() if p not in user]
+        self._prov_prefixes = [(p, b) for _, p, b in sorted(items, key=lambda x: (x[0], -len(x[1])))]
 
     def name(self, pid: str) -> str:
         return self.by_id.get(pid, {}).get("name", pid)

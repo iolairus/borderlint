@@ -906,6 +906,9 @@ def test_provenance_resolution():
     k = load_kb(_kb_file({"provenance": {"qwen-inhouse-": "eu"}}))
     assert k.match_model("qwen-inhouse-7b")[1] == "eu"   # longer user prefix
     assert k.match_model("qwen2.5-72b")[1] == "cn"       # bundled prefix still applies
+    # User precedence beats bundled length: a shorter user prefix wins over a longer bundled one
+    k2 = load_kb(_kb_file({"provenance": {"deepseek": "eu"}}))
+    assert k2.match_model("deepseek-r1")[1] == "eu"      # user prefix beats bundled "deepseek-"
 
 
 def test_provenance_binding():
