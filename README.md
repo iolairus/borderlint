@@ -110,7 +110,10 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
 - **Provenance:** whose model weights a flow runs — a third orthogonal bloc resolved from model
   references in code (`anthropic.claude-…`, `qwen2.5-72b`, `deepseek/deepseek-r1`, `Qwen/…`) or
   the provider's first-party default. Bedrock `ap-east-1` serving DeepSeek-R1 is residency `hk`,
-  sovereignty `us`, provenance `cn`. Opt-in `provenance` policy block, same shape as sovereignty.
+  sovereignty `us`, provenance `cn`. Local LLM usage resolves too: GGUF/MLX redistributor repos
+  (`TheBloke/…`, `mlx-community/…`), `.gguf` file paths, and Ollama tags (`llama3.2`, `qwen2.5`)
+  — so a self-hosted Qwen reads `local`/`local`/`cn`. Opt-in `provenance` policy block, same
+  shape as sovereignty.
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
   failure set, declared home regime.
 - **Regimes & arrangements:** declared home location → data-protection regime tag + the cross-border

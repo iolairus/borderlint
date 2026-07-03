@@ -145,6 +145,16 @@ signal, not a network flow (never residency-evaluated). Aggregator-qualified IDs
 the one axis routers don't obscure: `deepseek/deepseek-r1` via OpenRouter resolves provenance `cn`
 while residency and sovereignty stay `unknown`.
 
+**Local LLM usage resolves too.** Redistributor-qualified IDs from the GGUF/MLX ecosystem
+(`mlx-community/Qwen2.5-7B-Instruct-4bit`, `TheBloke/Llama-2-7B-GGUF`, `bartowski/…`,
+`unsloth/…`) resolve by the model family in the repo name — the quantizer org is stripped, since
+packaging carries no provenance. `.gguf` file paths match by basename
+(`models/qwen2.5-7b-q4_k_m.gguf` → `cn`), and bare local-runtime tags (`llama3.2`, `phi4`,
+`gemma2:9b`, `qwq:32b`) are covered by pinned family prefixes; tool names that merely resemble a
+family (`llama_index`, `llama-cpp-python`) never match. Combined with Ollama's `local`
+residency/sovereignty, self-hosted flows carry an honest weights origin: `local`/`local`/`cn`
+for a local Qwen, `local`/`local`/`us` for a local Llama.
+
 **Blocs** reuse the sovereignty vocabulary minus `local` (weights always have a developer):
 `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `unknown`. Fine-tunes and distillations inherit
 the base family's bloc.

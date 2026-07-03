@@ -1044,3 +1044,31 @@ def test_provenance_invalid_token():
         assert False, "expected ValueError"
     except ValueError:
         pass
+
+
+def test_provenance_local_models():
+    # Redistributor-qualified (GGUF/MLX hubs): org stripped, family name carries provenance
+    assert kb.match_model("mlx-community/Qwen2.5-7B-Instruct-4bit")[1] == "cn"
+    assert kb.match_model("TheBloke/Llama-2-7B-GGUF")[1] == "us"
+    assert kb.match_model("bartowski/Meta-Llama-3.1-8B-Instruct-GGUF")[1] == "us"
+    assert kb.match_model("unsloth/DeepSeek-R1-GGUF")[1] == "cn"
+    # GGUF file paths match by basename
+    assert kb.match_model("models/qwen2.5-7b-instruct-q4_k_m.gguf")[1] == "cn"
+    assert kb.match_model("/opt/llm/Meta-Llama-3.1-8B-Q5_K_S.gguf")[1] == "us"
+    # Ollama-style bare tags
+    assert kb.match_model("llama3.2")[1] == "us"
+    assert kb.match_model("phi4")[1] == "us"
+    assert kb.match_model("gemma2:9b")[1] == "us"
+    assert kb.match_model("qwq:32b")[1] == "cn"
+    assert kb.match_model("mistral:7b")[1] == "eu"
+    # Tool names that resemble a family prefix are not models
+    assert kb.match_model("llama_index") is None
+    assert kb.match_model("llama-cpp-python") is None
+    assert kb.match_model("llamafile") is None
+    # Out-of-vocabulary families are deliberately absent -> no detection, no noise
+    assert kb.match_model("falcon-180b") is None
+    # e2e: ollama + a bound tag -> residency local, sovereignty local, provenance us
+    ds = _scan_file('import ollama\nm = "llama3.2"\n')
+    d = [x for x in ds if x.kind == "sdk_import"][0]
+    assert (d.jurisdiction, d.sovereignty, d.provenance) == ("local", "local", "us")
+    assert d.model == "llama3.2"

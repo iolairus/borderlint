@@ -114,6 +114,9 @@ _PROVENANCE_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "
 # strings that merely start with a model name ("gpt-4 is great") are never flagged.
 _MODEL_ID = re.compile(r"^[A-Za-z0-9._/:-]{3,100}$")
 
+# ponytail: tool names that resemble a model-family prefix; a stoplist beats a veto mechanism
+_NOT_MODELS = ("llama_index", "llama-index", "llamaindex", "llama_cpp", "llama-cpp", "llamafile")
+
 
 def _valid_provenance(token: str) -> bool:
     """A provenance bloc must be one of the fixed vocabulary."""
@@ -176,6 +179,7 @@ def load_kb(path: str | None = None) -> "KB":
     kb.sovereignty_map = sov_map
     kb.sovereignty_updated = sov_doc.get("updated")
     kb.provenance_defaults = dict(prov_doc.get("provider_defaults", {}))
+    kb.provenance_passthrough = [o.lower() for o in prov_doc.get("passthrough_orgs", [])]
     kb.provenance_updated = prov_doc.get("updated")
     kb.set_provenance_patterns(prov_patterns)
     return kb
@@ -205,6 +209,7 @@ class KB:
         self.sovereignty_map: dict = {}  # provider id → sovereignty bloc, set by load_kb
         self.sovereignty_updated: str | None = None  # sovereignty map last-reviewed date
         self.provenance_defaults: dict = {}  # provider id → bloc for first-party-only providers
+        self.provenance_passthrough: list = []  # quantizer/community org prefixes, stripped before match
         self.provenance_updated: str | None = None  # provenance map last-reviewed date
         self._prov_prefixes: list = []  # (prefix, bloc), longest first, set via set_provenance_patterns
 
@@ -248,12 +253,22 @@ class KB:
         """Match a string literal against the model-ID prefix map → (identifier, bloc) or None.
 
         Anchored: the whole literal must look like a model identifier (no spaces, model-id
-        charset) and start with a known prefix. Longest prefix wins.
+        charset) and start with a known prefix. Longest prefix wins. Local-model forms (D7):
+        a `.gguf` path matches by basename; a redistributor org (quantizer/community hub) is
+        stripped so the model family in the repo name carries the provenance.
         """
         s = literal.strip()
         if not _MODEL_ID.match(s):
             return None
         low = s.lower()
+        if low.endswith(".gguf"):  # model-file path: directories defeat start-anchoring
+            low = low.rsplit("/", 1)[-1]
+        for org in self.provenance_passthrough:  # quantizer hubs carry no provenance
+            if low.startswith(org):
+                low = low[len(org):]
+                break
+        if low.startswith(_NOT_MODELS):
+            return None
         for prefix, bloc in self._prov_prefixes:
             if low.startswith(prefix):
                 return s, bloc
