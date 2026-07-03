@@ -56,3 +56,20 @@
 - [x] 6.1 `examples/residency.json`: annotated `provenance` block
 - [x] 6.2 `CAPABILITIES.md` §3.2 provenance subsection + capability map row; `README.md`
       mention alongside sovereignty
+
+## 7. Local model identifiers (GGUF / MLX / Ollama)
+
+- [x] 7.1 `provenance.json`: `passthrough_orgs` list (mlx-community, TheBloke, bartowski,
+      unsloth, mradermacher, lmstudio-community, ggml-org, QuantFactory, NousResearch) +
+      pinned family prefixes for local-runtime names (llama2/3/4, meta-llama-, phi2/3/4,
+      gemma2/3, mixtral, mistral, glm4, chatglm, qwq, deepseek, smollm, granite-/granite3,
+      internlm, baichuan, minicpm, olmo-/olmo2, nemotron, starcoder, aya-) — out-of-vocabulary
+      families (falcon, exaone, solar) deliberately absent (Requirement: Local model
+      identifiers resolve provenance; D7)
+- [x] 7.2 `kb.py` `match_model()`: `.gguf` basename matching, pass-through org strip before
+      prefix match, tool-name stoplist (llama_index, llama-cpp, llamafile, …) (D7)
+- [x] 7.3 Tests: redistributor forms (MLX 4-bit, TheBloke/bartowski/unsloth GGUF repos), GGUF
+      path basenames, Ollama tags (llama3.2, phi4, gemma2:9b, qwq:32b), stoplist negatives,
+      ollama e2e binding (local/local/us)
+- [x] 7.4 Docs: CAPABILITIES §3.2 local-identifier sentence; README provenance bullet mentions
+      GGUF/MLX/Ollama coverage

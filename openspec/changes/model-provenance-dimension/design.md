@@ -99,7 +99,31 @@ residency and sovereignty stay `unknown`.
 **Rationale:** The org prefix is statically present; provenance is the one axis aggregators
 don't obscure. This makes the dimension *more* informative exactly where the other two are blind.
 
-### D7 — Reporting: additive across all five formats
+### D7 — Local model identifiers: pass-through orgs, GGUF basenames, pinned family stems
+**Decision:** Three mechanisms make local-LLM usage (Ollama, llama.cpp, MLX) resolvable:
+(1) a **pass-through org list** — quantizer/community-conversion hubs (`mlx-community/`,
+`thebloke/`, `bartowski/`, `unsloth/`, …) are stripped and the remaining model name re-matched,
+since the redistributor org carries no provenance while the family name in the repo does;
+(2) literals ending `.gguf` match by **basename**, since file paths defeat start-anchoring;
+(3) family prefixes are **pinned with digits/punctuation** (`llama3`, `phi4`, `gemma2`) rather
+than bare stems, and a small stoplist rejects tool names (`llama_index`, `llama-cpp-python`)
+that would otherwise match a family prefix. Families whose developer bloc is outside the
+vocabulary (Falcon/TII, EXAONE/LG, Solar/Upstage) get **no entry** — absence resolves `unknown`
+for bound flows without generating standalone noise rows; they join the vocabulary-completion
+follow-up.
+**Rationale:** Redistributor repos dominate real local-model strings; without pass-through, the
+dimension is blind exactly where `local`/`local`/`<bloc>` matters most.
+**Alternatives rejected:**
+- *Map quantizer orgs to a bloc directly.* Rejected: `bartowski/` publishes conversions of every
+  family; the org identifies packaging, never weights origin.
+- *Bare family stems (`llama`, `phi`).* Rejected: collide with tooling and ordinary words
+  (`llama_index`, `philadelphia`); digit/punctuation pinning plus a stoplist keeps anchoring
+  honest.
+- *Mapping out-of-vocabulary families to `unknown` entries.* Rejected: an entry that resolves
+  `unknown` creates standalone `model_reference` rows that only add noise; absence gives the
+  same verdict without the rows.
+
+### D8 — Reporting: additive across all five formats
 **Decision:** Text gains a provenance segment, JSON a `provenance` field, Mermaid appends the
 bloc to node labels, SARIF includes it in the message, SBOM gains `provenances`. Default
 `fail_on` excludes `provenance`.
