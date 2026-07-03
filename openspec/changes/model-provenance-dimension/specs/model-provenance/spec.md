@@ -11,9 +11,9 @@ reject a user-supplied provenance mapping that uses a token outside it.
 - **WHEN** a user-supplied knowledge base maps a model pattern to the bloc `overseas`
 - **THEN** loading fails with an error naming the invalid token and the accepted vocabulary
 
-#### Scenario: Unmatched model reference resolves to unknown
-- **WHEN** a model reference matches no pattern in the provenance map
-- **THEN** its provenance is `unknown`
+#### Scenario: A flow with no matched model reference resolves to unknown
+- **WHEN** a flow carries no matched model reference and its provider has no first-party default
+- **THEN** the flow's provenance is `unknown`
 
 ### Requirement: Bundled model provenance map
 The system SHALL bundle a model provenance map that resolves model references to a developer
@@ -91,12 +91,16 @@ match.
 
 ### Requirement: User provenance overrides
 The system SHALL accept provenance overrides from a user-supplied knowledge base; user entries
-SHALL take precedence over bundled entries and SHALL be validated against the provenance bloc
-vocabulary.
+SHALL take precedence over bundled entries — including over longer bundled prefixes that would
+otherwise win the longest-match — and SHALL be validated against the provenance bloc vocabulary.
 
 #### Scenario: User maps an in-house model
 - **WHEN** a user mapping assigns the pattern of an in-house model to the organisation's home bloc
 - **THEN** flows carrying that model reference resolve to that bloc
+
+#### Scenario: A shorter user pattern beats a longer bundled pattern
+- **WHEN** a user mapping assigns `deepseek` to `eu` and the bundled map contains the longer prefix `deepseek-`
+- **THEN** the model reference `deepseek-r1` resolves to `eu`
 
 ### Requirement: Base-family provenance for derived models
 Fine-tuned and distilled model identifiers SHALL inherit the provenance bloc of their base model

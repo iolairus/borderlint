@@ -52,6 +52,20 @@ requiring `provenance` in `fail_on`. The default `fail_on` SHALL NOT include `pr
 - **WHEN** the provenance block sets `on_unknown` to `fail`, `fail_on` does not include `provenance`, and a flow resolves to provenance `unknown`
 - **THEN** the finding fails the run
 
+### Requirement: Standalone model references are weights signals, not flows
+The system SHALL evaluate a standalone `model_reference` finding only against the provenance
+dimension. It SHALL NOT produce `denied_provider`, `residency`, `unknown`, `sovereignty`, or
+`sovereignty_unknown` reasons for such a finding, because no network flow is detected — the
+finding carries weight-origin information only.
+
+#### Scenario: Standalone reference with no provenance block
+- **WHEN** a policy has no `provenance` block and a standalone `model_reference` finding is evaluated
+- **THEN** the finding has no reasons and severity `ok`, leaving the exit code unchanged
+
+#### Scenario: Standalone reference against a provenance allow-list
+- **WHEN** the active classification declares a provenance allow-list and a standalone `model_reference` finding resolves outside it
+- **THEN** the finding is reported with a `provenance` reason and no residency or sovereignty reasons
+
 ### Requirement: Waiver applies to provenance findings
 A waiver with a non-empty justification SHALL downgrade a provenance failure to the `waived`
 state, consistent with residency and sovereignty waiver behaviour. A waiver SHALL NOT override

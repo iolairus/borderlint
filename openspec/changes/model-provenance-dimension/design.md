@@ -155,8 +155,10 @@ bloc to node labels, SARIF includes it in the message, SBOM gains `provenances`.
 
 ## Open Questions
 
-- Should the Mermaid label carry both sovereignty and provenance, or become too noisy? Lean:
-  append provenance only when it differs from sovereignty; to confirm during implementation
-  against real diagrams.
+- ~~Should the Mermaid label carry both sovereignty and provenance?~~ Resolved during
+  implementation: the label appends provenance only when it differs from sovereignty and is not
+  `unknown` — the divergence is the signal; repetition and `unknown` are noise. Spec'd in the
+  cli-and-reporting delta.
 - Whether `ollama pull`/model-file references in shell scripts and Dockerfiles are in scope for
-  detection. Lean: defer to the IaC-scanning enhancement; Python/TS string literals only here.
+  detection. Partially resolved by D7: quoted literals in scanned file types (including `.sh`)
+  already match; unquoted tokens and Dockerfiles defer to the IaC-scanning enhancement.

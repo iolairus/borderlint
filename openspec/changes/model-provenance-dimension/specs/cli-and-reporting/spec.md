@@ -5,7 +5,8 @@ Every report format SHALL surface each flow's provenance bloc alongside residenc
 sovereignty, never replacing either: the text report SHALL include a provenance segment per
 provider line; the JSON report SHALL include a `provenance` field per finding; the Mermaid
 diagram SHALL reflect the provenance in the node label when it differs from the flow's
-sovereignty (identical blocs would only repeat the label); the SARIF output SHALL include the
+sovereignty and is not `unknown` (identical blocs would only repeat the label, and `unknown`
+would add noise); the SARIF output SHALL include the
 provenance in the result message; the SBOM SHALL include a `provenances` list per component.
 The provenance reasons SHALL have human-readable descriptions in report output.
 
