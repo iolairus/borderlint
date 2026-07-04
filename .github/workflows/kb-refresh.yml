@@ -18,21 +18,30 @@ jobs:
           python-version: "3.12"
       - id: drift
         run: |
-          python3 scripts/kb_drift.py > gap.txt || true
-          echo "count=$(wc -l < gap.txt)" >> "$GITHUB_OUTPUT"
-      - if: steps.drift.outputs.count != '0'
+          python3 scripts/kb_drift.py > report.md
+          echo "bytes=$(wc -c < report.md)" >> "$GITHUB_OUTPUT"
+      - if: steps.drift.outputs.bytes != '0'
         uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
-            const gap = fs.readFileSync('gap.txt', 'utf8').trim();
-            if (!gap) return;
-            const body = [
-              'Upstream providers not yet covered by the borderlint KB.',
-              'Assign endpoint host(s) and a jurisdiction **by hand** — do not auto-merge.',
-              '', '```', gap, '```',
-            ].join('\n');
-            await github.rest.issues.create({
+            const body = fs.readFileSync('report.md', 'utf8').trim();
+            if (!body) return;
+            const title = 'KB freshness: items to review';
+            // Persistent conditions (e.g. staleness) recur weekly: update the open
+            // issue instead of opening a duplicate every Monday.
+            const open = await github.rest.issues.listForRepo({
               owner: context.repo.owner, repo: context.repo.repo,
-              title: 'KB drift: new upstream providers to review', body,
+              state: 'open', per_page: 100,
             });
+            const existing = open.data.find(i => i.title === title && !i.pull_request);
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo, title, body,
+              });
+            }

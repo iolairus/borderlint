@@ -198,6 +198,58 @@ def test_kb_drift_diff():
     assert all(isinstance(g, str) for g in gap)    # no jurisdiction/endpoint assigned
 
 
+def _drift():
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    return kb_drift
+
+
+def test_kb_drift_model_coverage():
+    kd = _drift()
+    k = load_kb()
+    ids = ["gpt-4o", "bedrock/anthropic.claude-3-sonnet", "azure/eu/gpt-4o-2024-08-06",
+           "totally-made-up-model-9x"]
+    gap = kd.model_coverage_gap(ids, k)
+    assert gap == ["totally-made-up-model-9x"]     # qualifiers of any depth covered via suffix
+    stems = kd.family_stems(["grok-4", "vendor/grok-4-fast", "zzz-solo"])
+    assert stems == [("grok", 2, "grok-4"), ("zzz", 1, "zzz-solo")]  # aggregated, count-desc
+
+
+def test_kb_drift_sovereignty_gaps():
+    kd = _drift()
+    gaps = kd.sovereignty_gaps(["a", "b", "c"], {"a": "us", "b": "overseas"})
+    assert gaps == [("b", "overseas"), ("c", None)]  # invalid + missing; valid not reported
+    # the bundled data itself must be complete — the live audit stays empty
+    import json
+    with open("borderlint/data/providers.json", encoding="utf-8") as fh:
+        ids = [p["id"] for p in json.load(fh)["providers"]]
+    assert kd.sovereignty_gaps(ids, load_kb().sovereignty_map) == []
+
+
+def test_kb_drift_staleness():
+    import datetime as dt
+    kd = _drift()
+    today = dt.date(2026, 7, 4)
+    stale = kd.stale_kbs({"old.json": "2026-01-01", "fresh.json": "2026-07-01"}, today)
+    assert stale == [("old.json", "2026-01-01", 184)]  # stale flagged with age; fresh not
+
+
+def test_kb_drift_render_report():
+    kd = _drift()
+    assert kd.render_report([], [], [], []) == ""  # empty report renders nothing
+    r = kd.render_report(["deepseek"], [("grok", 2, "grok-4")], [("x", None)],
+                         [("old.json", "2026-01-01", 184)])
+    assert all(h in r for h in ("### New providers", "### Uncovered model families",
+                                "### Sovereignty gaps", "### Stale knowledge bases"))
+    assert "- deepseek" in r and "by hand" in r    # gap record carries no assigned bloc
+    only = kd.render_report([], [("grok", 2, "grok-4")], [], [])
+    assert "### New providers" not in only         # empty sections omitted
+    many = [(f"fam{i:03d}", 1, f"fam{i:03d}-1b") for i in range(60)]
+    capped = kd.render_report([], many, [], [])
+    assert "… and 10 more families" in capped      # cap disclosed
+
+
 def test_kb_has_iso_date():
     import re
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", load_kb().updated or "")
