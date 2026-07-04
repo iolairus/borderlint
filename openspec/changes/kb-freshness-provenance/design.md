@@ -27,8 +27,9 @@ template every new check follows.
 ### D1 — Reuse the litellm fetch; match its keys through the real matcher
 **Decision:** The provenance check runs each upstream model key through `load_kb().match_model`
 — the same code path the scanner uses (passthrough stripping, `.gguf` basenames, stoplist,
-anchored prefixes). A key counts as covered if either the full key or its post-`/` remainder
-matches (litellm keys are often provider-qualified: `bedrock/anthropic.claude-…`).
+anchored prefixes). A key counts as covered if the full key or any of its `/`-suffixes matches:
+litellm keys carry provider/region qualifiers of varying depth (`bedrock/anthropic.claude-…`,
+`azure/eu/gpt-4o`), and single-level stripping falsely reported covered families as gaps.
 **Alternatives rejected:**
 - *Reimplement matching in the script.* Rejected: two matchers drift; the check must answer
   "what would the scanner resolve", not "what does a lookalike regex resolve".
@@ -90,8 +91,8 @@ body is markdown now).
   entry). → Aggregation + cap keeps it readable; triage adds entries, passthrough orgs, or
   consciously accepts `unknown`.
 - **[Provider-qualified prefixes]** litellm's `azure/`, `bedrock/` qualifiers are not hub orgs;
-  stripping only the first segment may occasionally mask a real org. → Matching both the full
-  key and the remainder bounds the error to false-covered, never false-alarm.
+  suffix matching at every depth may occasionally mask a real org. → The error is bounded to
+  false-covered, never false-alarm; anchored prefixes keep spurious matches out.
 - **[Import coupling]** The script now imports `borderlint.kb`; a broken package import breaks
   the weekly job. → CI runs the same import on every push; the failure mode is loud, not silent.
 

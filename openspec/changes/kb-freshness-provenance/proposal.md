@@ -45,6 +45,8 @@ None.
   staleness) plus sectioned output; existing functions unchanged.
 - `.github/workflows/kb-refresh.yml` — issue body assembled from the sectioned report.
 - `tests/` — offline unit tests for each new pure function.
+- `borderlint/data/` — gaps the new checks surface in the bundled data are cured in this change
+  (first catch: the `model_reference` pseudo-provider lacked a sovereignty mapping).
 - **Dependency**: requires `provenance.json` from `model-provenance-dimension` (PR #37); this
   change builds on that branch and ships after it.
 
