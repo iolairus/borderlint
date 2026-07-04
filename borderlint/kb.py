@@ -82,7 +82,8 @@ def _valid_jurisdiction(token: str) -> bool:
 # --- Sovereignty dimension ----------------------------------------------------
 # Sovereignty blocs: which government can compel disclosure of a flow's data, derived from the
 # provider's home legal regime (not the endpoint region). Distinct from residency.
-_SOVEREIGNTY_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "local", "unknown"})
+_SOVEREIGNTY_BLOCS = frozenset(
+    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "local", "unknown"})
 
 
 def _valid_sovereignty(token: str) -> bool:
@@ -108,7 +109,8 @@ def _is_loopback_evidence(evidence: str) -> bool:
 # Provenance blocs: the legal regime of the model's developer (whose weights), derived from model
 # references found statically in code. The sovereignty vocabulary minus `local` — weights always
 # have a developer. Distinct from residency and sovereignty.
-_PROVENANCE_BLOCS = frozenset({"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "unknown"})
+_PROVENANCE_BLOCS = frozenset(
+    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "unknown"})
 
 # A model identifier: no spaces, model-id punctuation only. Anchors prefix matching so prose
 # strings that merely start with a model name ("gpt-4 is great") are never flagged.
@@ -163,7 +165,7 @@ def load_kb(path: str | None = None) -> "KB":
                 if not _valid_sovereignty(bloc):
                     raise ValueError(
                         f"invalid sovereignty bloc '{bloc}' for provider '{pid}' "
-                        "(use one of us, eu, cn, uk, ru, in, il, ca, local, unknown)")
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, local, unknown)")
                 sov_map[pid] = bloc  # user wins
         # User provenance overrides: a top-level "provenance" map (model-ID prefix → bloc) takes
         # precedence over the bundled patterns — even shorter user prefixes beat longer bundled
@@ -174,7 +176,7 @@ def load_kb(path: str | None = None) -> "KB":
                 if not _valid_provenance(bloc):
                     raise ValueError(
                         f"invalid provenance bloc '{bloc}' for model pattern '{pat}' "
-                        "(use one of us, eu, cn, uk, ru, in, il, ca, unknown)")
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, unknown)")
                 user_prov_patterns[pat.lower()] = bloc
     kb = KB(providers)
     kb.updated = bundled.get("updated")

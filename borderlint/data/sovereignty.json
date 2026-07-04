@@ -11,7 +11,12 @@
     "il": "Israeli privacy law and surveillance framework.",
     "ca": "PIPEDA + the CSIS/RCMP production-order regime — Canadian-headquartered providers are subject to Canadian compelled-disclosure process.",
     "local": "Self-hosted inference — no external sovereign; the operator's own jurisdiction governs.",
-    "unknown": "Sovereignty not statically determinable (aggregator/router or unmapped host)."
+    "unknown": "Sovereignty not statically determinable (aggregator/router or unmapped host).",
+    "jp": "APPI (Act on the Protection of Personal Information) + Criminal Procedure Code access — Japanese-headquartered providers subject to Japanese compelled-disclosure process.",
+    "kr": "PIPA 2011 + Protection of Communications Secrets Act — Korean-headquartered providers subject to Korean compelled-disclosure process.",
+    "sg": "PDPA 2012 + Criminal Procedure Code 2010 / Computer Misuse Act — Singapore-headquartered providers subject to Singaporean compelled-disclosure process.",
+    "au": "TOLA 2018 (Assistance and Access Act) + Privacy Act 1988 — Australian-headquartered providers subject to Australian compelled-disclosure and technical-assistance process.",
+    "ae": "Federal Decree-Law 45/2021 (PDPL) + broad state-security access — UAE-headquartered providers subject to Emirati compelled-disclosure process."
   },
   "providers": {
     "openai": "us",

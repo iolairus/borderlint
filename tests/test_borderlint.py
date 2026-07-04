@@ -1120,10 +1120,59 @@ def test_provenance_local_models():
     assert kb.match_model("llama_index") is None
     assert kb.match_model("llama-cpp-python") is None
     assert kb.match_model("llamafile") is None
-    # Out-of-vocabulary families are deliberately absent -> no detection, no noise
-    assert kb.match_model("falcon-180b") is None
+    # Formerly out-of-vocabulary families resolve since bloc-vocabulary-completion
+    assert kb.match_model("falcon-180b")[1] == "ae"
     # e2e: ollama + a bound tag -> residency local, sovereignty local, provenance us
     ds = _scan_file('import ollama\nm = "llama3.2"\n')
     d = [x for x in ds if x.kind == "sdk_import"][0]
     assert (d.jurisdiction, d.sovereignty, d.provenance) == ("local", "local", "us")
     assert d.model == "llama3.2"
+
+
+def test_bloc_vocabulary_completion():
+    k = load_kb()
+    # resolution per new bloc; org-anchored and pinned-stem forms
+    assert k.match_model("tiiuae/falcon-180B")[1] == "ae"
+    assert k.match_model("falcon-40b-instruct")[1] == "ae"
+    assert k.match_model("exaone-3.5-7.8b-instruct")[1] == "kr"
+    assert k.match_model("upstage/SOLAR-10.7B-v1.0")[1] == "kr"
+    assert k.match_model("aisingapore/gemma-sea-lion-v4-27b-it")[1] == "sg"
+    assert k.match_model("pfnet/plamo-2-8b")[1] == "jp"
+    assert k.match_model("sakana/tinyswallow-1.5b")[1] == "jp"
+    # anchoring holds: collision-prone stems stay pinned, bare words don't match
+    assert k.match_model("solarwinds-agent") is None
+    assert k.match_model("falcon") is None
+    # user KB accepts the new tokens
+    k2 = load_kb(_kb_file({"provenance": {"acme-model": "sg"}}))
+    assert k2.match_model("acme-model-v1")[1] == "sg"
+    # policy blocks accept the new tokens for both dimensions
+    import json, os, tempfile
+    from borderlint.policy import load_policy
+    p = os.path.join(tempfile.mkdtemp(), "pol.json")
+    with open(p, "w", encoding="utf-8") as fh:
+        json.dump({"classifications": {"customer-pii": ["hk"]},
+                   "sovereignty": {"classifications": {"customer-pii": ["jp", "au"]}},
+                   "provenance": {"classifications": {"customer-pii": ["kr", "ae"]}}}, fh)
+    load_policy(p)  # must not raise
+    # invalid tokens still reject
+    try:
+        load_kb(_kb_file({"provenance": {"gpt-": "nz"}}))
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
+
+
+def test_bloc_vocabulary_sources_and_display():
+    import json
+    from borderlint.kb import _SOVEREIGNTY_BLOCS
+    from borderlint.report import SOVEREIGNTY
+    with open("borderlint/data/sovereignty.json", encoding="utf-8") as fh:
+        sources = json.load(fh)["sources"]
+    for bloc in _SOVEREIGNTY_BLOCS:
+        assert bloc in sources, f"no source note for {bloc}"
+        assert bloc in SOVEREIGNTY, f"no display name for {bloc}"
+    # covered families leave the drift report
+    kd = _drift()
+    assert kd.model_coverage_gap(
+        ["tiiuae/falcon-180B", "bedrock/exaone-3.5", "made-up-model-7x"], load_kb()
+    ) == ["made-up-model-7x"]

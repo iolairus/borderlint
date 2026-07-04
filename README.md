@@ -64,8 +64,8 @@ so `sg` is allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA`
 **Sovereignty — opt-in, orthogonal to residency.** Residency says *where the bytes rest*;
 **sovereignty** says *which government can compel disclosure* — a US provider (AWS, Azure, GCP,
 OpenAI) is subject to the CLOUD Act regardless of the endpoint region. Add a `sovereignty` block
-to constrain it per class. Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`,
-`local`, `unknown`. Absent the block, behaviour is unchanged (sovereignty is reported as a column but never
+to constrain it per class. Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`,
+`kr`, `sg`, `au`, `ae`, `local`, `unknown`. Absent the block, behaviour is unchanged (sovereignty is reported as a column but never
 gates). `local` sovereignty is exempt (self-hosted = no external sovereign). See
 [CAPABILITIES.md §3.1](CAPABILITIES.md) for the full model.
 
@@ -103,8 +103,8 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
 - **Jurisdictions:** ccTLD/ISO codes + `CN-GBA` / `GBA`; **AWS / Azure / GCP-Vertex region resolved
   from the endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` and
   `asia-east2-aiplatform.googleapis.com` → `hk`).
-- **Sovereignty:** a per-flow bloc (`us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `local`,
-  `unknown`) derived from the provider's home legal regime — orthogonal to residency. Opt-in
+- **Sovereignty:** a per-flow bloc (`us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`, `kr`,
+  `sg`, `au`, `ae`, `local`, `unknown`) derived from the provider's home legal regime — orthogonal to residency. Opt-in
   policy block; reported in every output format; host-level overrides for ring-fenced
   subsidiaries (e.g. AWS China / Sinnet → `cn`).
 - **Provenance:** whose model weights a flow runs — a third orthogonal bloc resolved from model
