@@ -1191,3 +1191,23 @@ def test_bloc_vocabulary_sources_and_display():
     assert kd.model_coverage_gap(
         ["tiiuae/falcon-180B", "bedrock/exaone-3.5", "made-up-model-7x"], load_kb()
     ) == ["made-up-model-7x"]
+
+
+def test_kb_curation_2026_07():
+    k = load_kb()
+    # Bedrock cross-region inference profiles strip their region prefix
+    assert k.match_model("us.anthropic.claude-3-5-haiku-20241022-v1:0")[1] == "us"
+    assert k.match_model("eu.amazon.nova-2-lite-v1:0")[1] == "us"
+    assert k.match_model("apac.anthropic.claude-haiku-4-5-20251001-v1:0")[1] == "us"
+    # curated families from freshness issue #39
+    assert k.match_model("o1-2024-12-17")[1] == "us"
+    assert k.match_model("databricks/databricks-bge-large-en")[1] == "us"
+    assert k.match_model("flux-pro")[1] == "eu"
+    assert k.match_model("rerank-english-v2.0")[1] == "ca"
+    assert k.match_model("sd3")[1] == "uk"
+    assert k.match_model("kat-coder")[1] == "cn"
+    assert k.match_model("ft:babbage-002")[1] == "us"
+    # anchoring still holds: lookalike tool/infra names do not match
+    assert k.match_model("sonar-scanner") is None
+    assert k.match_model("nova-compute") is None
+    assert k.match_model("flux-system") is None
