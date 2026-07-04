@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-02",
+  "updated": "2026-07-04",
   "note": "Advisory only. This map surfaces compelled-disclosure exposure — which government can compel disclosure of a flow's data via the provider's home legal regime (e.g. US CLOUD Act, PRC DSL/CSL/PIPL). It does NOT adjudicate whether a given statute legally applies to any specific flow; the policy decides. Sovereignty is distinct from residency (where the endpoint physically sits).",
   "sources": {
     "us": "CLOUD Act 2018, FISA 702, Patriot Act §215 — US-headquartered providers subject to US compelled-disclosure process regardless of endpoint region.",
@@ -96,6 +96,7 @@
     "deepgram": "us",
     "assemblyai": "us",
     "soniox": "us",
-    "aws_polly": "us"
+    "aws_polly": "us",
+    "model_reference": "unknown"
   }
 }
