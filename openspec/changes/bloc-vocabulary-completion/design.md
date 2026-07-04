@@ -39,8 +39,7 @@ the shared mental model.
 `elyza`, `sea-lion`, `hyperclova`); collision-prone stems get pinned forms (`falcon-`,
 `falcon2`, `falcon3`, `solar-`); families whose hub ids do not start with the family name are
 carried by their org prefix instead (`tiiuae/`, `upstage/`, `lgai-exaone/`,
-`naver-hyperclovax/`, `aisingapore/`, `sbintuitions/`, `pfnet/`, `tokyotech-llm/`, `rinna/`,
-`elyza/`) — e.g. `tokyotech-llm/Llama-3.1-Swallow-8B` resolves via the org because the
+`naver-hyperclovax/`, `aisingapore/`, `sbintuitions/`, `pfnet/`, `tokyotech-llm/`, `rinna/`) — e.g. `tokyotech-llm/Llama-3.1-Swallow-8B` resolves via the org because the
 basename starts with the base-family name, not "swallow".
 **Rationale:** Same anchoring discipline that keeps `llama_index` out of the match set; org
 prefixes are unambiguous and survive family renames.

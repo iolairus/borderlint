@@ -1153,7 +1153,17 @@ def test_bloc_vocabulary_completion():
         json.dump({"classifications": {"customer-pii": ["hk"]},
                    "sovereignty": {"classifications": {"customer-pii": ["jp", "au"]}},
                    "provenance": {"classifications": {"customer-pii": ["kr", "ae"]}}}, fh)
-    load_policy(p)  # must not raise
+    pol = load_policy(p)
+    # a flow with sovereignty jp passes the check (not just load-time acceptance)
+    from borderlint.detect import Detection
+    from borderlint.policy import evaluate
+    d = Detection("openai", "sdk_import", "import openai", "a.py", 1,
+                  jurisdiction="hk", sovereignty="jp")
+    f = evaluate([d], pol, "customer-pii", k)[0]
+    assert "sovereignty" not in f.reasons
+    # user-KB sovereignty override accepts a new token
+    k3 = load_kb(_kb_file({"sovereignty": {"openai": "jp"}}))
+    assert k3.sovereignty_map["openai"] == "jp"
     # invalid tokens still reject
     try:
         load_kb(_kb_file({"provenance": {"gpt-": "nz"}}))
@@ -1171,6 +1181,11 @@ def test_bloc_vocabulary_sources_and_display():
     for bloc in _SOVEREIGNTY_BLOCS:
         assert bloc in sources, f"no source note for {bloc}"
         assert bloc in SOVEREIGNTY, f"no display name for {bloc}"
+    # bundled patterns are trusted at load time: guard that every bloc is in-vocabulary
+    from borderlint.kb import _PROVENANCE_BLOCS
+    with open("borderlint/data/provenance.json", encoding="utf-8") as fh:
+        for pat, entry in json.load(fh)["patterns"].items():
+            assert entry["bloc"] in _PROVENANCE_BLOCS, f"{pat}: {entry['bloc']}"
     # covered families leave the drift report
     kd = _drift()
     assert kd.model_coverage_gap(
