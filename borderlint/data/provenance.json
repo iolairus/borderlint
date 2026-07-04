@@ -7,7 +7,8 @@
     "azure_foundry_sold_by_azure": "https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models",
     "azure_foundry_partners": "https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-from-partners",
     "vertex_ai_generative": "https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models",
-    "vertex_ai_model_garden": "https://cloud.google.com/model-garden"
+    "vertex_ai_model_garden": "https://cloud.google.com/model-garden",
+    "openrouter": "https://openrouter.ai/api/v1/models"
   },
   "patterns": {
     "anthropic.claude-": {"org": "Anthropic", "bloc": "us"},
@@ -111,7 +112,14 @@
     "pixtral-": {"org": "Mistral AI", "bloc": "eu"},
     "gemma4": {"org": "Google", "bloc": "us"},
     "glm5": {"org": "Zhipu AI", "bloc": "cn"},
-    "minimax-": {"org": "MiniMax", "bloc": "cn"}
+    "minimax-": {"org": "MiniMax", "bloc": "cn"},
+    "ibm-granite/": {"org": "IBM", "bloc": "us"},
+    "inclusionai/": {"org": "InclusionAI", "bloc": "cn"},
+    "minimax/": {"org": "MiniMax", "bloc": "cn"},
+    "tencent/": {"org": "Tencent", "bloc": "cn"},
+    "stepfun/": {"org": "StepFun", "bloc": "cn"},
+    "xiaomi/": {"org": "Xiaomi", "bloc": "cn"},
+    "sakana/": {"org": "Sakana AI", "bloc": "jp"}
   },
   "passthrough_orgs_note": "Quantizer / community-conversion hubs (GGUF, MLX). The org carries no provenance — the model family in the repo name does — so the org prefix is stripped and the remainder matched against the family patterns. Families whose developer bloc is outside the vocabulary (Falcon/TII, EXAONE/LG, Solar/Upstage) are deliberately absent from the patterns: absence resolves 'unknown' without generating standalone noise findings.",
   "passthrough_orgs": [
