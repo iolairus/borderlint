@@ -88,6 +88,7 @@
     "nemotron": {"org": "NVIDIA", "bloc": "us"},
     "starcoder": {"org": "BigCode (Hugging Face / ServiceNow)", "bloc": "us"},
     "aya-": {"org": "Cohere", "bloc": "ca"},
+    "cohere-": {"org": "Cohere", "bloc": "ca"},
     "google.": {"org": "Google", "bloc": "us"},
     "openai.": {"org": "OpenAI", "bloc": "us"},
     "nvidia.": {"org": "NVIDIA", "bloc": "us"},
