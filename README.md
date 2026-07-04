@@ -2,12 +2,13 @@
 
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-borderlint-2188ff?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/borderlint-ai-data-residency-lint)
 
-**Map and govern where your AI data and traffic flow — and who can compel its disclosure.**
+**Map and govern where your AI data and traffic flow — who can compel its disclosure, and whose
+model weights it runs.**
 
-A static, in-CI linter for **AI data residency and sovereignty across APAC & EMEA**, with
-first-class **HK / GBA** support. borderlint statically scans your repo (**Python and
-TypeScript/JavaScript**) for AI provider usage and evaluates each flow against two orthogonal
-dimensions:
+A static, in-CI linter for **AI data residency, sovereignty, and model provenance across APAC &
+EMEA**, with first-class **HK / GBA** support. borderlint statically scans your repo (**Python
+and TypeScript/JavaScript**) for AI provider usage and evaluates each flow against three
+orthogonal dimensions:
 
 - **Residency** — *where the bytes rest*. Each flow resolves to a jurisdiction (ccTLD/ISO codes
   plus the `CN-GBA` / `GBA` tokens); a flow outside the allow-list for the declared data class
@@ -16,6 +17,11 @@ dimensions:
   Azure, GCP, OpenAI, Anthropic) is subject to the CLOUD Act regardless of the endpoint region;
   a flow to AWS Bedrock `ap-east-1` is residency-clean for a PDPO policy (residency `hk`) yet
   remains under **US sovereignty**. An optional `sovereignty` block constrains this per class.
+- **Provenance** — *whose model weights the flow runs*. Model references in code — a Bedrock
+  model ID, a bare API model string, an aggregator-qualified ID, a HF repo, a `.gguf` path, an
+  Ollama tag — resolve to the developer's bloc. Bedrock `ap-east-1` serving DeepSeek-R1 is
+  residency `hk`, sovereignty `us`, **provenance `cn`**; self-hosted Qwen is `local`/`local`/`cn`.
+  An optional `provenance` block constrains this per class.
 
 Declare a home base — **HK, Macao, the GBA, Japan, Korea, Singapore, Australia, the UK, the EU,
 or Malaysia** — and flagged flows are tagged with the matching regime (PDPO, PIPL, APPI, PIPA,
@@ -40,7 +46,8 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 ## Policy (the eval-set)
 
 `residency.json` maps each data class to the jurisdictions you accept, and optionally to the
-**sovereignty blocs** you accept for compelled-disclosure exposure:
+**sovereignty** and **provenance blocs** you accept for compelled-disclosure and model-origin
+exposure:
 
 ```json
 {
@@ -53,6 +60,10 @@ python -m borderlint scan ./service --policy residency.json --classification cus
   "sovereignty": {
     "on_unknown": "warn",
     "classifications": { "customer-pii": ["eu", "uk", "local"] }
+  },
+  "provenance": {
+    "on_unknown": "warn",
+    "classifications": { "customer-pii": ["us", "eu", "uk"] }
   }
 }
 ```
@@ -69,11 +80,14 @@ to constrain it per class. Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, 
 gates). `local` sovereignty is exempt (self-hosted = no external sovereign). See
 [CAPABILITIES.md §3.1](CAPABILITIES.md) for the full model.
 
-**Provenance — opt-in, the third axis.** *Whose model weights* a flow runs, resolved from model
-references in code — so Bedrock `ap-east-1` serving DeepSeek-R1 (residency `hk`, sovereignty
-`us`, provenance `cn`) and self-hosted Qwen (residency/sovereignty `local`, provenance `cn`)
-become expressible. An optional `provenance` block mirrors the sovereignty shape; vocabulary is
-the same minus `local`. See [CAPABILITIES.md §3.2](CAPABILITIES.md).
+**Provenance — opt-in, orthogonal to both.** *Whose model weights* a flow runs, resolved in two
+tiers: a model reference bound to the flow wins; absent one, a provider that serves only its own
+models (OpenAI, Anthropic, DeepSeek …) resolves to its org's bloc, while multi-model hosts
+(Bedrock, Vertex) and aggregators stay `unknown`. Aggregator-qualified IDs
+(`deepseek/deepseek-r1` via OpenRouter) resolve provenance even where residency and sovereignty
+are `unknown` — the one axis routers don't obscure. The `provenance` block mirrors the
+sovereignty shape; vocabulary is the same minus `local` (weights always have a developer).
+Fine-tunes inherit the base family's bloc. See [CAPABILITIES.md §3.2](CAPABILITIES.md).
 
 Declare your **`home_location`** — a GBA seat (`hk`/`mo`/`CN-GBA`) or an APAC/EMEA seat
 (`jp`, `kr`, `sg`, `au`, `uk`, `eu`, `my`) — and a flagged flow is tagged with the **data-protection
@@ -192,10 +206,14 @@ policy it runs inventory mode and always passes).
 
 ## Keeping the KB fresh
 
-A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) diffs the bundled provider KB against
-litellm's registry and opens an issue listing providers we don't yet cover — jurisdictions are
-assigned **by hand**, never auto-merged. `borderlint --version` shows the KB's last-reviewed date.
-To add or correct a provider, see [`CONTRIBUTING.md`](CONTRIBUTING.md) (KB schema + PR workflow).
+A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) checks freshness on every axis:
+providers we don't yet cover (diffed against litellm's registry), **model families the
+provenance map doesn't resolve** (aggregated, so the issue lists families to curate rather than
+thousands of model IDs), sovereignty-map completeness, and each bundled KB's last-reviewed date.
+It maintains a single standing review issue, updated in place. Jurisdictions and blocs are
+assigned **by hand**, never auto-merged. `borderlint --version` shows the KB's last-reviewed
+date. To add or correct a provider, see [`CONTRIBUTING.md`](CONTRIBUTING.md) (KB schema + PR
+workflow).
 
 ## Development
 
