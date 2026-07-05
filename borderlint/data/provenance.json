@@ -35,6 +35,7 @@
     "mixtral-": {"org": "Mistral AI", "bloc": "eu"},
     "magistral-": {"org": "Mistral AI", "bloc": "eu"},
     "codestral-": {"org": "Mistral AI", "bloc": "eu"},
+    "codestral": {"org": "Mistral", "bloc": "eu"},
     "command-r": {"org": "Cohere", "bloc": "ca"},
     "jamba-": {"org": "AI21 Labs", "bloc": "il"},
     "deepseek-": {"org": "DeepSeek", "bloc": "cn"},

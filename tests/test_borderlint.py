@@ -1211,3 +1211,24 @@ def test_kb_curation_2026_07():
     assert k.match_model("sonar-scanner") is None
     assert k.match_model("nova-compute") is None
     assert k.match_model("flux-system") is None
+
+
+def test_versioned_model_identifiers():
+    k = load_kb()
+    # digit-led @-version pins resolve by their base identifier
+    m = k.match_model("claude-3-5-haiku@20241022")
+    assert m == ("claude-3-5-haiku@20241022", "us")   # evidence keeps the suffix
+    assert k.match_model("anthropic.claude-haiku-4-5@20251001")[1] == "us"
+    assert k.match_model("mistral-large@2407")[1] == "eu"
+    assert k.match_model("mistral-large@2411-001")[1] == "eu"  # hyphenated version token
+    assert k.match_model("jamba-1.5-large@001")[1] == "il"
+    assert k.match_model("codestral@2405")[1] == "eu"
+    # the version never changes the bloc
+    assert k.match_model("mistral-large")[1] == k.match_model("mistral-large@2407")[1]
+    # letter-led @ segments are not version pins: emails and @default/@latest stay invisible
+    assert k.match_model("gemini-team@google.com") is None
+    assert k.match_model("codestral@latest") is None
+    assert k.match_model("a@b@1") is None
+    # drift inherits the fix through the same matcher
+    kd = _drift()
+    assert kd.model_coverage_gap(["vertex_ai/claude-3-5-haiku@20241022"], k) == []

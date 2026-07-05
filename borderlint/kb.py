@@ -116,6 +116,10 @@ _PROVENANCE_BLOCS = frozenset(
 # strings that merely start with a model name ("gpt-4 is great") are never flagged.
 _MODEL_ID = re.compile(r"^[A-Za-z0-9._/:-]{3,100}$")
 
+# Vertex/Bedrock-style version pin ("claude-3-5-haiku@20241022"). Digit-led only: an email's
+# domain starts with a letter, so "gemini-team@google.com" is never split into a candidate.
+_VERSION_SUFFIX = re.compile(r"@\d[A-Za-z0-9.-]*$")
+
 # ponytail: tool names that resemble a model-family prefix; a stoplist beats a veto mechanism
 _NOT_MODELS = ("llama_index", "llama-index", "llamaindex", "llama_cpp", "llama-cpp", "llamafile")
 
@@ -266,12 +270,14 @@ class KB:
         Anchored: the whole literal must look like a model identifier (no spaces, model-id
         charset) and start with a known prefix. Longest prefix wins. Local-model forms (D7):
         a `.gguf` path matches by basename; a redistributor org (quantizer/community hub) is
-        stripped so the model family in the repo name carries the provenance.
+        stripped so the model family in the repo name carries the provenance. A trailing
+        digit-led `@<version>` pin is stripped before matching; the returned identifier keeps it.
         """
         s = literal.strip()
-        if not _MODEL_ID.match(s):
+        base = _VERSION_SUFFIX.sub("", s)  # provenance is a property of the base identifier
+        if not _MODEL_ID.match(base):
             return None
-        low = s.lower()
+        low = base.lower()
         if low.endswith(".gguf"):  # model-file path: directories defeat start-anchoring
             low = low.rsplit("/", 1)[-1]
         for org in self.provenance_passthrough:  # quantizer hubs carry no provenance
