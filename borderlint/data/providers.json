@@ -1,5 +1,5 @@
 {
-  "updated": "2026-06-29",
+  "updated": "2026-07-05",
   "providers": [
     {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "npm": ["openai", "@ai-sdk/openai"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
     {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "npm": ["@anthropic-ai/sdk", "@ai-sdk/anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
@@ -41,6 +41,9 @@
     {"id": "novita", "name": "Novita AI", "sdks": [], "npm": [], "endpoints": ["api.novita.ai"], "jurisdiction": "unknown", "note": "global multi-region infrastructure; HQ US + Singapore entity"},
     {"id": "nvidia_nim", "name": "NVIDIA NIM", "sdks": [], "npm": [], "endpoints": ["integrate.api.nvidia.com"], "jurisdiction": "unknown", "endpoint_jurisdictions": {"integrate.api.nvidia.com": "us"}, "note": "hosted catalog = US DGX Cloud; NIM is often self-hosted (default unknown)"},
     {"id": "ollama", "name": "Ollama (local)", "sdks": ["ollama"], "npm": ["ollama"], "endpoints": [], "jurisdiction": "local", "note": "local-first inference server (localhost by default)"},
+    {"id": "sagemaker", "name": "AWS SageMaker", "sdks": ["sagemaker"], "npm": [], "endpoints": ["runtime.sagemaker"], "jurisdiction": "unknown", "region_scheme": "aws"},
+    {"id": "snowflake", "name": "Snowflake Cortex", "sdks": ["snowflake.cortex"], "npm": [], "endpoints": ["snowflakecomputing.com"], "jurisdiction": "unknown", "note": "region is per-account; host does not carry it"},
+    {"id": "lemonade", "name": "Lemonade (AMD, local)", "sdks": ["lemonade"], "npm": [], "endpoints": [], "jurisdiction": "local", "note": "local-first inference server (localhost by default)"},
     {"id": "pinecone", "name": "Pinecone", "category": "vector_store", "sdks": ["pinecone"], "npm": ["@pinecone-database/pinecone"], "endpoints": ["pinecone.io"], "jurisdiction": "unknown", "note": "vector cluster region is chosen per index; not resolvable from the host"},
     {"id": "weaviate", "name": "Weaviate Cloud", "category": "vector_store", "sdks": ["weaviate"], "npm": ["weaviate-client", "weaviate-ts-client"], "endpoints": ["weaviate.cloud", "weaviate.network"], "jurisdiction": "unknown", "note": "cluster region chosen at creation; SDK may also target a self-hosted instance"},
     {"id": "qdrant", "name": "Qdrant Cloud", "category": "vector_store", "sdks": ["qdrant_client"], "npm": ["@qdrant/js-client-rest"], "endpoints": ["qdrant.io"], "jurisdiction": "unknown", "note": "cluster region chosen at creation; SDK may also target a self-hosted instance"},

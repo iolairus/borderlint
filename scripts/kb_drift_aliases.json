@@ -43,9 +43,11 @@
     "google_pse": "Google Programmable Search Engine, search-only route (judged 2026-07-05)",
     "linkup": "web-search API, not an AI model provider (judged 2026-07-05)",
     "one of https://docs.litellm.ai/docs/providers": "placeholder junk entry in the upstream price file (judged 2026-07-05)",
+    "parallel_ai": "Parallel Web Systems — web search/research APIs for agents, no model weights (judged 2026-07-05)",
     "searxng": "self-hosted metasearch engine, search-only route (judged 2026-07-05)",
     "serper": "Google SERP API, not an AI model provider (judged 2026-07-05)",
     "tavily": "web-search API, not an AI model provider (judged 2026-07-05)",
+    "tinyfish": "TinyFish — enterprise web-agent automation infra, no model weights (judged 2026-07-05)",
     "you_com": "litellm routes You.com as web search, not model serving (judged 2026-07-05)"
   }
 }
