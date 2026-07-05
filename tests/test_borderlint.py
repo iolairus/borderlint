@@ -1239,6 +1239,15 @@ def test_kb_curation_2026_07():
     assert k.match_model("sonar-scanner") is None
     assert k.match_model("nova-compute") is None
     assert k.match_model("flux-system") is None
+    # issue #39 close-out batch (2026-07-05): new-bloc and vendor-prefixed families
+    assert k.match_model("jais-30b-chat")[1] == "ae"
+    assert k.match_model("GigaChat-2-Lite")[1] == "ru"
+    assert k.match_model("j2-light")[1] == "il"
+    assert k.match_model("us.twelvelabs.marengo-embed-2-7-v1:0")[1] == "us"
+    assert k.match_model("anthropic-claude-3-opus")[1] == "us"
+    # new providers resolve: SageMaker region from host, Snowflake host, Lemonade local
+    assert k.match_endpoint("runtime.sagemaker.ap-east-1.amazonaws.com")[2] == "hk"
+    assert k.match_endpoint("myacct.snowflakecomputing.com")[2] == "unknown"
 
 
 def test_versioned_model_identifiers():
