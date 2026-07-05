@@ -227,6 +227,34 @@ def test_kb_drift_sovereignty_gaps():
     assert kd.sovereignty_gaps(ids, load_kb().sovereignty_map) == []
 
 
+def test_kb_drift_suppression():
+    kd = _drift()
+    known = kd.known_providers({"providers": [{"id": "openai", "name": "OpenAI", "sdks": []}]})
+    supp = {"aliases": {"chatgpt": "openai"}, "ignore": {"tavily": "web search"}}
+    gap = kd.coverage_gap({"openai", "chatgpt", "tavily", "newvendor"}, known, supp)
+    assert gap == ["newvendor"]                    # aliased + ignored excluded; unlisted surfaces
+    # loud failures: rotten alias target, reasonless ignore
+    for bad in ({"aliases": {"x": "nonexistent"}, "ignore": {}},
+                {"aliases": {}, "ignore": {"y": "  "}}):
+        try:
+            kd.validate_suppression(bad, {"openai"})
+            assert False, "expected ValueError"
+        except ValueError as e:
+            assert "x" in str(e) or "y" in str(e)
+    # the shipped suppression file validates against the real KB
+    import json
+    with open("scripts/kb_drift_aliases.json", encoding="utf-8") as fh:
+        shipped = json.load(fh)
+    with open("borderlint/data/providers.json", encoding="utf-8") as fh:
+        ids = {p["id"] for p in json.load(fh)["providers"]}
+    kd.validate_suppression(shipped, ids)
+    assert all(r.strip() for r in shipped["ignore"].values())
+    # the scanner never reads the suppression list
+    import pathlib
+    for mod in pathlib.Path("borderlint").glob("*.py"):
+        assert "kb_drift_aliases" not in mod.read_text(encoding="utf-8")
+
+
 def test_kb_drift_staleness():
     import datetime as dt
     kd = _drift()
