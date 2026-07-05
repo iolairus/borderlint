@@ -23,6 +23,7 @@ from borderlint.kb import _SOVEREIGNTY_BLOCS, load_kb  # noqa: E402  deliberate 
 
 UPSTREAM = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 DATA_DIR = REPO_ROOT / "borderlint" / "data"
+ALIASES_FILE = Path(__file__).resolve().parent / "kb_drift_aliases.json"
 STALE_DAYS = 90
 FAMILY_CAP = 50
 
@@ -52,9 +53,26 @@ def upstream_models(prices: dict) -> list[str]:
                   if isinstance(e, dict) and e.get("litellm_provider"))
 
 
-def coverage_gap(upstream: set[str], known: set[str]) -> list[str]:
-    """Upstream provider names not represented in the bundled KB — names only, sorted."""
-    return sorted({u for u in upstream if _norm(u) not in known})
+def validate_suppression(supp: dict, provider_ids: set[str]) -> dict:
+    """Raise on an alias to a missing provider id or an ignore without a reason — loudly.
+
+    A silently rotten alias would re-hide a real gap; a reasonless ignore is not a judgment.
+    """
+    for name, target in supp.get("aliases", {}).items():
+        if target not in provider_ids:
+            raise ValueError(f"drift alias '{name}' targets unknown provider id '{target}'")
+    for name, reason in supp.get("ignore", {}).items():
+        if not (reason or "").strip():
+            raise ValueError(f"drift ignore '{name}' has no reason")
+    return supp
+
+
+def coverage_gap(upstream: set[str], known: set[str], suppression: dict | None = None) -> list[str]:
+    """Upstream provider names not in the bundled KB and not suppressed — names only, sorted."""
+    suppressed = set()
+    if suppression:
+        suppressed = set(suppression.get("aliases", {})) | set(suppression.get("ignore", {}))
+    return sorted({u for u in upstream if _norm(u) not in known and u not in suppressed})
 
 
 def model_coverage_gap(model_ids: list[str], kb) -> list[str]:
@@ -117,7 +135,8 @@ def render_report(providers_gap: list[str], families: list[tuple[str, int, str]]
         parts.append(
             "### New providers\n\n"
             "Upstream providers not yet covered by the borderlint KB. Assign endpoint host(s), "
-            "a jurisdiction, and a sovereignty bloc **by hand** — do not auto-merge.\n\n"
+            "a jurisdiction, and a sovereignty bloc **by hand** — or record the name as an alias "
+            "or out-of-scope entry in `scripts/kb_drift_aliases.json`. Never auto-merge.\n\n"
             + "\n".join(f"- {p}" for p in providers_gap))
     if families:
         lines = [f"- `{stem}` — {n} model{'s' if n > 1 else ''}, e.g. `{ex}`"
@@ -148,9 +167,13 @@ def main() -> int:
     with open(DATA_DIR / "providers.json", encoding="utf-8") as fh:
         providers_doc = json.load(fh)
     kb = load_kb()
+    with open(ALIASES_FILE, encoding="utf-8") as fh:
+        suppression = validate_suppression(
+            json.load(fh), {p["id"] for p in providers_doc["providers"]})
     prices = json.loads(urllib.request.urlopen(UPSTREAM, timeout=30).read())
 
-    providers_gap = coverage_gap(upstream_providers(prices), known_providers(providers_doc))
+    providers_gap = coverage_gap(upstream_providers(prices), known_providers(providers_doc),
+                                 suppression)
     families = family_stems(model_coverage_gap(upstream_models(prices), kb))
     sov_gaps = sovereignty_gaps([p["id"] for p in providers_doc["providers"]], kb.sovereignty_map)
     kb_dates = {f.name: json.loads(f.read_text(encoding="utf-8")).get("updated")

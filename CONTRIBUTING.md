@@ -47,7 +47,10 @@ Invalid tokens are rejected at load time.
 The weekly drift check (`scripts/kb_drift.py`, `.github/workflows/kb-refresh.yml`) lists upstream
 providers borderlint does **not** yet cover — names only, **no jurisdiction**. Mapping a provider
 to a jurisdiction is human judgment and is **never auto-merged**: a reviewer assigns it in the PR.
-This keeps the KB trustworthy as a residency source.
+This keeps the KB trustworthy as a residency source. An upstream name that is a route alias of a
+covered provider, or not an AI model provider at all, is recorded in
+`scripts/kb_drift_aliases.json` (with a reason for ignores) instead of the KB — same PR workflow,
+read only by the drift check.
 
 ## Custom / private providers (no PR needed)
 
