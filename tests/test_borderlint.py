@@ -1262,9 +1262,12 @@ def test_versioned_model_identifiers():
     assert k.match_model("codestral@2405")[1] == "eu"
     # the version never changes the bloc
     assert k.match_model("mistral-large")[1] == k.match_model("mistral-large@2407")[1]
-    # letter-led @ segments are not version pins: emails and @default/@latest stay invisible
+    # meta-version pins resolve; other letter-led @ segments stay invisible
+    assert k.match_model("codestral@latest")[1] == "eu"
+    assert k.match_model("mistral-large@latest")[1] == "eu"
+    assert k.match_model("claude-fable-5@default")[1] == "us"
     assert k.match_model("gemini-team@google.com") is None
-    assert k.match_model("codestral@latest") is None
+    assert k.match_model("model@stable") is None
     assert k.match_model("a@b@1") is None
     # drift inherits the fix through the same matcher
     kd = _drift()

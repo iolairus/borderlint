@@ -118,7 +118,7 @@ _MODEL_ID = re.compile(r"^[A-Za-z0-9._/:-]{3,100}$")
 
 # Vertex/Bedrock-style version pin ("claude-3-5-haiku@20241022"). Digit-led only: an email's
 # domain starts with a letter, so "gemini-team@google.com" is never split into a candidate.
-_VERSION_SUFFIX = re.compile(r"@\d[A-Za-z0-9.-]*$")
+_VERSION_SUFFIX = re.compile(r"@(?:\d[A-Za-z0-9.-]*|default|latest)$")
 
 # ponytail: tool names that resemble a model-family prefix; a stoplist beats a veto mechanism
 _NOT_MODELS = ("llama_index", "llama-index", "llamaindex", "llama_cpp", "llama-cpp", "llamafile")
