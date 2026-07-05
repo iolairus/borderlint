@@ -29,7 +29,7 @@ REASON = {"denied_provider": "provider denied by policy",
 SOVEREIGNTY = {"us": "United States", "eu": "European Union", "cn": "Mainland China",
                "uk": "United Kingdom", "ru": "Russia", "in": "India", "il": "Israel",
                "ca": "Canada", "jp": "Japan", "kr": "South Korea", "sg": "Singapore",
-               "au": "Australia", "ae": "UAE", "local": "Local", "unknown": "Unknown"}
+               "au": "Australia", "ae": "UAE", "ch": "Switzerland", "local": "Local", "unknown": "Unknown"}
 _RANK = {"ok": 0, "waived": 1, "warn": 2, "fail": 3}
 
 with open(os.path.join(os.path.dirname(__file__), "data", "arrangements.json"), encoding="utf-8") as _fh:

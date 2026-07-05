@@ -11,7 +11,7 @@ _JURIS_ALIAS = {"uk": "gb"}  # `.uk` is the ccTLD for ISO-3166 `GB`
 # Sovereignty bloc vocabulary (mirrors borderlint.kb._SOVEREIGNTY_BLOCS; duplicated here to
 # avoid a circular import — policy must not depend on kb at module load).
 _SOVEREIGNTY_BLOCS = frozenset(
-    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "local", "unknown"})
+    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "ch", "local", "unknown"})
 
 
 def _valid_sovereignty(token: str) -> bool:
@@ -22,7 +22,7 @@ def _valid_sovereignty(token: str) -> bool:
 # Provenance bloc vocabulary (mirrors borderlint.kb._PROVENANCE_BLOCS; duplicated for the same
 # circular-import reason). The sovereignty vocabulary minus `local` — weights always have a developer.
 _PROVENANCE_BLOCS = frozenset(
-    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "unknown"})
+    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "ch", "unknown"})
 
 
 def _valid_provenance(token: str) -> bool:
@@ -68,7 +68,7 @@ def load_policy(path: str) -> dict:
                 if not _valid_sovereignty(b):
                     raise ValueError(
                         f"invalid sovereignty bloc '{b}' in classification '{cls}' "
-                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, local, unknown)")
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, ch, local, unknown)")
     # Provenance block is opt-in. Validate bloc tokens when present, same posture as sovereignty.
     mprov = data.get("provenance")
     if mprov and isinstance(mprov, dict):
@@ -77,7 +77,7 @@ def load_policy(path: str) -> dict:
                 if not _valid_provenance(b):
                     raise ValueError(
                         f"invalid provenance bloc '{b}' in classification '{cls}' "
-                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, unknown)")
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, ch, unknown)")
     return data
 
 

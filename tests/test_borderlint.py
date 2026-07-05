@@ -1277,3 +1277,25 @@ def test_versioned_model_identifiers():
     # drift inherits the fix through the same matcher
     kd = _drift()
     assert kd.model_coverage_gap([("vertex_ai/claude-3-5-haiku@20241022", "vertex_ai")], k) == []
+
+
+def test_ch_bloc_apertus():
+    k = load_kb()
+    assert k.match_model("swiss-ai/Apertus-70B-Instruct")[1] == "ch"
+    assert k.match_model("apertus-70b-instruct")[1] == "ch"
+    # ch accepted in a user KB and policy blocks; rejection error names it
+    k2 = load_kb(_kb_file({"provenance": {"acme-alpine": "ch"}}))
+    assert k2.match_model("acme-alpine-1")[1] == "ch"
+    try:
+        load_kb(_kb_file({"provenance": {"x-": "zz"}}))
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "ch" in str(e)  # the error's vocabulary list includes the new bloc
+    import json, os, tempfile
+    from borderlint.policy import load_policy
+    p = os.path.join(tempfile.mkdtemp(), "pol.json")
+    with open(p, "w", encoding="utf-8") as fh:
+        json.dump({"classifications": {"customer-pii": ["hk"]},
+                   "sovereignty": {"classifications": {"customer-pii": ["ch"]}},
+                   "provenance": {"classifications": {"customer-pii": ["ch"]}}}, fh)
+    load_policy(p)  # must not raise

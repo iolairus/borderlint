@@ -99,7 +99,7 @@ jurisdiction" — a posture many HK/GBA and EU entities in fact hold.
 
 **Sovereignty blocs.** borderlint models a small set of blocs, not per-country sovereigns:
 `us`, `eu` (the EU/EEA as a single compelled-disclosure unit), `cn`, `uk` (post-Brexit, distinct
-from EU), `ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `local` (self-hosted — no
+from EU), `ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `local` (self-hosted — no
 external sovereign), and `unknown`
 (aggregators, custom endpoints, or unmapped providers). Sovereignty is derived from the
 **provider** (its home legal regime), not the endpoint region; region-in-endpoint providers
@@ -157,7 +157,7 @@ residency/sovereignty, self-hosted flows carry an honest weights origin: `local`
 for a local Qwen, `local`/`local`/`us` for a local Llama.
 
 **Blocs** reuse the sovereignty vocabulary minus `local` (weights always have a developer):
-`us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `unknown`.
+`us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `unknown`.
 Fine-tunes and distillations inherit
 the base family's bloc.
 
