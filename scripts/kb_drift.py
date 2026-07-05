@@ -47,9 +47,9 @@ def upstream_providers(prices: dict) -> set[str]:
             if isinstance(e, dict) and e.get("litellm_provider")}
 
 
-def upstream_models(prices: dict) -> list[str]:
-    """The upstream file's keys are model identifiers — the provenance check's input."""
-    return sorted(k for k, e in prices.items()
+def upstream_models(prices: dict) -> list[tuple[str, str]]:
+    """(model identifier, upstream provider) pairs — the provenance check's input."""
+    return sorted((k, e["litellm_provider"]) for k, e in prices.items()
                   if isinstance(e, dict) and e.get("litellm_provider"))
 
 
@@ -75,15 +75,26 @@ def coverage_gap(upstream: set[str], known: set[str], suppression: dict | None =
     return sorted({u for u in upstream if _norm(u) not in known and u not in suppressed})
 
 
-def model_coverage_gap(model_ids: list[str], kb) -> list[str]:
+def model_coverage_gap(models: list[tuple[str, str]], kb, suppression: dict | None = None) -> list[str]:
     """Upstream model identifiers the provenance map does not resolve, sorted.
 
     Covered when the key or any of its `/`-suffixes matches — litellm keys carry
     provider/region qualifiers of varying depth (`bedrock/ap-northeast-1/qwen.qwen3`),
-    and the qualifiers are not hub orgs.
+    and the qualifiers are not hub orgs. Provider context (design D1): ids of ignored
+    providers are not models and are excluded; ids of speech-category providers with a
+    first-party provenance default count as covered (tier 2 resolves those flows).
+    Inference providers' unresolved ids keep surfacing — they drive pattern curation.
     """
+    ignored = set(suppression.get("ignore", {})) if suppression else set()
+    aliases = suppression.get("aliases", {}) if suppression else {}
+    by_norm = {_norm(pid): pid for pid in kb.by_id}
     out = []
-    for mid in sorted(set(model_ids)):
+    for mid, upstream_name in sorted(set(models)):
+        if upstream_name in ignored:
+            continue
+        pid = aliases.get(upstream_name) or by_norm.get(_norm(upstream_name))
+        if pid and kb.category(pid) == "speech" and kb.default_provenance(pid) != "unknown":
+            continue
         parts = mid.split("/")
         if any(kb.match_model("/".join(parts[i:])) for i in range(len(parts))):
             continue
@@ -174,7 +185,7 @@ def main() -> int:
 
     providers_gap = coverage_gap(upstream_providers(prices), known_providers(providers_doc),
                                  suppression)
-    families = family_stems(model_coverage_gap(upstream_models(prices), kb))
+    families = family_stems(model_coverage_gap(upstream_models(prices), kb, suppression))
     sov_gaps = sovereignty_gaps([p["id"] for p in providers_doc["providers"]], kb.sovereignty_map)
     kb_dates = {f.name: json.loads(f.read_text(encoding="utf-8")).get("updated")
                 for f in sorted(DATA_DIR.glob("*.json"))}

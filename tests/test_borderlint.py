@@ -208,10 +208,15 @@ def _drift():
 def test_kb_drift_model_coverage():
     kd = _drift()
     k = load_kb()
-    ids = ["gpt-4o", "bedrock/anthropic.claude-3-sonnet", "azure/eu/gpt-4o-2024-08-06",
-           "totally-made-up-model-9x"]
+    ids = [("gpt-4o", "openai"), ("bedrock/anthropic.claude-3-sonnet", "bedrock"),
+           ("azure/eu/gpt-4o-2024-08-06", "azure"), ("totally-made-up-model-9x", "unknown_host")]
     gap = kd.model_coverage_gap(ids, k)
     assert gap == ["totally-made-up-model-9x"]     # qualifiers of any depth covered via suffix
+    # provider context: ignored providers excluded; speech tiers covered; inference still surfaces
+    supp = {"aliases": {"dg": "deepgram"}, "ignore": {"apiserpent": "search"}}
+    ctx = [("apiserpent/search", "apiserpent"), ("deepgram/base", "deepgram"),
+           ("dg/enhanced", "dg"), ("brand-new-family-1x", "openai")]
+    assert kd.model_coverage_gap(ctx, k, supp) == ["brand-new-family-1x"]
     stems = kd.family_stems(["grok-4", "vendor/grok-4-fast", "zzz-solo"])
     assert stems == [("grok", 2, "grok-4"), ("zzz", 1, "zzz-solo")]  # aggregated, count-desc
 
@@ -1217,8 +1222,8 @@ def test_bloc_vocabulary_sources_and_display():
     # covered families leave the drift report
     kd = _drift()
     assert kd.model_coverage_gap(
-        ["tiiuae/falcon-180B", "bedrock/exaone-3.5", "made-up-model-7x"], load_kb()
-    ) == ["made-up-model-7x"]
+        [("tiiuae/falcon-180B", "x"), ("bedrock/exaone-3.5", "x"), ("made-up-model-7x", "x")],
+        load_kb()) == ["made-up-model-7x"]
 
 
 def test_kb_curation_2026_07():
@@ -1271,4 +1276,4 @@ def test_versioned_model_identifiers():
     assert k.match_model("a@b@1") is None
     # drift inherits the fix through the same matcher
     kd = _drift()
-    assert kd.model_coverage_gap(["vertex_ai/claude-3-5-haiku@20241022"], k) == []
+    assert kd.model_coverage_gap([("vertex_ai/claude-3-5-haiku@20241022", "vertex_ai")], k) == []
