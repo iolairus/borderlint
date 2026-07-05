@@ -24,7 +24,7 @@ endpoint region alone.
 
 ### Requirement: Sovereignty bloc vocabulary
 The system SHALL express sovereignty using the blocs `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`,
-`ca`, `jp`, `kr`, `sg`, `au`, `ae`, `local`, and `unknown`. The `eu` bloc represents the EU/EEA
+`ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `local`, and `unknown`. The `eu` bloc represents the EU/EEA
 as a single compelled-disclosure unit. The `local` bloc represents self-hosted inference with no
 external sovereign. The `unknown` bloc represents a sovereignty that cannot be statically
 determined. The system SHALL NOT emit any sovereignty bloc outside this vocabulary. Every bloc
@@ -50,6 +50,10 @@ display name in report output.
 #### Scenario: Every vocabulary bloc carries a source note
 - **WHEN** the bundled sovereignty map is loaded
 - **THEN** each bloc in the vocabulary has a source note
+
+#### Scenario: The Swiss bloc is accepted in a sovereignty policy allow-list
+- **WHEN** a policy's sovereignty block lists `ch` for a classification
+- **THEN** the policy loads and flows with sovereignty `ch` pass the sovereignty check
 
 ### Requirement: Bundled sovereignty knowledge base
 The system SHALL ship a bundled sovereignty map keyed by provider id, covering every provider in

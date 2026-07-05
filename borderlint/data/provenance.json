@@ -215,7 +215,9 @@
     "eleven_": {"org": "ElevenLabs", "bloc": "us"},
     "twelvelabs.": {"org": "TwelveLabs", "bloc": "us"},
     "openai-gpt": {"org": "OpenAI", "bloc": "us"},
-    "anthropic-claude": {"org": "Anthropic", "bloc": "us"}
+    "anthropic-claude": {"org": "Anthropic", "bloc": "us"},
+    "apertus": {"org": "Swiss AI Initiative (ETH Zürich/EPFL)", "bloc": "ch"},
+    "swiss-ai/": {"org": "Swiss AI Initiative (ETH Zürich/EPFL)", "bloc": "ch"}
   },
   "passthrough_orgs_note": "Quantizer / community-conversion hubs (GGUF, MLX) and Bedrock cross-region inference-profile region prefixes (us., eu., apac., ...). The prefix carries no provenance — the model family in the repo name does — so the org prefix is stripped and the remainder matched against the family patterns. Developer orgs (tiiuae/, upstage/, aisingapore/, …) are pattern entries, never passthroughs: those orgs ARE the provenance signal.",
   "passthrough_orgs": [

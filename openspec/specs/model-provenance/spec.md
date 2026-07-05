@@ -9,7 +9,7 @@ origin and never adjudicates export-control applicability.
 ## Requirements
 ### Requirement: Provenance bloc vocabulary
 The system SHALL express model provenance using the blocs `us`, `eu`, `cn`, `uk`, `ru`, `in`,
-`il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, and `unknown` — the sovereignty vocabulary without
+`il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, and `unknown` — the sovereignty vocabulary without
 `local`, because model weights always have a developer. The `unknown` bloc represents a
 provenance that cannot be statically determined. The system SHALL NOT emit any provenance value
 outside this vocabulary, and SHALL reject a user-supplied provenance mapping that uses a token
@@ -34,6 +34,10 @@ outside it.
 #### Scenario: An org-anchored family resolves via its hub org
 - **WHEN** a flow carries the model reference `aisingapore/gemma-sea-lion-v4-27b-it`
 - **THEN** its provenance resolves to `sg`
+
+#### Scenario: The Apertus family resolves to Switzerland
+- **WHEN** a flow carries the model reference `swiss-ai/Apertus-70B-Instruct` or `apertus-70b-instruct`
+- **THEN** its provenance resolves to `ch`
 
 ### Requirement: Bundled model provenance map
 The system SHALL bundle a model provenance map that resolves model references to a developer

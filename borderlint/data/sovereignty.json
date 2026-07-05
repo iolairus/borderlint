@@ -16,7 +16,8 @@
     "kr": "PIPA 2011 + Protection of Communications Secrets Act — Korean-headquartered providers subject to Korean compelled-disclosure process.",
     "sg": "PDPA 2012 + Criminal Procedure Code 2010 / Computer Misuse Act — Singapore-headquartered providers subject to Singaporean compelled-disclosure process.",
     "au": "TOLA 2018 (Assistance and Access Act) + Privacy Act 1988 — Australian-headquartered providers subject to Australian compelled-disclosure and technical-assistance process.",
-    "ae": "Federal Decree-Law 45/2021 (PDPL) + broad state-security access — UAE-headquartered providers subject to Emirati compelled-disclosure process."
+    "ae": "Federal Decree-Law 45/2021 (PDPL) + broad state-security access — UAE-headquartered providers subject to Emirati compelled-disclosure process.",
+    "ch": "Revised FADP (in force 2023) + BÜPF lawful-interception framework — Swiss-headquartered providers subject to Swiss compelled-disclosure process; Switzerland is outside the EU/EEA."
   },
   "providers": {
     "openai": "us",
