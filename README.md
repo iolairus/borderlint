@@ -100,9 +100,9 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
 - **Languages:** Python (AST) and TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
   plus endpoint references in config/text files and **OpenAI-compatible `/v1/chat/completions` calls**
   — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
-- **Providers:** 80+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
+- **Providers:** 85+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
   AI**), Azure, Bedrock, Mistral, Cohere, Groq, Together, Perplexity, xAI, Cerebras, Fireworks,
-  Replicate, SambaNova, Meta Llama + **Tencent, Alibaba, DeepSeek, Moonshot, Zhipu/Z.ai, Baidu,
+  Replicate, SambaNova, Meta Llama, **AWS SageMaker, Snowflake Cortex** + **Tencent, Alibaba, DeepSeek, Moonshot, Zhipu/Z.ai, Baidu,
   Volcengine, MiniMax**, plus **AI21 (IL), Jina (DE), Voyage, GigaChat (RU), Sarvam (IN), Scaleway &
   OVHcloud (FR/EU)** and region-selectable clouds (**IBM watsonx, Oracle OCI, Cloudflare Workers AI,
   Heroku** → `unknown` until you pin a region) — with Python and JS/TS package names and the **Vercel
@@ -122,7 +122,8 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
   policy block; reported in every output format; host-level overrides for ring-fenced
   subsidiaries (e.g. AWS China / Sinnet → `cn`).
 - **Provenance:** whose model weights a flow runs — a third orthogonal bloc resolved from model
-  references in code (`anthropic.claude-…`, `qwen2.5-72b`, `deepseek/deepseek-r1`, `Qwen/…`) or
+  references in code (`anthropic.claude-…`, `qwen2.5-72b`, `deepseek/deepseek-r1`, `Qwen/…`,
+  version-pinned `claude-3-5-haiku@20241022`) or
   the provider's first-party default. Bedrock `ap-east-1` serving DeepSeek-R1 is residency `hk`,
   sovereignty `us`, provenance `cn`. Local LLM usage resolves too: GGUF/MLX redistributor repos
   (`TheBloke/…`, `mlx-community/…`), `.gguf` file paths, and Ollama tags (`llama3.2`, `qwen2.5`)
@@ -184,7 +185,7 @@ rendered to PNG:
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v1.1.4
+- uses: iolairus/borderlint@v1.3.1
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -195,7 +196,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v1.1.4
+  rev: v1.3.1
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
@@ -210,8 +211,9 @@ A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) checks freshness on 
 providers we don't yet cover (diffed against litellm's registry), **model families the
 provenance map doesn't resolve** (aggregated, so the issue lists families to curate rather than
 thousands of model IDs), sovereignty-map completeness, and each bundled KB's last-reviewed date.
-It maintains a single standing review issue, updated in place. Jurisdictions and blocs are
-assigned **by hand**, never auto-merged. `borderlint --version` shows the KB's last-reviewed
+It maintains a single standing review issue, updated in place. Route aliases and out-of-scope
+names are recorded in `scripts/kb_drift_aliases.json`; jurisdictions and blocs are assigned
+**by hand**, never auto-merged. `borderlint --version` shows the KB's last-reviewed
 date. To add or correct a provider, see [`CONTRIBUTING.md`](CONTRIBUTING.md) (KB schema + PR
 workflow).
 
