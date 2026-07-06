@@ -64,6 +64,9 @@ def validate_suppression(supp: dict, provider_ids: set[str]) -> dict:
     for name, reason in supp.get("ignore", {}).items():
         if not (reason or "").strip():
             raise ValueError(f"drift ignore '{name}' has no reason")
+    for entry, reason in supp.get("residue", {}).items():
+        if not (reason or "").strip():
+            raise ValueError(f"drift residue entry '{entry}' has no reason")
     return supp
 
 
@@ -100,6 +103,28 @@ def model_coverage_gap(models: list[tuple[str, str]], kb, suppression: dict | No
             continue
         out.append(mid)
     return out
+
+
+def split_residue(uncovered: list[str], residue: dict) -> tuple[list[str], list[tuple[str, int]]]:
+    """Split uncovered ids into (actionable, [(reason, count)]) via the residue list.
+
+    An entry ending in `/` or `-` matches as a lowercase full-key prefix; any other entry
+    matches exactly, so an acknowledged id never swallows its future variants. Classification
+    runs on the coverage check's OUTPUT only — it can never affect what counts as covered.
+    Counts are grouped by reason: the bulk-acknowledgment seed shares one reason.
+    """
+    actionable: list[str] = []
+    by_reason: dict[str, int] = {}
+    entries = sorted(residue.items(), key=lambda kv: -len(kv[0]))  # longest entry wins
+    for mid in uncovered:
+        low = mid.lower()
+        for entry, reason in entries:
+            if low.startswith(entry) if entry.endswith(("/", "-")) else low == entry:
+                by_reason[reason] = by_reason.get(reason, 0) + 1
+                break
+        else:
+            actionable.append(mid)
+    return actionable, sorted(by_reason.items(), key=lambda kv: -kv[1])
 
 
 def family_stems(uncovered: list[str]) -> list[tuple[str, int, str]]:
@@ -139,9 +164,20 @@ def stale_kbs(kb_dates: dict, today: dt.date,
 
 def render_report(providers_gap: list[str], families: list[tuple[str, int, str]],
                   sov_gaps: list[tuple[str, str | None]], stale: list[tuple[str, str, int]],
-                  family_cap: int = FAMILY_CAP) -> str:
+                  family_cap: int = FAMILY_CAP,
+                  residue: list[tuple[str, int]] | None = None) -> str:
     """Markdown issue body: empty sections omitted; empty report is the empty string."""
     parts = []
+    residue_total = sum(n for _, n in residue) if residue else 0
+    if providers_gap or families or sov_gaps or stale or residue_total:
+        n_act = len(providers_gap) + len(families) + len(sov_gaps) + len(stale)
+        head = (f"**Actionable:** {len(providers_gap)} providers \u00b7 {len(families)} model "
+                f"families \u00b7 {len(sov_gaps)} sovereignty gaps \u00b7 {len(stale)} stale KBs "
+                f"\u2014 **acknowledged residue:** {residue_total} ids")
+        if n_act == 0:
+            head = (f"**Nothing actionable.** Acknowledged residue: {residue_total} ids "
+                    "(see below).")
+        parts.append(head)
     if providers_gap:
         parts.append(
             "### New providers\n\n"
@@ -171,6 +207,15 @@ def render_report(providers_gap: list[str], families: list[tuple[str, int, str]]
             f"Last reviewed more than {STALE_DAYS} days ago — review and bump `updated`.\n\n"
             + "\n".join(f"- `{name}` — updated {date}, {age} days ago"
                         for name, date, age in stale))
+    if residue_total:
+        rows = "\n".join(f"- {reason} — {n} id{'s' if n > 1 else ''}"
+                         for reason, n in residue)
+        parts.append(
+            "<details>\n<summary>Known structural residue — acknowledged, unactionable "
+            f"({residue_total} ids)</summary>\n\n"
+            "Recorded in `scripts/kb_drift_aliases.json` (`residue`); counts only, grouped by "
+            "reason. Remove an entry to make its ids actionable again.\n\n"
+            + rows + "\n\n</details>")
     return "\n\n".join(parts)
 
 
@@ -185,13 +230,15 @@ def main() -> int:
 
     providers_gap = coverage_gap(upstream_providers(prices), known_providers(providers_doc),
                                  suppression)
-    families = family_stems(model_coverage_gap(upstream_models(prices), kb, suppression))
+    uncovered = model_coverage_gap(upstream_models(prices), kb, suppression)
+    actionable, residue = split_residue(uncovered, suppression.get("residue", {}))
+    families = family_stems(actionable)
     sov_gaps = sovereignty_gaps([p["id"] for p in providers_doc["providers"]], kb.sovereignty_map)
     kb_dates = {f.name: json.loads(f.read_text(encoding="utf-8")).get("updated")
                 for f in sorted(DATA_DIR.glob("*.json"))}
     stale = stale_kbs({k: v for k, v in kb_dates.items() if v}, dt.date.today())
 
-    report = render_report(providers_gap, families, sov_gaps, stale)
+    report = render_report(providers_gap, families, sov_gaps, stale, residue=residue)
     if report:
         print(report)
     return 0

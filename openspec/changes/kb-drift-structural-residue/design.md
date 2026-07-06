@@ -16,8 +16,8 @@ recorded, reasoned entry; nothing is hidden — residue renders with counts.
 
 ### D1 — Residue is a reporting classification applied after matching
 **Decision:** `residue` maps exact identifiers or id-prefixes (lowercase, matched against the
-full upstream key; an entry ending in `/` or `-` reads naturally as a prefix, but all entries
-match by prefix — exactness comes from writing the full key) to reasons. The 2026-07-05 seed is
+full upstream key; an entry ending in `/` or `-` matches as a prefix, any other entry matches
+exactly — so an acknowledged id never swallows its future variants) to reasons. The 2026-07-05 seed is
 a bulk acknowledgment: every currently uncovered id as an exact key (human review: nothing
 actionable), plus prefixes only for classes that keep arriving in the same shape
 (`fireworks-ai-`, `together-ai-` pricing buckets; `fal_ai/` path ids). Classification runs on the coverage check's *output*: uncovered ids matching a residue

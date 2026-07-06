@@ -260,6 +260,34 @@ def test_kb_drift_suppression():
         assert "kb_drift_aliases" not in mod.read_text(encoding="utf-8")
 
 
+def test_kb_drift_residue():
+    kd = _drift()
+    residue = {"fireworks-ai-": "pricing bucket", "exact-junk-id": "reviewed: not actionable"}
+    uncovered = ["fireworks-ai-1b-to-4b", "exact-junk-id", "exact-junk-id-v2", "new-family-1x"]
+    actionable, classed = kd.split_residue(uncovered, residue)
+    assert actionable == ["exact-junk-id-v2", "new-family-1x"]  # exact key ≠ its variants
+    assert dict(classed) == {"pricing bucket": 1, "reviewed: not actionable": 1}
+    # empty-reason residue entry fails loudly
+    try:
+        kd.validate_suppression({"aliases": {}, "ignore": {}, "residue": {"x-": ""}}, set())
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "x-" in str(e)
+    # summary line + collapsed counts, no raw id lists
+    r = kd.render_report(["prov1"], [("fam", 2, "fam-1")], [], [],
+                         residue=[("pricing bucket", 7)])
+    assert r.startswith("**Actionable:** 1 providers · 1 model families")
+    assert "acknowledged residue:** 7 ids" in r and "<details>" in r
+    assert "pricing bucket — 7 ids" in r
+    zero = kd.render_report([], [], [], [], residue=[("reviewed", 3)])
+    assert zero.startswith("**Nothing actionable.**")
+    # shipped residue block validates and its reasons are non-empty
+    import json
+    with open("scripts/kb_drift_aliases.json", encoding="utf-8") as fh:
+        shipped = json.load(fh)
+    assert shipped["residue"] and all(v.strip() for v in shipped["residue"].values())
+
+
 def test_kb_drift_staleness():
     import datetime as dt
     kd = _drift()
