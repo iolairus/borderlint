@@ -152,7 +152,8 @@ def load_kb(path: str | None = None) -> "KB":
     sov_doc = _load_sovereignty_map()
     sov_map = dict(sov_doc.get("providers", {}))  # bundled provider id → bloc (copy; user merges in)
     prov_doc = _load_provenance_map()
-    prov_patterns = {pat.lower(): entry["bloc"] for pat, entry in prov_doc.get("patterns", {}).items()}
+    prov_patterns = {pat.lower(): (entry["bloc"], entry.get("org"))
+                     for pat, entry in prov_doc.get("patterns", {}).items()}
     user_prov_patterns: dict = {}
     if path:
         with open(path, encoding="utf-8") as fh:
@@ -181,7 +182,7 @@ def load_kb(path: str | None = None) -> "KB":
                     raise ValueError(
                         f"invalid provenance bloc '{bloc}' for model pattern '{pat}' "
                         "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, ch, unknown)")
-                user_prov_patterns[pat.lower()] = bloc
+                user_prov_patterns[pat.lower()] = (bloc, None)
     kb = KB(providers)
     kb.updated = bundled.get("updated")
     kb.sovereignty_map = sov_map
@@ -228,9 +229,10 @@ class KB:
         longer bundled prefix, mirroring the provider KB. Within a source, longest prefix wins.
         """
         user = user_patterns or {}
-        items = [(0, p, b) for p, b in user.items()] + \
-                [(1, p, b) for p, b in patterns.items() if p not in user]
-        self._prov_prefixes = [(p, b) for _, p, b in sorted(items, key=lambda x: (x[0], -len(x[1])))]
+        items = [(0, p, v) for p, v in user.items()] + \
+                [(1, p, v) for p, v in patterns.items() if p not in user]
+        self._prov_prefixes = [(p, v[0], v[1])
+                               for _, p, v in sorted(items, key=lambda x: (x[0], -len(x[1])))]
 
     def name(self, pid: str) -> str:
         return self.by_id.get(pid, {}).get("name", pid)
@@ -264,15 +266,10 @@ class KB:
             return overrides[jurisdiction]
         return self.default_sovereignty(provider_id)
 
-    def match_model(self, literal: str) -> tuple[str, str] | None:
-        """Match a string literal against the model-ID prefix map → (identifier, bloc) or None.
-
-        Anchored: the whole literal must look like a model identifier (no spaces, model-id
-        charset) and start with a known prefix. Longest prefix wins. Local-model forms (D7):
-        a `.gguf` path matches by basename; a redistributor org (quantizer/community hub) is
-        stripped so the model family in the repo name carries the provenance. A trailing
-        digit-led `@<version>` pin is stripped before matching; the returned identifier keeps it.
-        """
+    def normalize_model(self, literal: str) -> str | None:
+        """The map's identifier normalization: strip → version pin → gate → basename →
+        passthrough → stoplist. Returns the normalized lowercase form, or None if the literal
+        does not look like a model identifier. Deny-list matching reuses this (design D2)."""
         s = literal.strip()
         base = _VERSION_SUFFIX.sub("", s)  # provenance is a property of the base identifier
         if not _MODEL_ID.match(base):
@@ -286,9 +283,24 @@ class KB:
                 break
         if low.startswith(_NOT_MODELS):
             return None
-        for prefix, bloc in self._prov_prefixes:
+        return low
+
+    def match_model(self, literal: str) -> tuple[str, str, str | None] | None:
+        """Match a string literal against the model-ID prefix map → (identifier, bloc, org).
+
+        Anchored: the whole literal must look like a model identifier (no spaces, model-id
+        charset) and start with a known prefix. Longest prefix wins. Local-model forms (D7):
+        a `.gguf` path matches by basename; a redistributor org (quantizer/community hub) is
+        stripped so the model family in the repo name carries the provenance. A trailing
+        version pin is stripped before matching; the returned identifier keeps it. The org is
+        the matched pattern's developer organisation (None for user-KB patterns).
+        """
+        low = self.normalize_model(literal)
+        if low is None:
+            return None
+        for prefix, bloc, org in self._prov_prefixes:
             if low.startswith(prefix):
-                return s, bloc
+                return literal.strip(), bloc, org
         return None
 
     def default_provenance(self, pid: str) -> str:

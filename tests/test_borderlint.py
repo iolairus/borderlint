@@ -1287,7 +1287,7 @@ def test_versioned_model_identifiers():
     k = load_kb()
     # digit-led @-version pins resolve by their base identifier
     m = k.match_model("claude-3-5-haiku@20241022")
-    assert m == ("claude-3-5-haiku@20241022", "us")   # evidence keeps the suffix
+    assert m[:2] == ("claude-3-5-haiku@20241022", "us")   # evidence keeps the suffix
     assert k.match_model("anthropic.claude-haiku-4-5@20251001")[1] == "us"
     assert k.match_model("mistral-large@2407")[1] == "eu"
     assert k.match_model("mistral-large@2411-001")[1] == "eu"  # hyphenated version token
@@ -1327,3 +1327,63 @@ def test_ch_bloc_apertus():
                    "sovereignty": {"classifications": {"customer-pii": ["ch"]}},
                    "provenance": {"classifications": {"customer-pii": ["ch"]}}}, fh)
     load_policy(p)  # must not raise
+
+
+def test_provenance_model_deny():
+    import json as _json, os, tempfile
+    from dataclasses import replace
+    from borderlint.policy import load_policy
+    from borderlint.report import as_json, text
+    k = load_kb()
+
+    def pol(**prov):
+        p = os.path.join(tempfile.mkdtemp(), "pol.json")
+        with open(p, "w", encoding="utf-8") as fh:
+            _json.dump({"classifications": {"customer-pii": ["hk", "us", "cn"]},
+                        "provenance": {"classifications": {"customer-pii": ["us", "cn"]},
+                                       **prov}}, fh)
+        return load_policy(p)
+
+    deny = pol(deny_models=["deepseek"])
+    d = Detection("aws_bedrock", "endpoint_reference", "bedrock-runtime.us-east-1.amazonaws.com",
+                  "a.py", 1, "us", sovereignty="us", provenance="cn", model="deepseek.r1-v1:0")
+    f = evaluate([d], deny, "customer-pii", k)[0]
+    assert "model_denied" in f.reasons and f.severity == "fail"  # allowed bloc, denied family
+    # redistributor path and version pin do not dodge the deny
+    for dodge in ("TheBloke/deepseek-llm-7B-GGUF", "deepseek-v3@2412"):
+        f = evaluate([replace(d, model=dodge)], deny, "customer-pii", k)[0]
+        assert "model_denied" in f.reasons, dodge
+    # standalone model reference is denied too
+    sa = Detection("model_reference", "model_reference", "deepseek-r1", "b.py", 2, "unknown",
+                   provenance="cn", model="deepseek-r1")
+    f = evaluate([sa], deny, "customer-pii", k)[0]
+    assert "model_denied" in f.reasons and f.severity == "fail"
+    # no bound model -> no deny (the bloc allow-list still governs)
+    bare = Detection("openai", "sdk_import", "import openai", "c.py", 1, "us",
+                     sovereignty="us", provenance="us")
+    assert "model_denied" not in evaluate([bare], deny, "customer-pii", k)[0].reasons
+    # a waiver cannot override the deny
+    f = evaluate([replace(d, waiver="approved")], deny, "customer-pii", k)[0]
+    assert f.severity == "fail"
+    # lifting is an explicit fail_on edit, mirroring denied_provider
+    lifted = dict(deny, fail_on=["residency", "denied_provider"])
+    assert evaluate([d], lifted, "customer-pii", k)[0].severity == "warn"
+    # load-time rejection of short entries
+    try:
+        pol(deny_models=["ds"])
+        assert False, "expected ValueError"
+    except ValueError as e:
+        assert "ds" in str(e)
+    # org threading: bundled patterns carry the developer org; user patterns do not
+    assert k.match_model("exaone-3.5-7.8b")[2] == "LG AI Research"
+    k2 = load_kb(_kb_file({"provenance": {"acme-x": "eu"}}))
+    assert k2.match_model("acme-x-1")[2] is None
+    # reporting: JSON model_org, text names the org, reason description exists
+    fs = evaluate([replace(d, model_org="DeepSeek")], deny, "customer-pii", k)
+    j = _json.loads(as_json(fs, k))
+    assert j["findings"][0]["model_org"] == "DeepSeek"
+    assert "deepseek.r1-v1:0 — DeepSeek" in text(fs, k)
+    assert "deny list" in text(fs, k)
+    # no org -> renders as before, no empty annotation
+    fs2 = evaluate([d], deny, "customer-pii", k)
+    assert "[model: deepseek.r1-v1:0]" in text(fs2, k)

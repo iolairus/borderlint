@@ -87,7 +87,12 @@ models (OpenAI, Anthropic, DeepSeek …) resolves to its org's bloc, while multi
 (`deepseek/deepseek-r1` via OpenRouter) resolve provenance even where residency and sovereignty
 are `unknown` — the one axis routers don't obscure. The `provenance` block mirrors the
 sovereignty shape; vocabulary is the same minus `local` (weights always have a developer).
-Fine-tunes inherit the base family's bloc. See [CAPABILITIES.md §3.2](CAPABILITIES.md).
+Fine-tunes inherit the base family's bloc. A `deny_models` list of anchored model-id prefixes
+bans a family regardless of host or bloc — `"deny_models": ["deepseek"]` fails a Bedrock flow
+serving DeepSeek-R1 even where `cn` weights are otherwise allowed; denies match after the same
+normalization as the map (GGUF paths, redistributor repos, `@`-version pins can't dodge them),
+sit in the default failure set like the provider deny, and cannot be waived inline. See
+[CAPABILITIES.md §3.2](CAPABILITIES.md).
 
 Declare your **`home_location`** — a GBA seat (`hk`/`mo`/`CN-GBA`) or an APAC/EMEA seat
 (`jp`, `kr`, `sg`, `au`, `uk`, `eu`, `my`) — and a flagged flow is tagged with the **data-protection
