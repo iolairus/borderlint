@@ -20,6 +20,19 @@ _ENDPOINT_KEY = re.compile(
     r"""(?i)\b(base_?url|api_base|openai_api_base|azure_endpoint|api_endpoint|inference_endpoint)\b['"]?\s*[:=]\s*['"]?\s*([^\s'"#,}\]]+)""")
 _LOOPBACK = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
+# Env-style endpoint keys: TELLMEWHY_LLM_SERVER_URL=... — segment-matched so EMAIL_URL's "AI"
+# substring never qualifies. The stem list is deliberately curated (no bare MODEL/API).
+_ENV_KEY = re.compile(r"""(?im)^[ \t]*-?[ \t]*([A-Za-z][A-Za-z0-9_]*)[ \t]*[:=][ \t]*['"]?[ \t]*([^\s'"#,}\]]+)""")
+_ENV_STEMS = frozenset({"llm", "openai", "anthropic", "gpt", "claude", "gemini", "mistral",
+                        "deepseek", "qwen", "ollama", "vllm", "inference",
+                        "completion", "completions", "embedding", "embeddings"})
+_ENV_SUFFIXES = frozenset({"url", "endpoint", "base", "host"})
+
+
+def _env_key_matches(key: str) -> bool:
+    segs = key.lower().split("_")
+    return len(segs) >= 2 and segs[-1] in _ENV_SUFFIXES and any(x in _ENV_STEMS for x in segs)
+
 # Inline waiver: `borderlint: allow <reason>` in any comment. The reason (justification) is required.
 _WAIVER = re.compile(r"borderlint:\s*allow\b[ \t]*(.*)", re.I)
 
@@ -109,15 +122,24 @@ def _host_of(value: str) -> str | None:
 
 
 def _scan_config_endpoints(path: str, src: str, kb) -> list[Detection]:
-    """Endpoints declared behind an AI-endpoint key (config or base_url kwarg)."""
+    """Endpoints declared behind an AI-endpoint key (config, base_url kwarg, or env-style key)."""
     out: list[Detection] = []
-    for m in _ENDPOINT_KEY.finditer(src):
-        host = _host_of(m.group(2))
+    matches = list(_ENDPOINT_KEY.finditer(src))
+    seen_spans = {m.span(2) for m in matches}
+    for m in _ENV_KEY.finditer(src):
+        if _env_key_matches(m.group(1)) and m.span(2) not in seen_spans:
+            matches.append(m)
+    for m in matches:
+        raw = m.group(2)
+        if "(" in raw or ")" in raw:
+            continue  # environment getter / code call: runtime-resolved, the .env is the source
+        host = _host_of(raw)
         if not host:
             continue
         low = host.lower()
         is_loop = low in _LOOPBACK or low.endswith(".localhost")
-        if not is_loop and not re.search(r"[A-Za-z0-9]\.[A-Za-z0-9]", host):
+        host_shaped = re.search(r"[A-Za-z0-9]\.[A-Za-z0-9]", host) or "://" in raw
+        if not is_loop and not host_shaped:
             continue  # not host-shaped: bare enums, "." / "./src" (e.g. tsconfig baseUrl), skip
         line = src.count("\n", 0, m.start()) + 1
         if is_loop:
