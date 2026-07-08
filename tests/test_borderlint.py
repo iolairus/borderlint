@@ -1501,3 +1501,26 @@ def test_model_file_basenames():
     assert k.match_model("weights/qwen2.5-vl-3b.safetensors")[1] == "cn"
     assert k.match_model("models/qwen2.5-7b-instruct-q4_k_m.gguf")[1] == "cn"  # unchanged
     assert k.match_model("dir/qwen2.5.zip") is None  # unlisted extension: whole-path anchoring
+
+
+def test_env_directories_excluded_by_marker(tmp_path):
+    import os
+    from borderlint.detect import scan
+    # nonstandard-named venv with a PEP 405 marker: excluded as a subtree
+    venv = tmp_path / ".venv-cuda"
+    (venv / "lib" / "site-packages").mkdir(parents=True)
+    (venv / "pyvenv.cfg").write_text("home = /usr/bin\n")
+    (venv / "lib" / "site-packages" / "hub.py").write_text("import openai\n")
+    # conda env: excluded by its conda-meta dir
+    conda = tmp_path / "env-gpu"
+    (conda / "conda-meta").mkdir(parents=True)
+    (conda / "runtime.py").write_text("import anthropic\n")
+    # bare site-packages with no marker: excluded by name
+    sp = tmp_path / "embedded" / "site-packages"
+    sp.mkdir(parents=True)
+    (sp / "vendored.py").write_text("import cohere\n")
+    # application code beside them: scanned as usual
+    (tmp_path / "app.py").write_text("import openai\n")
+    ds = scan(tmp_path, kb)
+    files = {d.file for d in ds}
+    assert files == {str(tmp_path / "app.py")}

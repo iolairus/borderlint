@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import ast
+import os
 import re
 import warnings
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-IGNORE = {".git", "node_modules", "__pycache__", ".venv", "venv", "build", "dist",
-          ".mypy_cache", ".pytest_cache", ".tox", ".ruff_cache"}
+IGNORE = {".git", "node_modules", "__pycache__", ".venv", "venv", "site-packages", "build",
+          "dist", ".mypy_cache", ".pytest_cache", ".tox", ".ruff_cache"}
 TEXT_EXT = {".env", ".ts", ".tsx", ".js", ".jsx", ".yaml", ".yml", ".toml", ".json", ".ini", ".cfg", ".sh"}
 JS_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
 MAX_FILE_BYTES = 5 * 1024 * 1024  # skip files larger than this; no source file is this big
@@ -240,9 +241,25 @@ def _resolve_provenance(detections, kb) -> list[Detection]:
             for d in detections]
 
 
+def _walk_files(root: Path) -> list[Path]:
+    """Single-pass walk pruning ignored and environment subtrees — never traversed at all.
+
+    Environments are recognised by their markers (PEP 405 `pyvenv.cfg`, conda's `conda-meta/`),
+    regardless of directory name; symlinked directories are not followed, matching rglob.
+    """
+    out: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [n for n in dirnames
+                       if n not in IGNORE
+                       and not os.path.isfile(os.path.join(dirpath, n, "pyvenv.cfg"))
+                       and not os.path.isdir(os.path.join(dirpath, n, "conda-meta"))]
+        out.extend(Path(dirpath) / f for f in filenames)
+    return out
+
+
 def scan(root, kb) -> list[Detection]:
     root = Path(root)
-    paths = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
+    paths = [root] if root.is_file() else _walk_files(root)
     seen, out, waivers = set(), [], {}
     for p in paths:
         if any(part in IGNORE for part in p.parts):
