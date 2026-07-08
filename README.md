@@ -35,8 +35,12 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 ```
 
 - No `--policy` → **inventory mode** (lists flows + jurisdictions, exits 0).
-- `--format json|mermaid|sarif|sbom` — machine output, a flow map, **SARIF** for GitHub code-scanning,
-  or a deterministic **AI data-flow SBOM** (policy-independent inventory of every flow; an artifact, exits 0).
+- `--format json|mermaid|sarif|sbom|evidence` — machine output, a flow map, **SARIF** for GitHub code-scanning,
+  a deterministic **AI data-flow SBOM**, or an **evidence pack** — a fileable markdown transfer
+  inventory with an audit envelope (git commit, policy SHA-256, KB review dates), all three
+  governance axes with developer orgs, a waiver register, and a regime annex (PDPO, PIPL + GBA SC,
+  Macao PDPA, PDPA-SG) that fills what the scan proves and leaves marked blanks for what only the
+  organisation knows. Exports are artifacts, not gates: they exit 0.
 - `diff <baseline.sbom> <current.sbom>` — compare two SBOMs; **exits 1 when the PR adds a new
   non-`local` flow** (new egress), else 0. Diff the base-branch SBOM against the PR's to gate new AI egress.
 - Accept a reviewed flow with an inline `# borderlint: allow <reason>` **waiver** (justification

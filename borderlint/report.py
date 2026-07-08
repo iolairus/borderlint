@@ -37,6 +37,8 @@ with open(os.path.join(os.path.dirname(__file__), "data", "arrangements.json"), 
     _ARRANGEMENTS = {a["id"]: a for a in json.load(_fh)["arrangements"]}
 with open(os.path.join(os.path.dirname(__file__), "data", "regimes.json"), encoding="utf-8") as _fh:
     _REGIMES = json.load(_fh)["regimes"]  # jurisdiction -> {regime, arrangements[]}
+with open(os.path.join(os.path.dirname(__file__), "data", "evidence_regimes.json"), encoding="utf-8") as _fh:
+    _EVIDENCE = json.load(_fh)  # regime display string -> filing expectations (advisory)
 # EU/EEA jurisdictions that trigger the GDPR reference (the `eu` token + member country codes).
 _EU = frozenset("eu at be bg hr cy cz dk ee fi fr de gr hu ie it lv lt lu mt nl pl pt ro sk si es se is li no".split())
 
@@ -374,3 +376,109 @@ def diff_text(delta: dict) -> str:
 
 def diff_json(delta: dict) -> str:
     return json.dumps(delta, indent=2, sort_keys=True)
+
+
+def evidence(findings, kb, policy=None, envelope=None) -> str:
+    """Markdown evidence pack: audit envelope, transfer inventory, waiver register, regime annex.
+
+    An artifact, not a gate (always paired with exit 0 in the CLI). Unresolvable envelope
+    fields render as 'unavailable' — an auditor must be able to tell absent from forgotten.
+    """
+    env = envelope or {}
+    pol = policy or {}
+    ua = lambda v: v if v else "unavailable"
+    has_policy = bool(pol)
+    out = ["# AI data-flow evidence pack", "", "## Audit envelope", ""]
+    out += [f"- Tool: borderlint {ua(env.get('version'))}",
+            "- KB last reviewed: providers " + ua(env.get("kb_providers"))
+            + " / sovereignty " + ua(env.get("kb_sovereignty"))
+            + " / provenance " + ua(env.get("kb_provenance")),
+            f"- Scan timestamp (UTC): {ua(env.get('timestamp'))}",
+            f"- Scanned path: {ua(env.get('path'))}",
+            f"- Git commit: {ua(env.get('commit'))}",
+            f"- Policy SHA-256: {ua(env.get('policy_digest'))}",
+            f"- Classification: {ua(env.get('classification'))}",
+            f"- Home location: {ua(pol.get('home_location'))}", ""]
+
+    out += ["## Transfer inventory", ""]
+    if not findings:
+        out += ["No AI data flows detected.", ""]
+    else:
+        head = "| # | Provider (category) | Residency | Sovereignty | Weights | Model | Verdict |"
+        if not has_policy:
+            head = head.replace(" Verdict |", " — |")
+        out += [head, "|---|---|---|---|---|---|---|"]
+        for i, f in enumerate(findings, 1):
+            d = f.detection
+            model = d.model or "—"
+            if d.model and getattr(d, "model_org", None):
+                model = f"{d.model} ({d.model_org})"
+            verdict = f.severity if has_policy else "—"
+            out.append(f"| {i} | {kb.name(d.provider_id)} ({kb.category(d.provider_id)}) "
+                       f"| {juris(d.jurisdiction)} | {sov(d.sovereignty)} | {sov(d.provenance)} "
+                       f"| {model} | {verdict} |")
+        out += ["", "### Code locations", ""]
+        for i, f in enumerate(findings, 1):
+            d = f.detection
+            reasons = ("; ".join(REASON.get(r, r) for r in f.reasons)) if f.reasons else ""
+            out.append(f"{i}. `{d.file}:{d.line}` ({d.kind}: {d.evidence})"
+                       + (f" — {reasons}" if reasons else ""))
+        out.append("")
+
+    waived = [f for f in findings if f.severity == "waived"]
+    out += ["## Waiver register", ""]
+    if waived:
+        for f in waived:
+            d = f.detection
+            out.append(f"- `{d.file}:{d.line}` ({kb.name(d.provider_id)}) — {d.waiver}")
+    else:
+        out.append("No active waivers.")
+    out.append("")
+
+    if has_policy:
+        counts = {}
+        for f in findings:
+            counts[f.severity] = counts.get(f.severity, 0) + 1
+        out += ["## Summary", "",
+                " / ".join(f"{counts.get(k, 0)} {k}" for k in ("ok", "warn", "fail", "waived")), ""]
+        refs = _arrangements(findings, pol)
+        regs = _regimes(findings, pol)
+        if regs or refs:
+            out += ["## Cross-border context (references only)", ""]
+            out += [f"- Regimes in play: {', '.join(regs)}"] if regs else []
+            out += [f"- {r}" for r in refs] + [""]
+
+    loc = _alias(pol["home_location"]) if pol.get("home_location") else None
+    if loc:
+        regime = regime_of(loc)
+        entry = _EVIDENCE["regimes"].get(regime or "")
+        if entry:
+            out += [f"## Regime annex — {entry['heading']}", "",
+                    f"_Expectations data last reviewed {_EVIDENCE.get('updated', 'unavailable')}."
+                    " References only; this annex never adjudicates filing sufficiency._", "",
+                    "**Citations**", ""]
+            out += [f"- {c}" for c in entry["citations"]]
+            out += ["", "**Filled from this scan (static)**", ""]
+            dests = sorted({f.detection.jurisdiction for f in findings})
+            sovs = sorted({f.detection.sovereignty for f in findings})
+            provs = sorted({f.detection.provenance for f in findings})
+            orgs = sorted({f.detection.model_org for f in findings if getattr(f.detection, "model_org", None)})
+            filled = {"destination jurisdictions": ", ".join(juris(d) for d in dests) or "none",
+                      "compelled-disclosure (sovereignty) blocs": ", ".join(sov(b) for b in sovs) or "none",
+                      "model provenance blocs and developer organisations":
+                          (", ".join(sov(b) for b in provs) or "none")
+                          + (f" — orgs: {', '.join(orgs)}" if orgs else ""),
+                      "transfer mechanism references": "see Cross-border context above",
+                      "code locations": "see Transfer inventory above"}
+            for field in entry["static"]:
+                if field.startswith("data classification"):
+                    out.append(f"- {field}: {env.get('classification') or 'unavailable'}")
+                else:
+                    out.append(f"- {field}: {filled.get(field, 'see Transfer inventory above')}")
+            out += ["", "**To be completed by the organisation**", ""]
+            out += [f"- [ ] {field}: ________" for field in entry["org"]]
+            out.append("")
+        else:
+            out += ["## Regime annex", "",
+                    f"No annex is available for regime {regime or 'unknown'}; the inventory above stands alone.", ""]
+    return "\n".join(out)

@@ -259,6 +259,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | C10 | Declare **home base / regime** — HK·PDPO or GBA/Mainland·PIPL — so defaults & surfaced references adapt | ✅ |
 | C11 | **Sovereignty** dimension (§3.1): per-classification allow-lists of compelled-disclosure blocs, opt-in | ✅ |
 | C12 | **Provenance** dimension (§3.2): per-classification allow-lists of model-weights blocs, opt-in | ✅ |
+| C13 | **Evidence pack** (`--format evidence`): fileable transfer inventory with audit envelope, waiver register, and regime-aligned annexes (PDPO, PIPL + GBA SC, Macao PDPA, PDPA-SG); static fields filled from the scan, org-supplied fields as marked blanks | ✅ |
 
 ### D. Reporting & output
 | # | Capability | Status |

@@ -1,0 +1,45 @@
+{
+  "updated": "2026-07-08",
+  "note": "Advisory filing expectations per data-protection regime, keyed by the regime display string from regimes.json (regime_of). Citations are references only — never adjudication of filing sufficiency. 'static' fields are filled from scan findings; 'org' fields cannot be known statically and render as blanks for the organisation to complete.",
+  "regimes": {
+    "PDPO": {
+      "heading": "PDPO (Hong Kong) — cross-border transfer documentation",
+      "citations": [
+        "PDPO (Cap. 486) s.33 — cross-border transfer restriction (not yet in operation; PCPD recommends contractual safeguards meanwhile)",
+        "PCPD Guidance on Personal Data Protection in Cross-border Data Transfer, incl. the Recommended Model Contractual Clauses",
+        "PCPD Artificial Intelligence: Model Personal Data Protection Framework (2024) — third-party AI supply-chain expectations"
+      ],
+      "static": ["destination jurisdictions", "compelled-disclosure (sovereignty) blocs", "model provenance blocs and developer organisations", "transfer mechanism references", "data classification (as class of personal data)", "code locations"],
+      "org": ["purpose of each transfer", "classes of data subjects", "recipient identity and contact", "contractual safeguards adopted (e.g. RMCCs)", "retention period at recipient"]
+    },
+    "PIPL": {
+      "heading": "PIPL (Mainland China) — PIA and cross-border transfer route documentation",
+      "citations": [
+        "PIPL Arts. 38–40 — transfer routes: CAC security assessment, standard contract filing, or certification (plus the 2024 Provisions exemptions)",
+        "PIPL Arts. 55–56 — personal information protection impact assessment (PIA) record",
+        "GBA Standard Contract — (Mainland, Hong Kong) and (Mainland, Macao) variants for qualifying intra-GBA transfers of personal information (no important data)"
+      ],
+      "static": ["destination jurisdictions", "compelled-disclosure (sovereignty) blocs", "model provenance blocs and developer organisations", "transfer mechanism references", "data classification (as category of personal information)", "code locations"],
+      "org": ["purpose and necessity of each transfer", "scale: number of data subjects", "overseas recipient identity and contact", "retention period", "security measures at the recipient", "declared transfer route and filing status", "PIA conclusions"]
+    },
+    "Macao PDPA": {
+      "heading": "Macao PDPA — transfer outside Macao documentation",
+      "citations": [
+        "Macao Personal Data Protection Act (Law 8/2005) Arts. 19–20 — transfers of personal data outside Macao",
+        "GBA Standard Contract — (Mainland, Macao) variant for qualifying intra-GBA transfers"
+      ],
+      "static": ["destination jurisdictions", "compelled-disclosure (sovereignty) blocs", "model provenance blocs and developer organisations", "transfer mechanism references", "data classification", "code locations"],
+      "org": ["purpose of each transfer", "recipient identity", "adequacy/consent basis relied on", "retention period"]
+    },
+    "PDPA (SG)": {
+      "heading": "PDPA (Singapore) — transfer limitation documentation",
+      "citations": [
+        "PDPA s.26 — transfer limitation obligation (comparable protection)",
+        "PDPC Advisory Guidelines on Key Concepts — transfer limitation: contractual clauses, BCRs, or certification (incl. APEC CBPR/PRP)",
+        "PDPC Model AI Governance Framework — third-party AI and data supply-chain expectations"
+      ],
+      "static": ["destination jurisdictions", "compelled-disclosure (sovereignty) blocs", "model provenance blocs and developer organisations", "transfer mechanism references", "data classification", "code locations"],
+      "org": ["purpose of each transfer", "recipient and receiving-jurisdiction safeguards", "legal basis: contractual clauses / BCRs / certification relied on", "retention period"]
+    }
+  }
+}
