@@ -1475,3 +1475,21 @@ def test_env_style_endpoint_keys():
     assert cfg("MODEL_URL=https://cdn.example.com/x.glb\n", ".env") == []
     assert cfg('LLM_SERVER_URL = os.environ.get("X_LLM_URL", "http://localhost:8080")\n', "settings.py") == []
     assert cfg('{"compilerOptions": {"baseUrl": "."}}', "tsconfig.json") == []
+
+
+def test_transformers_local_runtime():
+    # transformers/sentence-transformers are local runtimes; provenance binds from model refs
+    ds = _scan_file('from transformers import AutoModelForCausalLM\nm = "microsoft/Florence-2-large"\n')
+    d = [x for x in ds if x.provider_id == "hf_transformers_local"][0]
+    assert (d.jurisdiction, d.sovereignty, d.provenance) == ("local", "local", "us")
+    assert d.model == "microsoft/Florence-2-large"
+    # multi-model runtime: no first-party default — unbound flows stay unknown provenance
+    ds = _scan_file("from sentence_transformers import SentenceTransformer\n")
+    d = [x for x in ds if x.provider_id == "hf_transformers_local"][0]
+    assert (d.jurisdiction, d.sovereignty, d.provenance) == ("local", "local", "unknown")
+    # memorybox families resolve
+    k = load_kb()
+    assert k.match_model("vikhyatk/moondream2")[1] == "us"
+    assert k.match_model("moondream2")[1] == "us"
+    assert k.match_model("florence-2-base")[1] == "us"
+    assert k.match_model("clip-ViT-B-32")[1] == "us"
