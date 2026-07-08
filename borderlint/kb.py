@@ -275,7 +275,7 @@ class KB:
         if not _MODEL_ID.match(base):
             return None
         low = base.lower()
-        if low.endswith(".gguf"):  # model-file path: directories defeat start-anchoring
+        if low.endswith((".gguf", ".onnx", ".safetensors")):  # model-file path: directories defeat start-anchoring
             low = low.rsplit("/", 1)[-1]
         for org in self.provenance_passthrough:  # quantizer hubs carry no provenance
             if low.startswith(org):
@@ -290,7 +290,7 @@ class KB:
 
         Anchored: the whole literal must look like a model identifier (no spaces, model-id
         charset) and start with a known prefix. Longest prefix wins. Local-model forms (D7):
-        a `.gguf` path matches by basename; a redistributor org (quantizer/community hub) is
+        a model-file path (`.gguf`/`.onnx`/`.safetensors`) matches by basename; a redistributor org (quantizer/community hub) is
         stripped so the model family in the repo name carries the provenance. A trailing
         version pin is stripped before matching; the returned identifier keeps it. The org is
         the matched pattern's developer organisation (None for user-KB patterns).

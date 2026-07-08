@@ -1493,3 +1493,11 @@ def test_transformers_local_runtime():
     assert k.match_model("moondream2")[1] == "us"
     assert k.match_model("florence-2-base")[1] == "us"
     assert k.match_model("clip-ViT-B-32")[1] == "us"
+
+
+def test_model_file_basenames():
+    k = load_kb()
+    assert k.match_model("models/clip-vit-b-32.onnx")[1] == "us"
+    assert k.match_model("weights/qwen2.5-vl-3b.safetensors")[1] == "cn"
+    assert k.match_model("models/qwen2.5-7b-instruct-q4_k_m.gguf")[1] == "cn"  # unchanged
+    assert k.match_model("dir/qwen2.5.zip") is None  # unlisted extension: whole-path anchoring
