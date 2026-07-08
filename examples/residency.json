@@ -1,5 +1,5 @@
 {
-  "home_regime": "pdpo",
+  "home_location": "hk",
   "on_unknown": "warn",
   "fail_on": ["residency", "denied_provider", "sovereignty"],
   "providers": { "deny": [], "allow": [] },
