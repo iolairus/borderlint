@@ -51,6 +51,7 @@ class Detection:
     sovereignty: str = "unknown"  # compelled-disclosure bloc; resolved in scan() from the provider KB
     provenance: str = "unknown"  # model-weights bloc; bound model reference or first-party default
     model: str | None = None  # the bound model identifier, when one resolved the provenance
+    model_org: str | None = None  # the matched pattern's developer organisation, when known
 
 
 def _scan_py(path: str, src: str, kb) -> list[Detection]:
@@ -180,13 +181,13 @@ def _resolve_sovereignty(detections, kb) -> list[Detection]:
             for d in detections]
 
 
-def _scan_model_refs(src: str, kb) -> list[tuple[int, str, str]]:
-    """(line, identifier, bloc) for each string literal matching the model-ID prefix map."""
+def _scan_model_refs(src: str, kb) -> list[tuple[int, str, str, str | None]]:
+    """(line, identifier, bloc, org) for each string literal matching the model-ID prefix map."""
     out = []
     for m in _STR_LITERAL.finditer(src):
         hit = kb.match_model(m.group(1))
         if hit:
-            out.append((src.count("\n", 0, m.start()) + 1, hit[0], hit[1]))
+            out.append((src.count("\n", 0, m.start()) + 1, hit[0], hit[1], hit[2]))
     return out
 
 
@@ -200,12 +201,14 @@ def _attach_models(path: str, src: str, dets: list[Detection], kb) -> list[Detec
     refs = _scan_model_refs(src, kb)
     if not refs:
         return dets
-    blocs = {b for _, _, b in refs}
+    blocs = {b for _, _, b, _ in refs}
     if dets and len(blocs) == 1:
         # ponytail: first ref represents same-bloc siblings; per-ref pairing needs call-site AST
-        return [replace(d, provenance=refs[0][2], model=refs[0][1]) for d in dets]
+        return [replace(d, provenance=refs[0][2], model=refs[0][1], model_org=refs[0][3])
+                for d in dets]
     return dets + [Detection("model_reference", "model_reference", ref, path, line, "unknown",
-                             provenance=bloc, model=ref) for line, ref, bloc in refs]
+                             provenance=bloc, model=ref, model_org=org)
+                   for line, ref, bloc, org in refs]
 
 
 def _resolve_provenance(detections, kb) -> list[Detection]:

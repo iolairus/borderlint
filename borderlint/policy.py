@@ -78,6 +78,11 @@ def load_policy(path: str) -> dict:
                     raise ValueError(
                         f"invalid provenance bloc '{b}' in classification '{cls}' "
                         "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, ch, unknown)")
+        for entry in mprov.get("deny_models", []):
+            if not isinstance(entry, str) or len(entry.strip().lower()) < 3:
+                raise ValueError(
+                    f"invalid deny_models entry {entry!r}: "
+                    "entries are anchored model-id prefixes of at least three characters")
     return data
 
 
@@ -96,7 +101,7 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
     deny = set(policy.get("providers", {}).get("deny", []))
     prov_allow = set(policy.get("providers", {}).get("allow", []))
     on_unknown = policy.get("on_unknown", "warn")
-    fail_on = set(policy.get("fail_on", ["residency", "denied_provider"]))
+    fail_on = set(policy.get("fail_on", ["residency", "denied_provider", "model_denied"]))
 
     # Sovereignty is opt-in: only evaluate when the policy declares a sovereignty block AND a
     # sovereignty allow-list for the active classification. Absent → no sovereignty reason, ever.
@@ -111,6 +116,8 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
     mprov_classes = mprov_block.get("classifications", {}) if isinstance(mprov_block, dict) else {}
     mprov_allow = set(mprov_classes.get(classification, [])) if classification in mprov_classes else None
     mprov_on_unknown = mprov_block.get("on_unknown", "warn") if isinstance(mprov_block, dict) else "warn"
+    deny_models = [e.strip().lower() for e in mprov_block.get("deny_models", [])] \
+        if isinstance(mprov_block, dict) else []
 
     findings = []
     for d in detections:
@@ -133,6 +140,12 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
                     reasons.append("sovereignty_unknown")  # governed by sov_on_unknown
                 elif sov not in sov_allow:
                     reasons.append("sovereignty")  # an allow-list mismatch
+        # Model deny-list (opt-in, evidence-based): the hardest statement in the provenance
+        # block; matches the flow's bound identifier after the map's own normalization (D2).
+        if deny_models and d.model:
+            norm = kb.normalize_model(d.model) if kb is not None else d.model.strip().lower()
+            if norm and any(norm.startswith(e) for e in deny_models):
+                reasons.append("model_denied")
         # Provenance dimension (opt-in): applies to flows and standalone model references alike.
         if mprov_allow is not None:
             mp = getattr(d, "provenance", "unknown")
@@ -142,8 +155,9 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
                 reasons.append("provenance")  # an allow-list mismatch
         sev = _severity(reasons, fail_on, on_unknown, sov_on_unknown, mprov_on_unknown)
         if sev == "fail" and d.waiver:  # a justified waiver downgrades a residency/unknown/sovereignty failure
-            blocking = "denied_provider" in reasons and "denied_provider" in fail_on
-            if not blocking:  # ...but never an explicit provider deny
+            blocking = (("denied_provider" in reasons and "denied_provider" in fail_on)
+                        or ("model_denied" in reasons and "model_denied" in fail_on))
+            if not blocking:  # ...but never an explicit provider or model deny
                 sev = "waived"
         findings.append(Finding(d, sev, reasons))
     return findings
@@ -154,6 +168,7 @@ def _severity(reasons: list[str], fail_on: set[str], on_unknown: str, sov_on_unk
     if not reasons:
         return "ok"
     fail = (("denied_provider" in reasons and "denied_provider" in fail_on)
+            or ("model_denied" in reasons and "model_denied" in fail_on)
             or ("residency" in reasons and "residency" in fail_on)
             or ("unknown" in reasons and on_unknown == "fail")
             or ("sovereignty" in reasons and "sovereignty" in fail_on)

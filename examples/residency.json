@@ -16,6 +16,7 @@
   },
   "provenance": {
     "on_unknown": "warn",
+    "deny_models": [],
     "classifications": {
       "customer-pii": ["us", "eu", "uk"]
     }

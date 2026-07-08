@@ -158,6 +158,9 @@ for a local Qwen, `local`/`local`/`us` for a local Llama.
 
 **Blocs** reuse the sovereignty vocabulary minus `local` (weights always have a developer):
 `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `unknown`.
+A `deny_models` list of anchored model-id prefixes bans a family regardless of host or bloc,
+with provider-deny semantics (default failure set, unwaivable); findings carry the developer
+organisation (`model_org`) when the map knows it.
 Fine-tunes and distillations inherit
 the base family's bloc.
 

@@ -25,7 +25,8 @@ REASON = {"denied_provider": "provider denied by policy",
           "sovereignty": "sovereignty outside the allow-list for this data class",
           "sovereignty_unknown": "sovereignty could not be determined",
           "provenance": "model provenance outside the allow-list for this data class",
-          "provenance_unknown": "model provenance could not be determined"}
+          "provenance_unknown": "model provenance could not be determined",
+          "model_denied": "model family is on the policy deny list"}
 SOVEREIGNTY = {"us": "United States", "eu": "European Union", "cn": "Mainland China",
                "uk": "United Kingdom", "ru": "Russia", "in": "India", "il": "Israel",
                "ca": "Canada", "jp": "Japan", "kr": "South Korea", "sg": "Singapore",
@@ -137,7 +138,9 @@ def text(findings, kb, policy=None) -> str:
         for f in fs:
             d = f.detection
             model = getattr(d, "model", None)
-            suffix = f" [model: {model}]" if model and d.kind != "model_reference" else ""
+            org = getattr(d, "model_org", None)
+            label = f"{model} — {org}" if model and org else model
+            suffix = f" [model: {label}]" if model and d.kind != "model_reference" else ""
             lines.append(f"        {d.file}:{d.line} ({d.kind}: {d.evidence}){suffix}")
             for r in f.reasons:
                 lines.append(f"           ! {REASON.get(r, r)}")
@@ -164,6 +167,7 @@ def as_json(findings, kb, policy=None) -> str:
                       "sovereignty": getattr(f.detection, "sovereignty", "unknown"),
                       "provenance": getattr(f.detection, "provenance", "unknown"),
                       "model": getattr(f.detection, "model", None),
+                      "model_org": getattr(f.detection, "model_org", None),
                       "severity": f.severity, "reasons": f.reasons,
                       "kind": f.detection.kind, "evidence": f.detection.evidence,
                       "file": f.detection.file, "line": f.detection.line,
@@ -324,7 +328,8 @@ def sbom(findings, kb, policy=None) -> str:
               "jurisdiction": d.jurisdiction,
               "sovereignty": getattr(d, "sovereignty", "unknown"),
               "provenance": getattr(d, "provenance", "unknown"),
-              "model": getattr(d, "model", None)} for d in ds),
+              "model": getattr(d, "model", None),
+              "model_org": getattr(d, "model_org", None)} for d in ds),
             key=lambda s: (s["file"], s["line"], s["kind"], s["evidence"]))
         components.append({"provider": pid, "name": kb.name(pid), "category": kb.category(pid),
                            "jurisdictions": sorted({d.jurisdiction for d in ds}),
