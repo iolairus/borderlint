@@ -12,6 +12,35 @@ from .kb import load_kb
 from .policy import Finding, evaluate, load_policy
 
 
+def _envelope(a, kb) -> dict:
+    """Audit envelope for the evidence pack. Local-only resolution; absent fields stay None
+    so the renderer prints 'unavailable' — an auditor must see absence, not silence."""
+    import datetime as dt
+    import hashlib
+    import os
+    import subprocess
+    from . import __version__
+    epoch = os.environ.get("SOURCE_DATE_EPOCH")
+    ts = (dt.datetime.fromtimestamp(int(epoch), dt.timezone.utc) if epoch
+          else dt.datetime.now(dt.timezone.utc))
+    commit = None
+    try:
+        root = a.path if os.path.isdir(a.path) else (os.path.dirname(a.path) or ".")
+        r = subprocess.run(["git", "-C", root, "rev-parse", "HEAD"],
+                           capture_output=True, text=True, timeout=2)
+        commit = r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
+    except (OSError, subprocess.SubprocessError):
+        commit = None
+    digest = None
+    if a.policy:
+        with open(a.policy, "rb") as fh:
+            digest = hashlib.sha256(fh.read()).hexdigest()
+    return {"version": __version__, "kb_providers": kb.updated,
+            "kb_sovereignty": kb.sovereignty_updated, "kb_provenance": kb.provenance_updated,
+            "timestamp": ts.strftime("%Y-%m-%dT%H:%M:%SZ"), "path": a.path,
+            "commit": commit, "policy_digest": digest, "classification": a.classification}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="borderlint", description="Map and govern where your AI data flows.")
     ap.add_argument("--version", action="store_true", help="print version and KB last-reviewed date")
@@ -20,7 +49,7 @@ def main(argv=None) -> int:
     s.add_argument("path", nargs="?", default=".")
     s.add_argument("-p", "--policy", help="residency policy JSON (omit for inventory mode)")
     s.add_argument("-c", "--classification", help="data class on the scanned path (required with --policy)")
-    s.add_argument("-f", "--format", choices=["text", "json", "mermaid", "sarif", "sbom"], default="text")
+    s.add_argument("-f", "--format", choices=["text", "json", "mermaid", "sarif", "sbom", "evidence"], default="text")
     s.add_argument("--providers", help="custom provider knowledge base JSON")
     dp = sub.add_parser("diff", help="Compare two AI data-flow SBOMs (baseline vs current).")
     dp.add_argument("baseline")
@@ -59,11 +88,13 @@ def main(argv=None) -> int:
     else:
         findings = [Finding(d, "ok", []) for d in detections]  # inventory mode
 
+    envelope = _envelope(a, kb) if a.format == "evidence" else None
     renderers = {"text": report.text, "json": report.as_json,
                  "mermaid": lambda f, k, p: report.mermaid(f, k, p, report.project_label(a.path)),
-                 "sarif": report.sarif, "sbom": report.sbom}
+                 "sarif": report.sarif, "sbom": report.sbom,
+                 "evidence": lambda f, k, p: report.evidence(f, k, p, envelope)}
     print(renderers[a.format](findings, kb, policy))
-    if a.format == "sbom":  # an export is an artifact, not a gate
+    if a.format in ("sbom", "evidence"):  # an export is an artifact, not a gate
         return 0
     return 1 if any(f.severity == "fail" for f in findings) else 0
 

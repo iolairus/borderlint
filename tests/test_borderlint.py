@@ -1387,3 +1387,54 @@ def test_provenance_model_deny():
     # no org -> renders as before, no empty annotation
     fs2 = evaluate([d], deny, "customer-pii", k)
     assert "[model: deepseek.r1-v1:0]" in text(fs2, k)
+
+
+def test_evidence_pack(tmp_path, monkeypatch, capsys):
+    import json as _json, os
+    from dataclasses import replace
+    from borderlint.policy import Finding
+    from borderlint.report import evidence
+    k = load_kb()
+    d = Detection("aws_bedrock", "endpoint_reference", "bedrock-runtime.ap-east-1.amazonaws.com",
+                  "src/app.py", 3, "hk", sovereignty="us", provenance="cn",
+                  model="deepseek.r1-v1:0", model_org="DeepSeek")
+    pol = {"home_location": "hk", "classifications": {"customer-pii": ["hk"]}}
+    fs = [Finding(d, "fail", ["sovereignty"]), Finding(replace(d, waiver="ok'd"), "waived", ["sovereignty"])]
+    env = {"version": "x", "kb_providers": "2026-07-05", "timestamp": "T", "path": "p",
+           "commit": None, "policy_digest": "abc", "classification": "customer-pii"}
+    doc = evidence(fs, k, pol, env)
+    # envelope: unresolved fields say so; resolved ones render
+    assert "- Git commit: unavailable" in doc and "- Policy SHA-256: abc" in doc
+    # inventory row carries the axes, the model, and the org
+    assert "| Hong Kong | United States | Mainland China | deepseek.r1-v1:0 (DeepSeek) | fail |" in doc
+    # waiver register + summary
+    assert "## Waiver register" in doc and "ok'd" in doc and "1 waived" in doc
+    # hk home -> PDPO annex: citations, static fill, org blanks, data date
+    assert "Regime annex — PDPO" in doc and "PCPD Guidance" in doc
+    assert "data classification (as class of personal data): customer-pii" in doc
+    assert "- [ ] purpose of each transfer: ________" in doc
+    assert "Expectations data last reviewed" in doc
+    # cn / mo / sg homes reach their annexes through regime_of
+    for loc, marker in (("cn", "PIPL (Mainland China)"), ("CN-GBA", "PIPL (Mainland China)"),
+                        ("mo", "Macao PDPA"), ("sg", "PDPA (Singapore)")):
+        assert marker in evidence(fs, k, dict(pol, home_location=loc), env), loc
+    # uncovered home location: explicit no-annex statement; home_regime-only: no annex section
+    assert "No annex is available" in evidence(fs, k, dict(pol, home_location="uk"), env)
+    hr = evidence(fs, k, {"home_regime": "pdpo", "classifications": {"c": ["hk"]}}, env)
+    assert "Regime annex" not in hr
+    # no policy: inventory framing without verdicts, no annex
+    inv = evidence([Finding(d, "ok", [])], k, None, env)
+    assert "| fail |" not in inv and "Regime annex" not in inv
+    # CLI: artifact exit 0 despite failures; SOURCE_DATE_EPOCH determinism
+    from borderlint import cli
+    src = tmp_path / "app.py"; src.write_text('import openai\nu = "api.deepseek.com"\n')
+    polf = tmp_path / "pol.json"
+    polf.write_text(_json.dumps({"classifications": {"customer-pii": ["hk"]}}))
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "1751900000")
+    args = ["scan", str(tmp_path), "--policy", str(polf),
+            "--classification", "customer-pii", "--format", "evidence"]
+    assert cli.main(args) == 0
+    one = capsys.readouterr().out
+    assert cli.main(args) == 0
+    two = capsys.readouterr().out
+    assert one == two and "fail" in one  # byte-identical, records the failing state
