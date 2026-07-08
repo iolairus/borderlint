@@ -1438,3 +1438,11 @@ def test_evidence_pack(tmp_path, monkeypatch, capsys):
     assert cli.main(args) == 0
     two = capsys.readouterr().out
     assert one == two and "fail" in one  # byte-identical, records the failing state
+
+
+def test_config_endpoint_ignores_path_values():
+    # tsconfig-style baseUrl values are paths, not endpoints (TellMeWhy false positive)
+    assert cfg('{"compilerOptions": {"baseUrl": "."}}', "tsconfig.json") == []
+    assert cfg('base_url: ./models\n') == []
+    assert cfg('base_url: https://llm-cn.acme.cn/v1\n')[0].provider_id != ""  # real hosts still detected
+    assert cfg("base_url: http://localhost:8080\n")[0].jurisdiction == "local"  # loopback unaffected

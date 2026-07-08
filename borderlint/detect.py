@@ -117,8 +117,8 @@ def _scan_config_endpoints(path: str, src: str, kb) -> list[Detection]:
             continue
         low = host.lower()
         is_loop = low in _LOOPBACK or low.endswith(".localhost")
-        if not is_loop and "." not in host:
-            continue  # bare non-host value (e.g. an enum), skip
+        if not is_loop and not re.search(r"[A-Za-z0-9]\.[A-Za-z0-9]", host):
+            continue  # not host-shaped: bare enums, "." / "./src" (e.g. tsconfig baseUrl), skip
         line = src.count("\n", 0, m.start()) + 1
         if is_loop:
             out.append(Detection("local", "config_endpoint", host, path, line, "local"))
