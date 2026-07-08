@@ -1446,3 +1446,14 @@ def test_config_endpoint_ignores_path_values():
     assert cfg('base_url: ./models\n') == []
     assert cfg('base_url: https://llm-cn.acme.cn/v1\n')[0].provider_id != ""  # real hosts still detected
     assert cfg("base_url: http://localhost:8080\n")[0].jurisdiction == "local"  # loopback unaffected
+
+
+def test_edge_tts_and_local_whisper():
+    # edge-tts: cross-border speech flow to Microsoft; nested import is caught by the AST walk
+    ds = _scan_file('def speak():\n    import edge_tts\n')
+    d = [x for x in ds if x.provider_id == "edge_tts"][0]
+    assert (d.jurisdiction, d.sovereignty, d.provenance) == ("unknown", "us", "us")
+    # faster-whisper: local runtime, OpenAI-developed weights
+    ds = _scan_file("from faster_whisper import WhisperModel\n")
+    d = [x for x in ds if x.provider_id == "whisper_local"][0]
+    assert (d.jurisdiction, d.sovereignty, d.provenance) == ("local", "local", "us")

@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-05",
+  "updated": "2026-07-08",
   "providers": [
     {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "npm": ["openai", "@ai-sdk/openai"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
     {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "npm": ["@anthropic-ai/sdk", "@ai-sdk/anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
@@ -44,6 +44,8 @@
     {"id": "sagemaker", "name": "AWS SageMaker", "sdks": ["sagemaker"], "npm": [], "endpoints": ["runtime.sagemaker"], "jurisdiction": "unknown", "region_scheme": "aws"},
     {"id": "snowflake", "name": "Snowflake Cortex", "sdks": ["snowflake.cortex"], "npm": [], "endpoints": ["snowflakecomputing.com"], "jurisdiction": "unknown", "note": "region is per-account; host does not carry it"},
     {"id": "lemonade", "name": "Lemonade (AMD, local)", "sdks": ["lemonade"], "npm": [], "endpoints": [], "jurisdiction": "local", "note": "local-first inference server (localhost by default)"},
+    {"id": "edge_tts", "name": "Microsoft Edge TTS", "category": "speech", "sdks": ["edge_tts"], "npm": [], "endpoints": ["speech.platform.bing.com"], "jurisdiction": "unknown", "note": "free Edge browser TTS endpoint; serving region undocumented"},
+    {"id": "whisper_local", "name": "Whisper (local)", "category": "speech", "sdks": ["faster_whisper", "whisper"], "npm": [], "endpoints": [], "jurisdiction": "local", "note": "local-first STT runtimes (faster-whisper/CTranslate2, openai-whisper)"},
     {"id": "pinecone", "name": "Pinecone", "category": "vector_store", "sdks": ["pinecone"], "npm": ["@pinecone-database/pinecone"], "endpoints": ["pinecone.io"], "jurisdiction": "unknown", "note": "vector cluster region is chosen per index; not resolvable from the host"},
     {"id": "weaviate", "name": "Weaviate Cloud", "category": "vector_store", "sdks": ["weaviate"], "npm": ["weaviate-client", "weaviate-ts-client"], "endpoints": ["weaviate.cloud", "weaviate.network"], "jurisdiction": "unknown", "note": "cluster region chosen at creation; SDK may also target a self-hosted instance"},
     {"id": "qdrant", "name": "Qdrant Cloud", "category": "vector_store", "sdks": ["qdrant_client"], "npm": ["@qdrant/js-client-rest"], "endpoints": ["qdrant.io"], "jurisdiction": "unknown", "note": "cluster region chosen at creation; SDK may also target a self-hosted instance"},
