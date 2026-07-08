@@ -134,7 +134,8 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
   sovereignty `us`, provenance `cn`. Local LLM usage resolves too: GGUF/MLX redistributor repos
   (`TheBloke/…`, `mlx-community/…`), `.gguf` file paths, and Ollama tags (`llama3.2`, `qwen2.5`)
   — so a self-hosted Qwen reads `local`/`local`/`cn`. Opt-in `provenance` policy block, same
-  shape as sovereignty.
+  shape as sovereignty, plus a `deny_models` family ban with provider-deny semantics; findings
+  name the developer organisation when the map knows it.
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
   failure set, declared home regime.
 - **Regimes & arrangements:** declared home location → data-protection regime tag + the cross-border
@@ -191,7 +192,7 @@ rendered to PNG:
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v1.3.1
+- uses: iolairus/borderlint@v1.4.0
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -202,7 +203,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v1.3.1
+  rev: v1.4.0
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
