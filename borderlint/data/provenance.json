@@ -216,6 +216,10 @@
     "twelvelabs.": {"org": "TwelveLabs", "bloc": "us"},
     "openai-gpt": {"org": "OpenAI", "bloc": "us"},
     "anthropic-claude": {"org": "Anthropic", "bloc": "us"},
+    "moondream": {"org": "M87 Labs (Moondream)", "bloc": "us"},
+    "vikhyatk/": {"org": "M87 Labs (Moondream)", "bloc": "us"},
+    "florence-2": {"org": "Microsoft", "bloc": "us"},
+    "clip-vit": {"org": "OpenAI (CLIP)", "bloc": "us"},
     "apertus": {"org": "Swiss AI Initiative (ETH Zürich/EPFL)", "bloc": "ch"},
     "swiss-ai/": {"org": "Swiss AI Initiative (ETH Zürich/EPFL)", "bloc": "ch"}
   },

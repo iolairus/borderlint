@@ -108,6 +108,7 @@
     "snowflake": "us",
     "lemonade": "local",
     "edge_tts": "us",
-    "whisper_local": "local"
+    "whisper_local": "local",
+    "hf_transformers_local": "local"
   }
 }
