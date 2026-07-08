@@ -63,7 +63,8 @@ exposure:
   },
   "provenance": {
     "on_unknown": "warn",
-    "classifications": { "customer-pii": ["us", "eu", "uk"] }
+    "classifications": { "customer-pii": ["us", "eu", "uk"] },
+    "deny_models": []
   }
 }
 ```
