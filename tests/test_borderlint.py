@@ -1457,3 +1457,21 @@ def test_edge_tts_and_local_whisper():
     ds = _scan_file("from faster_whisper import WhisperModel\n")
     d = [x for x in ds if x.provider_id == "whisper_local"][0]
     assert (d.jurisdiction, d.sovereignty, d.provenance) == ("local", "local", "us")
+
+
+def test_env_style_endpoint_keys():
+    # prefixed env keys resolve packaged endpoints (TellMeWhy's .env case)
+    assert cfg("TELLMEWHY_LLM_SERVER_URL=http://localhost:8080\n", ".env")[0].jurisdiction == "local"
+    hits = cfg("OPENAI_BASE_URL=https://api.openai.com/v1\n", ".env")
+    assert any(d.provider_id == "openai" for d in hits)
+    assert cfg("llm_server_url: http://llm-cn.acme.cn/v1\n")[0].kind == "config_endpoint"
+    # compose list form: scheme-bearing single-label service host -> custom endpoint, unknown
+    d = cfg("services:\n  app:\n    environment:\n      - OLLAMA_BASE_URL=http://ollama:11434\n", "docker-compose.yml")
+    assert d and d[0].jurisdiction == "unknown"
+    # negatives: no AI-stem segment, AI substring, curated-list absences, env getters, path values
+    assert cfg("DATABASE_URL=https://db.example.com\n", ".env") == []
+    assert cfg("HOMEPAGE_URL=https://example.com\n", ".env") == []
+    assert cfg("EMAIL_URL=https://mail.example.com\n", ".env") == []
+    assert cfg("MODEL_URL=https://cdn.example.com/x.glb\n", ".env") == []
+    assert cfg('LLM_SERVER_URL = os.environ.get("X_LLM_URL", "http://localhost:8080")\n', "settings.py") == []
+    assert cfg('{"compilerOptions": {"baseUrl": "."}}', "tsconfig.json") == []
