@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "borderlint"
-version = "1.5.0"
+version = "1.6.0"
 description = "Map and govern where your AI data flows — and who can compel its disclosure."
 readme = "README.md"
 license = "MIT"
