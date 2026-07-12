@@ -476,6 +476,56 @@ def test_sarif_waived_suppressed():
     assert waived and waived[0]["level"] == "note"
 
 
+def test_badge_policy_mode_clean():
+    import json as _json
+    from borderlint.report import badge
+    # No detections = clean
+    f = evaluate([], _pol(["hk"]), "customer-pii", kb)
+    doc = _json.loads(badge(f, kb, _pol(["hk"])))
+    assert doc["schemaVersion"] == 1
+    assert doc["label"] == "borderlint"
+    assert doc["message"] == "clean"
+    assert doc["color"] == "green"
+
+
+def test_badge_policy_mode_violations():
+    import json as _json
+    from borderlint.report import badge
+    # openai (us) with policy allowing only hk = failure
+    f = evaluate(_scan_file("import openai\n"), _pol(["hk"]), "customer-pii", kb)
+    doc = _json.loads(badge(f, kb, _pol(["hk"])))
+    assert doc["schemaVersion"] == 1
+    assert doc["label"] == "borderlint"
+    assert "flagged" in doc["message"]
+    assert doc["color"] == "red"
+
+
+def test_badge_inventory_mode():
+    import json as _json
+    from borderlint.report import badge
+    from borderlint.policy import Finding
+    # No policy = inventory mode - create findings directly
+    detections = _scan_file("import openai\n")
+    f = [Finding(d, "ok", []) for d in detections]
+    doc = _json.loads(badge(f, kb, None))
+    assert doc["schemaVersion"] == 1
+    assert doc["label"] == "borderlint"
+    assert "flows" in doc["message"]
+    assert doc["color"] == "blue"
+
+
+def test_badge_exit_code_non_gating(tmp_path):
+    """Badge format exits 0 regardless of violations (non-gating export)."""
+    import json as _json
+    from borderlint import cli
+    src = tmp_path / "app.py"
+    src.write_text("import openai\n")
+    polf = tmp_path / "pol.json"
+    polf.write_text(_json.dumps({"classifications": {"customer-pii": ["hk"]}}))
+    # badge format should exit 0 even with violations
+    assert cli.main(["scan", str(tmp_path), "-p", str(polf), "-c", "customer-pii", "-f", "badge"]) == 0
+
+
 def test_drift26_new_providers_resolve():
     def res(host):
         m = kb.match_endpoint(host)
