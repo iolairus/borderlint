@@ -20,8 +20,8 @@ The `init` command SHALL prompt for a home base selected from the supported seat
 - **THEN** the home base defaults to `hk`
 
 #### Scenario: Invalid home base rejected
-- **WHEN** the operator enters a token outside the supported seat list
-- **THEN** the prompt is repeated until a valid seat is entered
+- **WHEN** the operator enters a token outside the supported seat list (e.g. `zz` or `us`)
+- **THEN** the prompt is repeated until a supported seat is entered (the wizard validates membership in the supported seats, not merely a two-letter format)
 
 ### Requirement: Data class interview
 The `init` command SHALL prompt for which data classifications the operator handles, from `non-pii`, `employee-pii`, `customer-pii` (plus any user-typed extra), defaulting to all three when no selection is made.
@@ -68,8 +68,12 @@ When both `--home` and `--classes` are supplied, the `init` command SHALL skip a
 - **THEN** a `residency.json` is written with no interactive prompts
 
 ### Requirement: Emitted policy shape
-The `init` command SHALL write a policy containing `home_location`, a `classifications` map of handled classes to jurisdiction allow-lists, `on_unknown` set to `warn`, and `fail_on` listing `residency`, `denied_provider`, and `sovereignty`, so the file loads via the existing policy loader.
+The `init` command SHALL write a policy containing `home_location`, a `classifications` map of handled classes to jurisdiction allow-lists, and `on_unknown` set to `warn`, so the file loads via the existing policy loader. The `init` command SHALL NOT emit a `fail_on` block, so the policy inherits the engine default (`residency`, `denied_provider`, `model_denied`) rather than downgrading a later-added `deny_models` match to a warning or silently opting the user into the sovereignty dimension.
 
 #### Scenario: Written file is loadable
 - **WHEN** `init` writes `residency.json`
 - **THEN** the file is accepted by the existing `load_policy` loader without error
+
+#### Scenario: fail_on is inherited, not emitted
+- **WHEN** `init` writes `residency.json`
+- **THEN** the file contains no `fail_on` key and inherits the engine default failure set

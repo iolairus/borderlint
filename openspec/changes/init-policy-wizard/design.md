@@ -49,9 +49,11 @@ the real scan and could miss wrapper/endpoint detections.
 don't know their egress surface; grounding in the scan is the whole point.
 
 **D4 — Output shape matches `load_policy()` expectations.**
-The written file uses the shorthand `{classification: [jurisdictions]}` map plus `home_location`,
-`on_unknown: "warn"`, and `fail_on: ["residency","denied_provider","sovereignty"]` — identical to
-`examples/residency.json` so it loads without special-casing.
+The written file uses the shorthand `{classification: [jurisdictions]}` map plus `home_location` and
+`on_unknown: "warn"`. `fail_on` is deliberately **omitted** so the policy inherits the engine default
+(`["residency","denied_provider","model_denied"]`); emitting it would either downgrade a later-added
+`deny_models` match to a warning or silently opt every new user into the sovereignty dimension before
+they have written a sovereignty block. The file still loads via `load_policy()` without special-casing.
 
 **D5 — Overwrite guard via `--force`.**
 Before writing, `init` checks `os.path.exists(out_path)`. If it exists and `--force` was not passed,
@@ -61,8 +63,10 @@ overwrites. Default output path is `./residency.json`; overridable with `-o/--ou
 **D6 — Non-interactive path.**
 When both `--home` and `--classes` are supplied, skip all `input()` prompts: seed home into every
 class, add every observed jurisdiction to every class's allow-list (scripted users get a permissive
-starting point they can tighten), and write. If only one of the two flags is given, still prompt for
-the missing piece.
+starting point they can tighten), and write. If only one flag is given, that flag is honoured and
+only the missing piece is prompted for (e.g. `borderlint init --home hk` uses `hk` and still asks
+which classes to handle). A supplied `--home` is validated against the supported seats; an invalid
+seat exits 2 rather than being silently written.
 
 ## Risks / Trade-offs
 

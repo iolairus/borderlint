@@ -40,7 +40,8 @@ def test_init_interactive_writes_policy():
     # home base is pre-seeded into every class allow-list.
     assert policy["classifications"]["customer-pii"] == ["sg"]
     assert policy["on_unknown"] == "warn"
-    assert policy["fail_on"] == ["residency", "denied_provider", "sovereignty"]
+    # fail_on is omitted so the policy inherits the engine default.
+    assert "fail_on" not in policy
     # the written file must load via the existing policy loader.
     load_policy(out)
 
@@ -78,6 +79,41 @@ def test_init_non_interactive_no_prompts():
     # home + every observed jurisdiction (us) seeded into each class.
     assert set(policy["classifications"]["customer-pii"]) == {"hk", "us"}
     load_policy(out)
+
+
+def test_init_rejects_unsupported_home_seat():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    a = _InitArgs(path=_FIXTURE, home="zz", classes="non-pii", output=out)
+    # non-interactive path must reject a two-letter code that is not a supported seat.
+    rc = run_init(a, input_fn=lambda p: (_ for _ in ()).throw(AssertionError("prompted")))
+    assert rc == 2
+
+
+def test_init_interactive_rejects_unsupported_seat_then_accepts():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    a = _InitArgs(path=_FIXTURE, output=out)
+    # first answer 'zz' (rejected, re-prompted), then 'sg'; classes default to all three.
+    rc = run_init(a, input_fn=_write_input(["zz", "sg"]))
+    assert rc == 0
+    with open(out, encoding="utf-8") as fh:
+        assert json.load(fh)["home_location"] == "sg"
+
+
+def test_init_single_home_flag_honored_no_reprompt():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    a = _InitArgs(path=_FIXTURE, home="hk", output=out)
+    # only --home given: home is honoured, classes are prompted (default all three).
+    # input_fn is called once for classes; fail if home is re-prompted.
+    calls = {"home_prompted": False}
+    def _fn(prompt):
+        if "Home base" in prompt:
+            calls["home_prompted"] = True
+        return ""  # empty -> default classes (all three)
+    rc = run_init(a, input_fn=_fn)
+    assert rc == 0
+    assert calls["home_prompted"] is False
+    with open(out, encoding="utf-8") as fh:
+        assert set(json.load(fh)["classifications"]) == {"non-pii", "employee-pii", "customer-pii"}
 
 
 def _kb_file(data):

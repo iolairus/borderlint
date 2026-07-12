@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 from .detect import scan
 from .kb import load_kb
-from .policy import _valid_home
+from .policy import _alias
 
 # Supported home-base seats offered by the wizard.
 _SUPPORTED_SEATS = ("hk", "mo", "CN-GBA", "jp", "kr", "sg", "au", "uk", "eu", "my")
@@ -28,7 +28,15 @@ _BUILTIN_CLASSES = ("non-pii", "employee-pii", "customer-pii")
 
 # Default policy blocks emitted alongside the classifications map.
 _DEFAULT_ON_UNKNOWN = "warn"
-_DEFAULT_FAIL_ON = ["residency", "denied_provider", "sovereignty"]
+
+
+def _is_supported_seat(seat: str) -> bool:
+    """A home base is valid only if it is one of the wizard's supported seats.
+
+    `_alias` is applied first so `uk` (a supported seat) is recognised even though the policy
+    normalises it to `gb`; arbitrary two-letter codes (e.g. `zz`, `us`) are rejected.
+    """
+    return seat in _SUPPORTED_SEATS or _alias(seat) in _SUPPORTED_SEATS
 
 
 @dataclass
@@ -42,19 +50,20 @@ class _InitArgs:
 
 
 def _ask(input_fn, prompt: str, default: str | None = None) -> str:
-    """Prompt once; return the stripped answer (empty -> default)."""
+    """Prompt once; return the stripped answer, applying `default` on empty input."""
     suffix = f" [{default}]" if default is not None else ""
-    return input_fn(f"{prompt}{suffix}: ").strip()
+    ans = input_fn(f"{prompt}{suffix}: ").strip()
+    return ans if ans else (default or "")
 
 
 def _ask_home(input_fn) -> str:
-    """Interview for the home base, re-prompting on an invalid token."""
+    """Interview for the home base, re-prompting on an unsupported seat."""
     while True:
         ans = _ask(input_fn,
                    f"Home base {', '.join(_SUPPORTED_SEATS)}",
                    _DEFAULT_SEAT)
         seat = ans if ans else _DEFAULT_SEAT
-        if _valid_home(seat):
+        if _is_supported_seat(seat):
             return seat
         print(f"error: '{seat}' is not a supported seat "
               f"({', '.join(_SUPPORTED_SEATS)})", file=sys.stderr)
@@ -101,11 +110,16 @@ def _walk_jurisdictions(input_fn, jurisdictions: set[str], classes: list[str], h
 
 
 def _build_policy(home: str, allow: dict[str, list[str]]) -> dict:
-    """Assemble the policy dict in the shorthand classifications-map shape."""
+    """Assemble the policy dict in the shorthand classifications-map shape.
+
+    `fail_on` is intentionally omitted so the policy inherits the engine default
+    (``["residency", "denied_provider", "model_denied"]``) — emitting it here would either
+    downgrade a later-added ``deny_models`` match to a warning or silently opt every new user
+    into the sovereignty dimension before they have written a sovereignty block.
+    """
     return {
         "home_location": home,
         "on_unknown": _DEFAULT_ON_UNKNOWN,
-        "fail_on": _DEFAULT_FAIL_ON,
         "classifications": {c: jur for c, jur in allow.items()},
     }
 
@@ -144,7 +158,7 @@ def run_init(args: object, input_fn=input, providers: str | None = None) -> int:
 
     if non_interactive:
         home = a.home
-        if not _valid_home(home):
+        if not _is_supported_seat(home):
             print(f"error: --home '{home}' is not a supported seat "
                   f"({', '.join(_SUPPORTED_SEATS)})", file=sys.stderr)
             return 2
@@ -153,8 +167,14 @@ def run_init(args: object, input_fn=input, providers: str | None = None) -> int:
         # Scripted users get a permissive starting point: home + every observed jurisdiction.
         allow = {c: [home] + sorted(j for j in jurisdictions if j != home) for c in classes}
     else:
-        home = _ask_home(input_fn)
-        classes = _ask_classes(input_fn)
+        # A single supplied flag is honoured; only the missing piece is prompted for.
+        home = a.home if (a.home and _is_supported_seat(a.home)) else _ask_home(input_fn)
+        if a.home and not _is_supported_seat(a.home):
+            print(f"error: --home '{a.home}' is not a supported seat "
+                  f"({', '.join(_SUPPORTED_SEATS)})", file=sys.stderr)
+            return 2
+        classes = ([c.strip() for c in a.classes.split(",") if c.strip()]
+                   if a.classes else _ask_classes(input_fn))
         jurisdictions = _observed_jurisdictions(a.path, providers)
         if not jurisdictions:
             print("note: no AI data flows detected; allow-lists seeded with the home base only.",
