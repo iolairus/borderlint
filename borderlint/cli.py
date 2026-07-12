@@ -55,12 +55,21 @@ def main(argv=None) -> int:
     dp.add_argument("baseline")
     dp.add_argument("current")
     dp.add_argument("-f", "--format", choices=["text", "json"], default="text")
+    ip = sub.add_parser("init", help="Scaffold a residency.json policy via an interactive wizard.")
+    ip.add_argument("path", nargs="?", default=".", help="path to scan for an inventory of AI data flows")
+    ip.add_argument("--home", help="home base seat (hk, mo, CN-GBA, jp, kr, sg, au, uk, eu, my)")
+    ip.add_argument("--classes", help="comma-separated data classifications to handle (non-interactive)")
+    ip.add_argument("-o", "--output", default="residency.json", help="output policy file (default: residency.json)")
+    ip.add_argument("--force", action="store_true", help="overwrite an existing output file")
     a = ap.parse_args(argv)
 
     if a.version:
         from . import __version__
         print(f"borderlint {__version__} (KB last reviewed {load_kb().updated})")
         return 0
+    if a.cmd == "init":
+        from .init import run_init
+        return run_init(a)
     if a.cmd == "diff":
         return _run_diff(a)
     if a.cmd != "scan":
