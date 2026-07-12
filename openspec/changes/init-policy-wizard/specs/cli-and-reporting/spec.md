@@ -1,11 +1,4 @@
-## MODIFIED Requirements
-
-### Requirement: Scan command
-The CLI SHALL provide a `scan` command that takes a path to scan, an optional policy, an optional active classification, and an output format (human-readable, JSON, Mermaid, SARIF, SBOM, or evidence).
-
-#### Scenario: Scan a path against a policy
-- **WHEN** the user runs the scan command with a path, a policy, and a classification
-- **THEN** the path is scanned and detected flows are evaluated against the policy for that classification
+## ADDED Requirements
 
 ### Requirement: Init command
 The CLI SHALL provide an `init` command, as a third subcommand alongside `scan` and `diff`, that scaffolds a `residency.json` policy. The command SHALL accept `--home <seat>`, `--classes <csv>`, `--output <path>` (default `./residency.json`), and `--force` options.
