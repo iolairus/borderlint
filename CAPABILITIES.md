@@ -281,6 +281,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | E5 | GitLab CI / generic CI recipes (GitHub Actions + Jenkins recipes shipped; GitLab pending) | next |
 | E6 | Per-run **`--classification`** input (the data class on the scanned path) | ✅ |
 | E7 | **Supply-chain / container scan mode** (JFrog-style SCA of dependencies & images) | later |
+| E8 | **Agent integration snippets** (Claude Code rules/skill, Cursor rules): scan before adding AI deps, surface new flows in-conversation | ✅ |
 
 ### F. Knowledge base — *the crown jewel*
 | # | Capability | Status |
