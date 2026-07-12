@@ -218,6 +218,10 @@ policy it runs inventory mode and always passes).
 
 ## Keeping the KB fresh
 
+**Browse the KB** at [iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/) —
+one page per provider and per model developer (residency, sovereignty, provenance, regime and
+cross-border references), generated straight from the bundled JSON on every KB change.
+
 A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) checks freshness on every axis:
 providers we don't yet cover (diffed against litellm's registry), **model families the
 provenance map doesn't resolve** (aggregated, so the issue lists families to curate rather than
