@@ -6,9 +6,9 @@
 model weights it runs.**
 
 A static, in-CI linter for **AI data residency, sovereignty, and model provenance across APAC &
-EMEA**, with first-class **HK / GBA** support. borderlint statically scans your repo (**Python
-and TypeScript/JavaScript**) for AI provider usage and evaluates each flow against three
-orthogonal dimensions:
+EMEA**, with first-class **HK / GBA** support. borderlint statically scans your repo (**Python,
+TypeScript/JavaScript, and Java/Kotlin**) for AI provider usage and evaluates each flow against
+three orthogonal dimensions:
 
 - **Residency** — *where the bytes rest*. Each flow resolves to a jurisdiction (ccTLD/ISO codes
   plus the `CN-GBA` / `GBA` tokens); a flow outside the allow-list for the declared data class
@@ -107,7 +107,9 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
 
 ## Capabilities
 
-- **Languages:** Python (AST) and TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
+- **Languages:** Python (AST), TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
+  and **Java/Kotlin** (`import` / `import static`, incl. **LangChain4j** and **Spring AI** as
+  runtime-routed aggregators and the official OpenAI/Anthropic/Bedrock/Vertex/Azure JVM SDKs),
   plus endpoint references in config/text files (incl. env-style keys like `MYAPP_LLM_SERVER_URL` in `.env`, compose, and settings files) and **OpenAI-compatible `/v1/chat/completions` calls**
   — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
 - **Providers:** 85+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
