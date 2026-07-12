@@ -13,6 +13,7 @@ IGNORE = {".git", "node_modules", "__pycache__", ".venv", "venv", "site-packages
           "dist", ".mypy_cache", ".pytest_cache", ".tox", ".ruff_cache"}
 TEXT_EXT = {".env", ".ts", ".tsx", ".js", ".jsx", ".yaml", ".yml", ".toml", ".json", ".ini", ".cfg", ".sh"}
 JS_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
+JVM_EXT = {".java", ".kt", ".kts"}
 MAX_FILE_BYTES = 5 * 1024 * 1024  # skip files larger than this; no source file is this big
 
 # AI endpoint declared via a config key or a base_url kwarg — anchored on the key, not the URL,
@@ -106,6 +107,19 @@ def _scan_js(path: str, src: str, kb) -> list[Detection]:
     out: list[Detection] = []
     for m in _JS_IMPORT.finditer(src):
         pid = kb.match_npm(m.group(1))
+        if pid:
+            line = src.count("\n", 0, m.start()) + 1
+            out.append(Detection(pid, "sdk_import", m.group(1), path, line, kb.default_jurisdiction(pid)))
+    return out
+
+
+_JVM_IMPORT = re.compile(r"^\s*import\s+(?:static\s+)?([\w.]+)", re.M)  # Java `;` and Kotlin bare forms
+
+
+def _scan_jvm(path: str, src: str, kb) -> list[Detection]:
+    out: list[Detection] = []
+    for m in _JVM_IMPORT.finditer(src):
+        pid = kb.match_jvm(m.group(1))
         if pid:
             line = src.count("\n", 0, m.start()) + 1
             out.append(Detection(pid, "sdk_import", m.group(1), path, line, kb.default_jurisdiction(pid)))
@@ -267,8 +281,9 @@ def scan(root, kb) -> list[Detection]:
         suffix = p.suffix
         is_py = suffix == ".py"
         is_js = suffix in JS_EXT
+        is_jvm = suffix in JVM_EXT
         is_text = suffix in TEXT_EXT or p.name == ".env"
-        if not (is_py or is_js or is_text):
+        if not (is_py or is_js or is_jvm or is_text):
             continue
         try:
             if p.stat().st_size > MAX_FILE_BYTES:  # don't read a huge file into memory (DoS guard)
@@ -284,6 +299,8 @@ def scan(root, kb) -> list[Detection]:
             dets = _scan_py(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
         elif is_js:  # imports + endpoint literals (text scan) + OpenAI-compatible call paths
             dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
+        elif is_jvm:  # same shape as JS: imports + endpoint literals + call paths
+            dets = _scan_jvm(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
         else:
             dets = _scan_text(str(p), src, kb) + cfg
         # one detection per flow per line: drop an api_call already produced by another scanner on its line
