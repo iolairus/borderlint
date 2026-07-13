@@ -234,6 +234,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | A5 | Detect **vector DBs / data sinks** that imply cross‑border storage (Pinecone, etc.) | ✅ |
 | A6 | Detect **observability/telemetry** endpoints that exfiltrate prompts/traces | later |
 | A7 | Detect **MCP servers / agent tool endpoints** by jurisdiction | later |
+| A8 | Scan **Java / Kotlin** (regex imports via the `jvm` KB key; endpoint/call-path/waiver parity with JS) | ✅ |
 
 ### B. Classification — *locate each flow*
 | # | Capability | Status |
@@ -270,6 +271,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | D4 | **SARIF** output (surfaces in GitHub code‑scanning) | ✅ |
 | D5 | **Inventory / "AI data‑flow SBOM"** export | ✅ |
 | D6 | Diff mode: *what new cross‑border flows did this PR introduce?* | ✅ |
+| D7 | **HTML report** (`--format html`): one self‑contained file for privacy/compliance review — no scripts, nothing fetched | ✅ |
 
 ### E. Integration
 | # | Capability | Status |
@@ -281,6 +283,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | E5 | GitLab CI / generic CI recipes (GitHub Actions + Jenkins recipes shipped; GitLab pending) | next |
 | E6 | Per-run **`--classification`** input (the data class on the scanned path) | ✅ |
 | E7 | **Supply-chain / container scan mode** (JFrog-style SCA of dependencies & images) | later |
+| E8 | **Agent integration snippets** (Claude Code rules/skill, Cursor rules): scan before adding AI deps, surface new flows in-conversation | ✅ |
 
 ### F. Knowledge base — *the crown jewel*
 | # | Capability | Status |

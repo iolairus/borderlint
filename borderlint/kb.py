@@ -199,19 +199,22 @@ class KB:
         self.by_id = {}
         for p in providers:
             self.by_id.setdefault(p["id"], p)  # first wins; user providers are passed first
-        sdks, npm, eps = [], [], []
+        sdks, npm, jvm, eps = [], [], [], []
         for p in providers:
             prio = 0 if p.get("_user") else 1  # user-supplied entries resolve in preference
             for s in p.get("sdks", []):
                 sdks.append((prio, s, p["id"]))
             for n in p.get("npm", []):
                 npm.append((prio, n, p["id"]))
+            for j in p.get("jvm", []):
+                jvm.append((prio, j, p["id"]))
             ej = p.get("endpoint_jurisdictions", {})
             for h in p.get("endpoints", []):
                 eps.append((prio, h, p["id"], ej.get(h, p.get("jurisdiction", "unknown"))))
         # User entries first; within a source, longest match wins.
         self._sdks = sorted(sdks, key=lambda x: (x[0], -len(x[1])))
         self._npm = sorted(npm, key=lambda x: (x[0], -len(x[1])))
+        self._jvm = sorted(jvm, key=lambda x: (x[0], -len(x[1])))
         self._eps = sorted(eps, key=lambda x: (x[0], -len(x[1])))
         self.region_scheme = {p["id"]: p["region_scheme"] for p in providers if p.get("region_scheme")}
         self.updated: str | None = None  # KB last-reviewed date, set by load_kb
@@ -320,6 +323,13 @@ class KB:
     def match_npm(self, pkg: str) -> str | None:
         for _prio, name, pid in self._npm:
             if pkg == name or pkg.startswith(name + "/"):
+                return pid
+        return None
+
+    def match_jvm(self, package: str) -> str | None:
+        """Java/Kotlin import path → provider, dot-boundary prefix match (match_sdk semantics)."""
+        for _prio, s, pid in self._jvm:
+            if package == s or package.startswith(s + "."):
                 return pid
         return None
 

@@ -6,9 +6,9 @@
 model weights it runs.**
 
 A static, in-CI linter for **AI data residency, sovereignty, and model provenance across APAC &
-EMEA**, with first-class **HK / GBA** support. borderlint statically scans your repo (**Python
-and TypeScript/JavaScript**) for AI provider usage and evaluates each flow against three
-orthogonal dimensions:
+EMEA**, with first-class **HK / GBA** support. borderlint statically scans your repo (**Python,
+TypeScript/JavaScript, and Java/Kotlin**) for AI provider usage and evaluates each flow against
+three orthogonal dimensions:
 
 - **Residency** — *where the bytes rest*. Each flow resolves to a jurisdiction (ccTLD/ISO codes
   plus the `CN-GBA` / `GBA` tokens); a flow outside the allow-list for the declared data class
@@ -35,12 +35,13 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 ```
 
 - No `--policy` → **inventory mode** (lists flows + jurisdictions, exits 0).
-- `--format json|mermaid|sarif|sbom|evidence` — machine output, a flow map, **SARIF** for GitHub code-scanning,
-  a deterministic **AI data-flow SBOM**, or an **evidence pack** — a fileable markdown transfer
+- `--format json|mermaid|sarif|sbom|evidence|html` — machine output, a flow map, **SARIF** for GitHub code-scanning,
+  a deterministic **AI data-flow SBOM**, an **evidence pack** — a fileable markdown transfer
   inventory with an audit envelope (git commit, policy SHA-256, KB review dates), all three
   governance axes with developer orgs, a waiver register, and a regime annex (PDPO, PIPL + GBA SC,
   Macao PDPA, PDPA-SG) that fills what the scan proves and leaves marked blanks for what only the
-  organisation knows. Exports are artifacts, not gates: they exit 0.
+  organisation knows — or an **HTML report**: one self-contained file (no scripts, nothing fetched)
+  to hand your privacy or compliance reviewer. Exports are artifacts, not gates: they exit 0.
 - `diff <baseline.sbom> <current.sbom>` — compare two SBOMs; **exits 1 when the PR adds a new
   non-`local` flow** (new egress), else 0. Diff the base-branch SBOM against the PR's to gate new AI egress.
 - `init [path]` — **scaffold a `residency.json`** instead of hand-writing one. It interviews you for
@@ -116,7 +117,9 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
 
 ## Capabilities
 
-- **Languages:** Python (AST) and TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
+- **Languages:** Python (AST), TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
+  and **Java/Kotlin** (`import` / `import static`, incl. **LangChain4j** and **Spring AI** as
+  runtime-routed aggregators and the official OpenAI/Anthropic/Bedrock/Vertex/Azure JVM SDKs),
   plus endpoint references in config/text files (incl. env-style keys like `MYAPP_LLM_SERVER_URL` in `.env`, compose, and settings files) and **OpenAI-compatible `/v1/chat/completions` calls**
   — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
 - **Providers:** 85+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
@@ -156,7 +159,7 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
   → PDPO / Macao PDPA / PIPL + the matching GBA Standard Contract; **APAC/EMEA seats `jp` (APPI), `kr`
   (PIPA), `sg`/`my` (PDPA s.26 / s.129), `au` (APP 8), `uk` (UK IDTA), `eu` (GDPR)** → their transfer
   mechanism. PIPL cross-border and GDPR are also surfaced for those destinations.
-- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM, an SBOM **`diff`** gate for new
+- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / HTML, an SBOM **`diff`** gate for new
   egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
 
 ## Scope
@@ -205,7 +208,7 @@ rendered to PNG:
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v1.7.0
+- uses: iolairus/borderlint@v1.9.0
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -216,7 +219,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v1.7.0
+  rev: v1.9.0
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
@@ -225,7 +228,28 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 The hook runs `borderlint scan` over the repo (the `args` are required for a real gate; without a
 policy it runs inventory mode and always passes).
 
+## Agentic coding
+
+The fastest-growing source of unreviewed AI egress is the coding agent itself, reaching for an
+SDK to solve the task in front of it. `integrations/` ships copy-paste rules that make the agent
+run borderlint *before* adding an AI dependency, endpoint, or model id — and surface any new
+non-`local` flow in the conversation, before it is committed:
+
+- **Claude Code** — append [`integrations/claude-code.md`](integrations/claude-code.md) to your
+  project's `CLAUDE.md` / `AGENTS.md`, or install
+  [`integrations/claude-code-skill.md`](integrations/claude-code-skill.md) as
+  `.claude/skills/borderlint-check/SKILL.md`.
+- **Cursor** — save [`integrations/cursor.mdc`](integrations/cursor.mdc) as
+  `.cursor/rules/borderlint.mdc`.
+
+Advisory by design: the pre-commit hook and the SBOM `diff` gate stay on as the enforcing
+backstop, and accepted flows are recorded with the inline waiver rather than hidden.
+
 ## Keeping the KB fresh
+
+**Browse the KB** at [iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/) —
+one page per provider and per model developer (residency, sovereignty, provenance, regime and
+cross-border references), generated straight from the bundled JSON on every KB change.
 
 A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) checks freshness on every axis:
 providers we don't yet cover (diffed against litellm's registry), **model families the

@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+from html import escape as _escape
 
 from .policy import _alias
 
@@ -67,8 +68,8 @@ def _flagged_dests(findings) -> set:
     return {f.detection.jurisdiction for f in findings if f.severity != "ok"}
 
 
-def _arrangements(findings, policy) -> list[str]:
-    """Cross-border arrangement reference(s) for flagged flows — context only, never adjudicated."""
+def _arrangement_ids(findings, policy) -> list[str]:
+    """Cross-border arrangement id(s) for flagged flows — context only, never adjudicated."""
     policy = policy or {}
     dests = _flagged_dests(findings)
     loc = _alias(policy.get("home_location")) if policy.get("home_location") else None
@@ -76,28 +77,32 @@ def _arrangements(findings, policy) -> list[str]:
         span = {loc} | dests
         out = []
         if {"hk", "CN-GBA"} <= span:
-            out.append(_ref("gba"))
+            out.append("gba")
         if {"mo", "CN-GBA"} <= span:
-            out.append(_ref("gba_mo"))
+            out.append("gba_mo")
         if "cn" in dests or (loc == "CN-GBA" and dests - {"cn", "CN-GBA", "hk", "mo"}):
-            out.append(_ref("pipl"))
+            out.append("pipl")
         if dests & _EU:
-            out.append(_ref("gdpr"))
+            out.append("gdpr")
         for aid in _REGIMES.get(loc, {}).get("arrangements", []):  # seeded empty for hk/mo/cn/CN-GBA
-            ref = _ref(aid)
-            if ref not in out:
-                out.append(ref)
+            if aid not in out:
+                out.append(aid)
         return out
     # legacy home_regime path — unchanged
     regime = policy.get("home_regime")
     out = []
     if "CN-GBA" in dests and regime in ("pdpo", "pipl"):  # HK <-> nine GBA cities, not plain cn
-        out.append(_ref("gba"))
+        out.append("gba")
     if "cn" in dests or (regime == "pipl" and dests - {"cn", "CN-GBA", "hk"}):
-        out.append(_ref("pipl"))
+        out.append("pipl")
     if dests & _EU:
-        out.append(_ref("gdpr"))
+        out.append("gdpr")
     return out
+
+
+def _arrangements(findings, policy) -> list[str]:
+    """Cross-border arrangement reference(s) for flagged flows — context only, never adjudicated."""
+    return [_ref(aid) for aid in _arrangement_ids(findings, policy)]
 
 
 def _regimes(findings, policy) -> list[str]:
@@ -376,6 +381,118 @@ def diff_text(delta: dict) -> str:
 
 def diff_json(delta: dict) -> str:
     return json.dumps(delta, indent=2, sort_keys=True)
+
+
+_HTML_STYLE = """\
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;margin:2rem auto;max-width:62rem;padding:0 1rem;color:#1a1a1a}
+h1{font-size:1.4rem}h2{font-size:1.1rem;margin-top:1.6rem}
+table{border-collapse:collapse;width:100%;font-size:.9rem;margin:.4rem 0}
+th,td{border:1px solid #ccc;padding:.35rem .5rem;text-align:left;vertical-align:top}
+th{background:#f5f5f5}
+table.meta{width:auto}
+code{font-family:ui-monospace,monospace;font-size:.85em}
+.chip{padding:.1rem .45rem;border-radius:.6rem;font-weight:600;font-size:.8rem}
+.chip.fail{background:#fdd;color:#900}.chip.warn{background:#fe9;color:#850}
+.chip.waived{background:#eee;color:#555}.chip.ok{background:#dfd;color:#060}
+tr.reasons td{border-top:0;color:#900;font-size:.85rem}"""
+
+
+def html(findings, kb, policy=None, envelope=None) -> str:
+    """Self-contained HTML report for review conversations — fetches nothing, runs nothing.
+
+    An artifact, not a gate (paired with exit 0 in the CLI). Every repo/KB-derived string is
+    escaped: scanned source must not be able to inject markup into the report. Not a filing
+    format — the markdown evidence pack remains the filing artifact.
+    """
+    env = envelope or {}
+    pol = policy or {}
+    has_policy = bool(pol)
+    e = lambda v: _escape(str(v), quote=True)
+    ua = lambda v: e(v) if v else "unavailable"
+    title = "borderlint — AI data-flow &amp; residency report"
+    out = ["<!doctype html>", '<html lang="en">', "<head>", '<meta charset="utf-8">',
+           '<meta name="viewport" content="width=device-width, initial-scale=1">',
+           f"<title>{title}</title>", "<style>", _HTML_STYLE, "</style>", "</head>", "<body>",
+           f"<h1>{title}</h1>"]
+
+    rows = [("Tool", "borderlint " + ua(env.get("version"))),
+            ("KB last reviewed", "providers " + ua(env.get("kb_providers"))
+             + " / sovereignty " + ua(env.get("kb_sovereignty"))
+             + " / provenance " + ua(env.get("kb_provenance"))),
+            ("Scan timestamp (UTC)", ua(env.get("timestamp"))),
+            ("Scanned path", ua(env.get("path"))),
+            ("Git commit", ua(env.get("commit")))]
+    if has_policy:
+        rows += [("Policy SHA-256", ua(env.get("policy_digest"))),
+                 ("Classification", ua(env.get("classification"))),
+                 ("Home location", ua(pol.get("home_location")))]
+    out.append('<table class="meta">')
+    out += [f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in rows]  # values escaped above
+    out.append("</table>")
+
+    if not findings:
+        out.append("<p>No AI provider usage detected.</p>")
+    else:
+        by = {}
+        for f in findings:
+            by.setdefault(f.detection.jurisdiction, []).append(f)
+        ncols = 8 if has_policy else 7
+        for j in sorted(by):
+            out.append(f"<h2>{e(juris(j))} <code>{e(j)}</code></h2>")
+            out.append("<table>")
+            head = "<th>Provider</th><th>Residency</th><th>Sovereignty</th><th>Weights</th><th>Model</th><th>Location</th><th>Evidence</th>"
+            out.append("<tr>" + ("<th>Severity</th>" if has_policy else "") + head + "</tr>")
+            for f in by[j]:
+                d = f.detection
+                model = getattr(d, "model", None)
+                org = getattr(d, "model_org", None)
+                mlabel = (f"{model} — {org}" if org else model) if model else "—"
+                cat = kb.category(d.provider_id)
+                plabel = f"{kb.name(d.provider_id)} ({cat})" if cat else kb.name(d.provider_id)
+                cells = [f'<td><span class="chip {e(f.severity)}">{e(f.severity)}</span></td>'] if has_policy else []
+                cells += [f"<td>{e(plabel)}</td>", f"<td>{e(juris(d.jurisdiction))}</td>",
+                          f"<td>{e(sov(getattr(d, 'sovereignty', 'unknown')))}</td>",
+                          f"<td>{e(sov(getattr(d, 'provenance', 'unknown')))}</td>",
+                          f"<td>{e(mlabel)}</td>",
+                          f"<td><code>{e(d.file)}:{d.line}</code></td>",
+                          f"<td><code>{e(d.kind)}: {e(d.evidence)}</code></td>"]
+                out.append("<tr>" + "".join(cells) + "</tr>")
+                if f.reasons:
+                    reasons = "; ".join(e(REASON.get(r, r)) for r in f.reasons)
+                    out.append(f'<tr class="reasons"><td colspan="{ncols}">! {reasons}</td></tr>')
+            out.append("</table>")
+
+    waived = [f for f in findings if f.severity == "waived"]
+    if waived:
+        out.append("<h2>Waiver register</h2>")
+        out.append("<ul>")
+        for f in waived:
+            d = f.detection
+            out.append(f"<li><code>{e(d.file)}:{d.line}</code> ({e(kb.name(d.provider_id))}) — {e(d.waiver)}</li>")
+        out.append("</ul>")
+
+    regs = _regimes(findings, pol)
+    aids = _arrangement_ids(findings, pol)
+    if regs or aids:
+        out.append("<h2>Cross-border context (references only)</h2>")
+        if regs:
+            out.append(f"<p>Regimes implicated: {e(', '.join(regs))}</p>")
+        if aids:
+            out.append("<ul>")
+            for aid in aids:
+                a = _ARRANGEMENTS[aid]
+                out.append(f'<li><a href="{e(a["url"])}">{e(a["name"])}</a> — {e(a["summary"])}</li>')
+            out.append("</ul>")
+
+    if has_policy and findings:
+        fails = sum(f.severity == "fail" for f in findings)
+        warns = sum(f.severity == "warn" for f in findings)
+        n_waived = len(waived)
+        oks = len(findings) - fails - warns - n_waived
+        out.append(f"<p>Summary: {fails} fail, {warns} warn, {n_waived} waived, {oks} ok</p>")
+
+    out += ["</body>", "</html>"]
+    return "\n".join(out)
 
 
 def evidence(findings, kb, policy=None, envelope=None) -> str:
