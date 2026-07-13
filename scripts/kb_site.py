@@ -54,7 +54,7 @@ def _slug(name: str) -> str:
     return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]", "-", name.lower())).strip("-")
 
 
-def _page(title: str, desc: str, body: str, depth: int) -> str:
+def _page(title: str, desc: str, body: str, depth: int, footer: str) -> str:
     home = "../" * depth
     return "\n".join([
         "<!doctype html>", '<html lang="en">', "<head>", '<meta charset="utf-8">',
@@ -64,7 +64,7 @@ def _page(title: str, desc: str, body: str, depth: int) -> str:
         "<style>", _STYLE, "</style>", "</head>", "<body>",
         f'<nav><a href="{home}index.html">{escape(SITE_NAME)}</a></nav>',
         body,
-        "<footer>", FOOTER, "</footer>", "</body>", "</html>"])
+        "<footer>", footer, "</footer>", "</body>", "</html>"])
 
 
 def _juris_label(j: str) -> str:
@@ -155,9 +155,8 @@ def build(out_dir: str) -> dict:
     prov = _load("provenance.json")
     regimes = _load("regimes.json")["regimes"]
     arrangements = {a["id"]: a for a in _load("arrangements.json")["arrangements"]}
-    global FOOTER
     e = lambda v: escape(str(v), quote=True)
-    FOOTER = (f"<p>Generated from the <a href=\"{REPO}\">borderlint</a> knowledge base — "
+    footer = (f"<p>Generated from the <a href=\"{REPO}\">borderlint</a> knowledge base — "
               f"providers reviewed {e(providers['updated'])}, sovereignty {e(sov['updated'])}, "
               f"provenance {e(prov['updated'])}. Corrections welcome via the repo.</p>"
               f"<p>Check your own repo: <code>{INSTALL}</code></p>")
@@ -172,7 +171,7 @@ def build(out_dir: str) -> dict:
         title = f"{p['name']} data residency & sovereignty — {SITE_NAME}"
         desc = (f"AI data residency and sovereignty for {p['name']}: residency {jlabel}, "
                 f"sovereignty bloc {sov_map.get(p['id'], 'unknown')}. From the borderlint knowledge base.")
-        doc = _page(title, desc, _provider_body(p, sov_map, regimes, arrangements), depth=1)
+        doc = _page(title, desc, _provider_body(p, sov_map, regimes, arrangements), depth=1, footer=footer)
         with open(os.path.join(out_dir, "providers", f"{p['id']}.html"), "w", encoding="utf-8") as fh:
             fh.write(doc)
         plinks.append((p["name"], f"providers/{p['id']}.html"))
@@ -192,7 +191,7 @@ def build(out_dir: str) -> dict:
         title = f"{org} model provenance — {SITE_NAME}"
         desc = (f"Model provenance for {org}: {len(orgs[org])} model-id pattern(s), "
                 f"provenance bloc {', '.join(sorted(blocs))}. Whose weights does your AI run?")
-        doc = _page(title, desc, _org_body(org, orgs[org], blocs), depth=1)
+        doc = _page(title, desc, _org_body(org, orgs[org], blocs), depth=1, footer=footer)
         with open(os.path.join(out_dir, "models", f"{s}.html"), "w", encoding="utf-8") as fh:
             fh.write(doc)
         olinks.append((org, f"models/{s}.html"))
@@ -218,7 +217,7 @@ def build(out_dir: str) -> dict:
         fh.write(_page(f"{SITE_NAME} — AI data residency, sovereignty & model provenance by provider",
                        "Browsable knowledge base: AI providers and model families resolved to "
                        "data residency, sovereignty, and model provenance. Generated from borderlint.",
-                       "\n".join(body), depth=0))
+                       "\n".join(body), depth=0, footer=footer))
     return {"providers": len(plinks), "orgs": len(olinks)}
 
 
