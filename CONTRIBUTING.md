@@ -28,12 +28,13 @@ Each object in the `providers` array:
 | `jurisdiction` | yes | string | Default jurisdiction token for the provider (see tokens below). Use `unknown` when the host carries the region (Azure/Bedrock), the cluster region is chosen per-deployment (vector stores), or the provider is an aggregator. |
 | `sdks` | no | string[] | Python import roots, e.g. `["openai"]`. Matched on `import x` / `from x …` and `x.<sub>`. |
 | `npm` | no | string[] | JS/TS package names, e.g. `["@anthropic-ai/sdk"]`. Matched on import/require and `pkg/<sub>`. |
+| `jvm` | no | string[] | Java/Kotlin import-package prefixes, e.g. `["com.openai"]`. Matched on `import` statements at dot boundaries (`com.openai.client.X`, not `com.openaiutils.X`). |
 | `endpoints` | no | string[] | Host substrings that identify the provider in code/config, e.g. `["api.openai.com"]`. |
 | `endpoint_jurisdictions` | no | object | Per-host override of `jurisdiction`, e.g. `{"dashscope-intl.aliyuncs.com": "sg"}`. |
 | `region_scheme` | no | `"aws"` \| `"azure"` \| `"gcp"` | The host carries the cloud region; borderlint resolves the region → jurisdiction (e.g. `bedrock-runtime.ap-east-1…` and `asia-east2-aiplatform.googleapis.com` → `hk`). |
 
-Omit a field rather than setting it empty. At least one of `sdks`, `npm`, or `endpoints` should
-be present, or the entry can never match.
+Omit a field rather than setting it empty. At least one of `sdks`, `npm`, `jvm`, or `endpoints`
+should be present, or the entry can never match.
 
 ### Jurisdiction tokens
 

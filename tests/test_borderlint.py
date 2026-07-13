@@ -1440,6 +1440,57 @@ def test_evidence_pack(tmp_path, monkeypatch, capsys):
     assert one == two and "fail" in one  # byte-identical, records the failing state
 
 
+def test_jvm_detection(tmp_path):
+    from borderlint.detect import scan
+    # Java: plain + static imports, dot-boundary negative, endpoint-literal parity
+    java = tmp_path / "App.java"
+    java.write_text(
+        "import com.openai.client.OpenAIClient;\n"
+        "import static com.anthropic.client.AnthropicClient.create;\n"
+        "import com.openaiutils.Helper;\n"
+        'class App { String url = "https://api.deepseek.com/v1"; }\n')
+    ds = scan(str(java), kb)
+    by = {d.provider_id: d for d in ds}
+    assert by["openai"].kind == "sdk_import" and by["openai"].jurisdiction == "us"
+    assert by["anthropic"].kind == "sdk_import"  # `import static` form
+    assert by["deepseek"].kind == "endpoint_reference"  # _scan_text parity on .java
+    # com.openaiutils must NOT resolve to openai (dot-boundary)
+    assert {d.evidence for d in ds if d.provider_id == "openai"} == {"com.openai.client.OpenAIClient"}
+
+    # Kotlin: bare import (no semicolon) + JVM aggregator -> unknown
+    kt = tmp_path / "Bot.kt"
+    kt.write_text(
+        "import com.anthropic.client.AnthropicOkHttpClient\n"
+        "import dev.langchain4j.model.chat.ChatLanguageModel\n")
+    by2 = {d.provider_id: d for d in scan(str(kt), kb)}
+    assert by2["anthropic"].jurisdiction == "us"
+    assert by2["langchain4j"].jurisdiction == "unknown"
+    assert kb.category("langchain4j") == "aggregator" and kb.category("spring_ai") == "aggregator"
+
+    # OpenAI-compatible call path in Kotlin resolves unknown (api_call parity)
+    kx = tmp_path / "Client.kt"
+    kx.write_text('val path = "/v1/chat/completions"\n')
+    assert any(d.kind == "api_call" and d.jurisdiction == "unknown" for d in scan(str(kx), kb))
+
+    # inline waiver on a flagged Java line
+    jw = tmp_path / "W.java"
+    jw.write_text('String u = "https://api.deepseek.com"; // borderlint: allow reviewed DR flow\n')
+    d = [x for x in scan(str(jw), kb) if x.provider_id == "deepseek"][0]
+    assert d.waiver and "reviewed" in d.waiver
+
+    # AWS SDK for Kotlin namespace (differs from the Java SDK v2) resolves to Bedrock
+    br_kt = tmp_path / "Br.kt"
+    br_kt.write_text("import aws.sdk.kotlin.services.bedrockruntime.BedrockRuntimeClient\n")
+    assert any(d.provider_id == "aws_bedrock" for d in scan(str(br_kt), kb))
+
+    # model reference binds provenance in a Java file
+    jm = tmp_path / "M.java"
+    jm.write_text('String host = "bedrock-runtime.ap-east-1.amazonaws.com";\n'
+                  'String model = "anthropic.claude-3-5-haiku-20241022-v1:0";\n')
+    md = [x for x in scan(str(jm), kb) if x.provider_id == "aws_bedrock"][0]
+    assert md.jurisdiction == "hk" and md.provenance == "us" and md.model
+
+
 def test_kb_site_generator(tmp_path):
     import importlib.util
     import json as _json
