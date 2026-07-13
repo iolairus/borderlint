@@ -1478,6 +1478,11 @@ def test_jvm_detection(tmp_path):
     d = [x for x in scan(str(jw), kb) if x.provider_id == "deepseek"][0]
     assert d.waiver and "reviewed" in d.waiver
 
+    # AWS SDK for Kotlin namespace (differs from the Java SDK v2) resolves to Bedrock
+    br_kt = tmp_path / "Br.kt"
+    br_kt.write_text("import aws.sdk.kotlin.services.bedrockruntime.BedrockRuntimeClient\n")
+    assert any(d.provider_id == "aws_bedrock" for d in scan(str(br_kt), kb))
+
     # model reference binds provenance in a Java file
     jm = tmp_path / "M.java"
     jm.write_text('String host = "bedrock-runtime.ap-east-1.amazonaws.com";\n'
