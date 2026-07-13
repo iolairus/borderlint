@@ -529,6 +529,18 @@ def test_badge_warn_only_yellow():
     assert doc["color"] == "yellow"
 
 
+def test_badge_zero_flows_inventory():
+    """Badge in inventory mode with 0 detections emits '0 flows'."""
+    import json as _json
+    from borderlint.report import badge
+    from borderlint.policy import Finding
+    doc = _json.loads(badge([], kb, None))
+    assert doc["schemaVersion"] == 1
+    assert doc["label"] == "borderlint"
+    assert doc["message"] == "0 flows"
+    assert doc["color"] == "blue"
+
+
 def test_badge_exit_code_non_gating(tmp_path):
     """Badge format exits 0 regardless of violations (non-gating export)."""
     import json as _json
