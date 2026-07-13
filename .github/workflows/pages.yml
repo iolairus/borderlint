@@ -5,9 +5,12 @@ on:
     paths:
       - "borderlint/data/**"
       - "scripts/kb_site.py"
+      - "borderlint/report.py"  # the generator imports its display labels from here
       - ".github/workflows/pages.yml"
   release:
     types: [published]
+  schedule:
+    - cron: "30 6 * * 1"  # weekly self-heal rebuild, 30 min after kb-refresh
   workflow_dispatch:
 
 permissions:
