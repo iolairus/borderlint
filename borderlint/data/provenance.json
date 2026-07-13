@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-08",
+  "updated": "2026-07-13",
   "note": "Advisory only. This map surfaces model-weight provenance — the bloc of the legal regime under which the model's developer operates — matched from model identifiers found statically in code. It does NOT adjudicate whether any export-control regime legally applies; the policy decides. Provenance is distinct from residency (where the endpoint sits) and sovereignty (who can compel disclosure from the serving provider). Fine-tunes and distillations inherit the base family's bloc. Patterns are case-insensitive prefixes anchored at the start of the identifier; longest pattern wins.",
   "sources_note": "Upstream catalogs from which provider prefixes here were derived. Re-check on kb refresh — new open-weights model families appearing on these pages indicate patterns to add. The kb-drift workflow does NOT scrape these automatically; a human diff on a refresh cadence is expected.",
   "sources": {
@@ -28,6 +28,8 @@
     "claude-": {"org": "Anthropic", "bloc": "us"},
     "gemini-": {"org": "Google", "bloc": "us"},
     "gemma-": {"org": "Google", "bloc": "us"},
+    "chirp": {"org": "Google", "bloc": "us"},
+    "muse-": {"org": "Meta", "bloc": "us"},
     "grok-": {"org": "xAI", "bloc": "us"},
     "llama-": {"org": "Meta", "bloc": "us"},
     "phi-": {"org": "Microsoft", "bloc": "us"},

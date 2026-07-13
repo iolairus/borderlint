@@ -32,7 +32,8 @@
     "vertex_ai-text-models": "vertex_ai",
     "vertex_ai-video-models": "vertex_ai",
     "vertex_ai-zai_models": "vertex_ai",
-    "zai": "zhipu"
+    "zai": "zhipu",
+    "meta": "meta_llama"
   },
   "ignore": {
     "apiserpent": "SERP/search API wrapper, no model weights (judged 2026-07-05)",
