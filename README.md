@@ -161,7 +161,7 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
   → PDPO / Macao PDPA / PIPL + the matching GBA Standard Contract; **APAC/EMEA seats `jp` (APPI), `kr`
   (PIPA), `sg`/`my` (PDPA s.26 / s.129), `au` (APP 8), `uk` (UK IDTA), `eu` (GDPR)** → their transfer
   mechanism. PIPL cross-border and GDPR are also surfaced for those destinations.
-- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / HTML, an SBOM **`diff`** gate for new
+- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / HTML / badge, an SBOM **`diff`** gate for new
   egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
 
 ## Scope
