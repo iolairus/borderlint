@@ -1,0 +1,24 @@
+---
+description: Run borderlint before adding any AI SDK, AI endpoint, or model identifier — check residency, sovereignty, and provenance before committing.
+alwaysApply: true
+---
+
+Before adding any AI SDK import, AI endpoint reference, or model identifier to this codebase
+(an `openai`/`anthropic`/`langchain`-style package, a provider URL, a Bedrock/HF/Ollama model
+id, an OpenAI-compatible `base_url`, an LLM endpoint in config or `.env`):
+
+1. Run the border check first. With a project policy:
+   `borderlint scan . --policy residency.json --classification <the project's data class>`
+   Otherwise inventory mode: `borderlint scan .`
+2. If the addition would introduce a flow whose jurisdiction is not `local` — or a
+   provider/router that resolves to `unknown` — say so in the conversation BEFORE committing,
+   naming the provider, its residency jurisdiction, its sovereignty bloc, and (if a model id is
+   involved) its provenance bloc. Let the human decide.
+3. If the flow is accepted, record it with an inline waiver carrying a real justification:
+   `# borderlint: allow <reason>`. Unjustified waivers are ignored; waivers cannot override a
+   provider or model deny.
+
+Backstop: the pre-commit hook and the CI SBOM `diff` gate fail any PR that adds new
+non-`local` AI egress — this rule moves the check to where the decision is made.
+
+Install: save as `.cursor/rules/borderlint.mdc` in your project.
