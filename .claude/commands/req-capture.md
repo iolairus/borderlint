@@ -8,7 +8,7 @@ Capture requirements for the topic `$ARGUMENTS` through a structured interview, 
 
 1. If no topic was given, ask what problem or initiative we are exploring. Derive a kebab-case topic name.
 
-   **Language gate (mandatory):** before generating any content, ask with **AskUserQuestion** whether the discovery doc must be written in **castellano** or **English**. Preselect `content.default_language` from `workflow.yaml` as the recommended option, but always ask — never assume.
+   The discovery doc is written in **English** (the repo's only content language).
 
 2. Interview the user with the **AskUserQuestion tool**, one round at a time, covering in order:
    - Who are the stakeholders/users affected, and what is the problem today?
