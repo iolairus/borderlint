@@ -35,13 +35,15 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 ```
 
 - No `--policy` → **inventory mode** (lists flows + jurisdictions, exits 0).
-- `--format json|mermaid|sarif|sbom|evidence|html` — machine output, a flow map, **SARIF** for GitHub code-scanning,
+- `--format json|mermaid|sarif|sbom|evidence|html|badge` — machine output, a flow map, **SARIF** for GitHub code-scanning,
   a deterministic **AI data-flow SBOM**, an **evidence pack** — a fileable markdown transfer
   inventory with an audit envelope (git commit, policy SHA-256, KB review dates), all three
   governance axes with developer orgs, a waiver register, and a regime annex (PDPO, PIPL + GBA SC,
   Macao PDPA, PDPA-SG) that fills what the scan proves and leaves marked blanks for what only the
-  organisation knows — or an **HTML report**: one self-contained file (no scripts, nothing fetched)
-  to hand your privacy or compliance reviewer. Exports are artifacts, not gates: they exit 0.
+  organisation knows — an **HTML report**: one self-contained file (no scripts, nothing fetched)
+  to hand your privacy or compliance reviewer; or a **shields.io badge** — a JSON payload for
+  `img.shields.io/endpoint?url=…` showing pass/fail/flow-count on your README or PR. Exports are
+  artifacts, not gates: they exit 0.
 - `diff <baseline.sbom> <current.sbom>` — compare two SBOMs; **exits 1 when the PR adds a new
   non-`local` flow** (new egress), else 0. Diff the base-branch SBOM against the PR's to gate new AI egress.
 - `init [path]` — **scaffold a `residency.json`** instead of hand-writing one. It interviews you for
@@ -159,7 +161,7 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
   → PDPO / Macao PDPA / PIPL + the matching GBA Standard Contract; **APAC/EMEA seats `jp` (APPI), `kr`
   (PIPA), `sg`/`my` (PDPA s.26 / s.129), `au` (APP 8), `uk` (UK IDTA), `eu` (GDPR)** → their transfer
   mechanism. PIPL cross-border and GDPR are also surfaced for those destinations.
-- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / HTML, an SBOM **`diff`** gate for new
+- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / HTML / badge, an SBOM **`diff`** gate for new
   egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
 
 ## Scope
@@ -244,6 +246,44 @@ non-`local` flow in the conversation, before it is committed:
 
 Advisory by design: the pre-commit hook and the SBOM `diff` gate stay on as the enforcing
 backstop, and accepted flows are recorded with the inline waiver rather than hidden.
+
+## Badge
+
+Generate a **shields.io badge** for your README or PR description. The badge shows the scan status
+as a colored badge: green for clean, red for violations, yellow for warnings, blue for inventory
+mode (flow count).
+
+```bash
+borderlint scan . --policy residency.json --classification customer-pii --format badge
+```
+
+Output is JSON conforming to the [shields.io endpoint schema](https://shields.io/endpoint):
+
+```json
+{"schemaVersion": 1, "label": "borderlint", "message": "clean", "color": "green"}
+```
+
+**Policy mode**: message is `"clean"` (green), `"{N} flagged"` (red on failures, yellow on
+warnings only). **Inventory mode** (no `--policy`): message is `"{N} flows"` (blue).
+
+### Publishing to shields.io
+
+Write the badge JSON to a file and host it (GitHub Pages, a gist, or any static host), then
+reference it in your README:
+
+```yaml
+# GitHub Actions — publish badge on every push
+- name: Generate borderlint badge
+  run: borderlint scan . --policy residency.json --classification customer-pii --format badge > badge.json
+- name: Deploy badge
+  run: cp badge.json $GITHUB_PAGES_DIR/badge.json
+```
+
+```markdown
+![borderlint](https://img.shields.io/endpoint?url=https://your-host/badge.json)
+```
+
+Badge output is a non-gating export: it always exits 0 regardless of violations.
 
 ## Keeping the KB fresh
 

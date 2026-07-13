@@ -599,3 +599,38 @@ def evidence(findings, kb, policy=None, envelope=None) -> str:
             out += ["## Regime annex", "",
                     f"No annex is available for regime {regime or 'unknown'}; the inventory above stands alone.", ""]
     return "\n".join(out)
+
+
+def badge(findings, kb, policy=None) -> str:
+    """Shields.io endpoint JSON — badge payload for CI dashboards and PR descriptions.
+    
+    Schema v1: https://shields.io/endpoint
+    - Policy mode with failures: message "{N} flagged", color red
+    - Policy mode clean: message "clean", color green
+    - Inventory mode (no policy): message "{N} flows", color blue
+    """
+    if policy is None:
+        # Inventory mode: blue badge with flow count
+        count = len(findings)
+        message = f"{count} flows"
+        color = "blue"
+    else:
+        # Policy mode: check for failures
+        has_failures = any(f.severity == "fail" for f in findings)
+        flagged = sum(1 for f in findings if f.severity in ("fail", "warn"))
+        if has_failures:
+            message = f"{flagged} flagged"
+            color = "red"
+        elif flagged > 0:
+            message = f"{flagged} flagged"
+            color = "yellow"
+        else:
+            message = "clean"
+            color = "green"
+    
+    return json.dumps({
+        "schemaVersion": 1,
+        "label": "borderlint",
+        "message": message,
+        "color": color
+    })
