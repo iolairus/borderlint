@@ -612,7 +612,7 @@ def badge(findings, kb, policy=None) -> str:
     if policy is None:
         # Inventory mode: blue badge with flow count
         count = len(findings)
-        message = f"{count} flows" if count > 0 else "clean"
+        message = f"{count} flows"
         color = "blue"
     else:
         # Policy mode: check for failures

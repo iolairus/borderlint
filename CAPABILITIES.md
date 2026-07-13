@@ -272,6 +272,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | D5 | **Inventory / "AI data‑flow SBOM"** export | ✅ |
 | D6 | Diff mode: *what new cross‑border flows did this PR introduce?* | ✅ |
 | D7 | **HTML report** (`--format html`): one self‑contained file for privacy/compliance review — no scripts, nothing fetched | ✅ |
+| D8 | **Shields.io badge** (`--format badge`): JSON payload for CI dashboards and PR descriptions — non-gating export | ✅ |
 
 ### E. Integration
 | # | Capability | Status |

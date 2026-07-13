@@ -2,7 +2,7 @@
 
 ### Requirement: Scan command
 The CLI SHALL provide a `scan` command that takes a path to scan, an optional policy, an optional
-active classification, and an output format (human-readable, JSON, Mermaid, SARIF, SBOM, evidence, or shields.io badge endpoint).
+active classification, and an output format (human-readable, JSON, Mermaid, SARIF, SBOM, evidence, HTML, or shields.io badge endpoint).
 
 #### Scenario: Scan a path against a policy
 - **WHEN** the user runs the scan command with a path, a policy, and a classification

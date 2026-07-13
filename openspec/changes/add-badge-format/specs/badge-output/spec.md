@@ -12,22 +12,26 @@ The CLI SHALL produce a shields.io endpoint JSON badge when `--format badge` is 
 - **THEN** the CLI emits JSON with `schemaVersion` set to 1, `label` set to `"borderlint"`, and valid `message` and `color` fields
 
 ### Requirement: Badge color coding by policy result
-The badge color SHALL be `"green"` when no violations exist (policy mode, clean), `"red"` when any violations exist (policy mode, failures), and `"blue"` in inventory mode (no policy).
+The badge color SHALL be `"green"` when no violations exist (policy mode, clean), `"red"` when any failures exist (policy mode), `"yellow"` when only warnings exist (policy mode, no failures), and `"blue"` in inventory mode (no policy).
 
 #### Scenario: Clean policy result yields green badge
 - **WHEN** a scan with policy finds no violations and `--format badge` is requested
 - **THEN** the badge color is `"green"`
 
 #### Scenario: Policy violations yield red badge
-- **WHEN** a scan with policy finds at least one violation and `--format badge` is requested
+- **WHEN** a scan with policy finds at least one failure and `--format badge` is requested
 - **THEN** the badge color is `"red"`
+
+#### Scenario: Policy warnings only yield yellow badge
+- **WHEN** a scan with policy finds warnings but no failures and `--format badge` is requested
+- **THEN** the badge color is `"yellow"`
 
 #### Scenario: Inventory mode yields blue badge
 - **WHEN** a scan without policy runs with `--format badge`
 - **THEN** the badge color is `"blue"`
 
 ### Requirement: Badge message content
-The badge message SHALL be `"clean"` when no violations exist (policy mode), `"{N} flagged"` when N violations exist (policy mode), and `"{N} flows"` when N flows are detected in inventory mode.
+The badge message SHALL be `"clean"` when no violations exist (policy mode), `"{N} flagged"` when N violations exist (policy mode), and `"{N} flows"` when N flows are detected in inventory mode (including `"0 flows"` when zero flows are detected).
 
 #### Scenario: Clean message in policy mode
 - **WHEN** a scan with policy finds no violations and `--format badge` is requested
