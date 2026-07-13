@@ -9,6 +9,9 @@ dist/
 venv/
 .env
 
+# Generated KB site (built fresh in CI; scripts/kb_site.py)
+site/
+
 # Tooling
 .pytest_cache/
 .mypy_cache/
