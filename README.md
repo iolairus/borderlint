@@ -217,6 +217,23 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 The hook runs `borderlint scan` over the repo (the `args` are required for a real gate; without a
 policy it runs inventory mode and always passes).
 
+## Agentic coding
+
+The fastest-growing source of unreviewed AI egress is the coding agent itself, reaching for an
+SDK to solve the task in front of it. `integrations/` ships copy-paste rules that make the agent
+run borderlint *before* adding an AI dependency, endpoint, or model id — and surface any new
+non-`local` flow in the conversation, before it is committed:
+
+- **Claude Code** — append [`integrations/claude-code.md`](integrations/claude-code.md) to your
+  project's `CLAUDE.md` / `AGENTS.md`, or install
+  [`integrations/claude-code-skill.md`](integrations/claude-code-skill.md) as
+  `.claude/skills/borderlint-check/SKILL.md`.
+- **Cursor** — save [`integrations/cursor.mdc`](integrations/cursor.mdc) as
+  `.cursor/rules/borderlint.mdc`.
+
+Advisory by design: the pre-commit hook and the SBOM `diff` gate stay on as the enforcing
+backstop, and accepted flows are recorded with the inline waiver rather than hidden.
+
 ## Keeping the KB fresh
 
 **Browse the KB** at [iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/) —
