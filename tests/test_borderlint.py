@@ -514,6 +514,21 @@ def test_badge_inventory_mode():
     assert doc["color"] == "blue"
 
 
+def test_badge_warn_only_yellow():
+    """Badge with warnings but no failures yields yellow."""
+    import json as _json
+    from borderlint.report import badge
+    # azure -> unknown jurisdiction; on_unknown: warn produces warn severity
+    d = dets('u = "myresource.openai.azure.com"\n')  # azure -> unknown
+    f = evaluate(d, {"classifications": {"c": ["hk"]}, "on_unknown": "warn"}, "c", kb)
+    assert all(x.severity == "warn" for x in f)
+    doc = _json.loads(badge(f, kb, {"classifications": {"c": ["hk"]}, "on_unknown": "warn"}))
+    assert doc["schemaVersion"] == 1
+    assert doc["label"] == "borderlint"
+    assert "flagged" in doc["message"]
+    assert doc["color"] == "yellow"
+
+
 def test_badge_exit_code_non_gating(tmp_path):
     """Badge format exits 0 regardless of violations (non-gating export)."""
     import json as _json
@@ -1683,8 +1698,6 @@ def test_kb_site_generator(tmp_path):
     assert 'href="https://' in b and "PIPL" in b
     # site tooling lives outside the shipped package
     assert not os.path.exists(os.path.join(root, "borderlint", "kb_site.py"))
-
-
 def test_html_report(tmp_path, capsys):
     import json as _json
     from dataclasses import replace
@@ -1732,6 +1745,41 @@ def test_html_report(tmp_path, capsys):
     assert cli.main(["scan", str(tmp_path), "-p", str(polf), "-c", "customer-pii", "-f", "html"]) == 0
     outdoc = capsys.readouterr().out
     assert "<!doctype html>" in outdoc and 'class="chip fail"' in outdoc
+
+
+def test_kb_site_generator(tmp_path):
+    import importlib.util
+    import json as _json
+    import os
+    import re
+    root = os.path.join(os.path.dirname(__file__), "..")
+    spec = importlib.util.spec_from_file_location("kb_site", os.path.join(root, "scripts", "kb_site.py"))
+    kb_site = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(kb_site)
+    counts = kb_site.build(str(tmp_path))
+    # one page per provider + per developer org + index
+    with open(os.path.join(root, "borderlint", "data", "providers.json"), encoding="utf-8") as fh:
+        n_providers = len(_json.load(fh)["providers"])
+    assert counts["providers"] == n_providers
+    assert counts["orgs"] >= 1
+    assert len(list((tmp_path / "providers").iterdir())) == counts["providers"]
+    assert len(list((tmp_path / "models").iterdir())) == counts["orgs"]  # unique slugs
+    assert (tmp_path / "index.html").exists()
+    # unknown-jurisdiction provider is honest about region-dependence
+    vertex = (tmp_path / "providers" / "vertex_ai.html").read_text()
+    assert "Region-dependent" in vertex
+    # unique title/meta per page, install one-liner everywhere (spot-check two pages)
+    a = (tmp_path / "providers" / "openai.html").read_text()
+    b = (tmp_path / "providers" / "deepseek.html").read_text()
+    for doc in (a, b):
+        assert "pip install borderlint" in doc
+    t = lambda doc: re.search(r"<title>(.*?)</title>", doc).group(1)
+    m = lambda doc: re.search(r'name="description" content="(.*?)"', doc).group(1)
+    assert t(a) != t(b) and m(a) != m(b) and "OpenAI" in t(a)
+    # cn-destination page names its regime and links the arrangement
+    assert 'href="https://' in b and "PIPL" in b
+    # site tooling lives outside the shipped package
+    assert not os.path.exists(os.path.join(root, "borderlint", "kb_site.py"))
 
 
 def test_config_endpoint_ignores_path_values():

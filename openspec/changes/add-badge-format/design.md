@@ -6,7 +6,7 @@ Borderlint currently supports six output formats: text, JSON, mermaid, SARIF, SB
 
 **Goals:**
 - Add `--format badge` that outputs shields.io endpoint JSON to stdout
-- Color-code by policy result: green (clean), red (failures), blue (inventory mode)
+- Color-code by policy result: green (clean), red (failures), yellow (warnings only), blue (inventory mode)
 - Keep the zero-dependency constraint — pure stdlib JSON construction
 - Document consumption patterns (GitHub Pages, gist, Actions step)
 
@@ -19,9 +19,10 @@ Borderlint currently supports six output formats: text, JSON, mermaid, SARIF, SB
 
 **Decision 1: Message format — count-based summary**
 - Policy mode with failures: `"{N} flagged"` (red)
+- Policy mode with warnings only (no failures): `"{N} flagged"` (yellow)
 - Policy mode clean: `"clean"` (green)
-- Inventory mode: `"{N} flows"` (blue)
-- Rationale: Shields badges have limited character space; a count gives the essential signal without crowding. Alternatives considered: listing jurisdictions (too long), "pass"/"fail" (loses inventory mode distinction).
+- Inventory mode: `"{N} flows"` (blue, including `"0 flows"` when no detections)
+- Rationale: Shields badges have limited character space; a count gives the essential signal without crowding. Yellow provides a middle ground for warn-only states (e.g., `on_unknown: warn`) without being as alarming as red. Alternatives considered: listing jurisdictions (too long), "pass"/"fail" (loses inventory mode distinction).
 
 **Decision 2: Badge format as non-gating export (like SBOM/evidence)**
 - `--format badge` exits 0 regardless of violations, matching SBOM/evidence behavior
