@@ -1,10 +1,119 @@
 """Smallest checks that fail if the core logic breaks (one per key spec scenario)."""
 
+import json
+import os
+import tempfile
+
 from borderlint.detect import Detection, _scan_config_endpoints, _scan_js, _scan_py, _scan_text, _resolve_sovereignty
+from borderlint.init import _InitArgs, run_init
 from borderlint.kb import load_kb
-from borderlint.policy import evaluate
+from borderlint.policy import evaluate, load_policy
 
 kb = load_kb()
+
+# A tiny fixture path that contains at least one detectable AI flow (OpenAI -> us).
+_FIXTURE = os.path.join(tempfile.mkdtemp(), "app.py")
+with open(_FIXTURE, "w", encoding="utf-8") as _fh:
+    _fh.write('import openai\n')
+
+
+def _write_input(scripted, walk_default="n"):
+    """Build an injectable input_fn over a fixed scripted list, then a default for walk prompts."""
+    idx = {"i": 0}
+    def _fn(prompt):
+        if idx["i"] < len(scripted):
+            v = scripted[idx["i"]]; idx["i"] += 1; return v
+        return walk_default
+    return _fn
+
+
+def test_init_interactive_writes_policy():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    a = _InitArgs(path=_FIXTURE, output=out)
+    # home=sg, classes=customer-pii,non-pii; drop the observed 'us' for both classes.
+    rc = run_init(a, input_fn=_write_input(["sg", "customer-pii,non-pii"]))
+    assert rc == 0
+    with open(out, encoding="utf-8") as fh:
+        policy = json.load(fh)
+    assert policy["home_location"] == "sg"
+    assert set(policy["classifications"]) == {"customer-pii", "non-pii"}
+    # home base is pre-seeded into every class allow-list.
+    assert policy["classifications"]["customer-pii"] == ["sg"]
+    assert policy["on_unknown"] == "warn"
+    # fail_on is omitted so the policy inherits the engine default.
+    assert "fail_on" not in policy
+    # the written file must load via the existing policy loader.
+    load_policy(out)
+
+
+def test_init_refuses_overwrite_without_force():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write('{"home_location":"hk","classifications":{"non-pii":["hk"]}}')
+    a = _InitArgs(path=_FIXTURE, output=out, force=False)
+    rc = run_init(a, input_fn=_write_input(["hk", "non-pii"]))
+    assert rc == 2  # non-zero, file untouched
+    with open(out, encoding="utf-8") as fh:
+        assert "home_location" in json.load(fh)
+
+
+def test_init_overwrites_with_force():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write('{"home_location":"hk","classifications":{"non-pii":["hk"]}}')
+    a = _InitArgs(path=_FIXTURE, output=out, force=True)
+    rc = run_init(a, input_fn=_write_input(["sg", "non-pii"]))
+    assert rc == 0
+    with open(out, encoding="utf-8") as fh:
+        assert json.load(fh)["home_location"] == "sg"
+
+
+def test_init_non_interactive_no_prompts():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    a = _InitArgs(path=_FIXTURE, home="hk", classes="customer-pii,non-pii", output=out)
+    # input_fn is never called in non-interactive mode; pass one that would fail if used.
+    rc = run_init(a, input_fn=lambda p: (_ for _ in ()).throw(AssertionError("prompted in non-interactive mode")))
+    assert rc == 0
+    with open(out, encoding="utf-8") as fh:
+        policy = json.load(fh)
+    # home + every observed jurisdiction (us) seeded into each class.
+    assert set(policy["classifications"]["customer-pii"]) == {"hk", "us"}
+    load_policy(out)
+
+
+def test_init_rejects_unsupported_home_seat():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    a = _InitArgs(path=_FIXTURE, home="zz", classes="non-pii", output=out)
+    # non-interactive path must reject a two-letter code that is not a supported seat.
+    rc = run_init(a, input_fn=lambda p: (_ for _ in ()).throw(AssertionError("prompted")))
+    assert rc == 2
+
+
+def test_init_interactive_rejects_unsupported_seat_then_accepts():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    a = _InitArgs(path=_FIXTURE, output=out)
+    # first answer 'zz' (rejected, re-prompted), then 'sg'; classes default to all three.
+    rc = run_init(a, input_fn=_write_input(["zz", "sg"]))
+    assert rc == 0
+    with open(out, encoding="utf-8") as fh:
+        assert json.load(fh)["home_location"] == "sg"
+
+
+def test_init_single_home_flag_honored_no_reprompt():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    a = _InitArgs(path=_FIXTURE, home="hk", output=out)
+    # only --home given: home is honoured, classes are prompted (default all three).
+    # input_fn is called once for classes; fail if home is re-prompted.
+    calls = {"home_prompted": False}
+    def _fn(prompt):
+        if "Home base" in prompt:
+            calls["home_prompted"] = True
+        return ""  # empty -> default classes (all three)
+    rc = run_init(a, input_fn=_fn)
+    assert rc == 0
+    assert calls["home_prompted"] is False
+    with open(out, encoding="utf-8") as fh:
+        assert set(json.load(fh)["classifications"]) == {"non-pii", "employee-pii", "customer-pii"}
 
 
 def _kb_file(data):

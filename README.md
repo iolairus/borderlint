@@ -44,6 +44,15 @@ python -m borderlint scan ./service --policy residency.json --classification cus
   to hand your privacy or compliance reviewer. Exports are artifacts, not gates: they exit 0.
 - `diff <baseline.sbom> <current.sbom>` — compare two SBOMs; **exits 1 when the PR adds a new
   non-`local` flow** (new egress), else 0. Diff the base-branch SBOM against the PR's to gate new AI egress.
+- `init [path]` — **scaffold a `residency.json`** instead of hand-writing one. It interviews you for
+  a home base (HK, Macao, GBA, JP, KR, SG, AU, UK, EU, MY) and the data classes you handle, runs a
+  read-only inventory scan of `path` (default `.`), then walks each observed jurisdiction and asks
+  whether to keep it for each class — proposing allow-lists grounded in what your code actually
+  reaches. Writes `residency.json` (refuses to overwrite without `--force`). For scripted/CI use,
+  skip the prompts with `--home <seat> --classes <csv>`:
+  ```bash
+  borderlint init . --home hk --classes customer-pii,non-pii --output residency.json
+  ```
 - Accept a reviewed flow with an inline `# borderlint: allow <reason>` **waiver** (justification
   required; it's reported as *waived*, not hidden, and can't override an explicit provider `deny`).
 - Exit code is non-zero on a violation, so it gates CI.
