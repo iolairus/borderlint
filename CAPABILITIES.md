@@ -271,6 +271,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | D4 | **SARIF** output (surfaces in GitHub code‑scanning) | ✅ |
 | D5 | **Inventory / "AI data‑flow SBOM"** export | ✅ |
 | D6 | Diff mode: *what new cross‑border flows did this PR introduce?* | ✅ |
+| D7 | **HTML report** (`--format html`): one self‑contained file for privacy/compliance review — no scripts, nothing fetched | ✅ |
 
 ### E. Integration
 | # | Capability | Status |

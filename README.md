@@ -35,12 +35,13 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 ```
 
 - No `--policy` → **inventory mode** (lists flows + jurisdictions, exits 0).
-- `--format json|mermaid|sarif|sbom|evidence` — machine output, a flow map, **SARIF** for GitHub code-scanning,
-  a deterministic **AI data-flow SBOM**, or an **evidence pack** — a fileable markdown transfer
+- `--format json|mermaid|sarif|sbom|evidence|html` — machine output, a flow map, **SARIF** for GitHub code-scanning,
+  a deterministic **AI data-flow SBOM**, an **evidence pack** — a fileable markdown transfer
   inventory with an audit envelope (git commit, policy SHA-256, KB review dates), all three
   governance axes with developer orgs, a waiver register, and a regime annex (PDPO, PIPL + GBA SC,
   Macao PDPA, PDPA-SG) that fills what the scan proves and leaves marked blanks for what only the
-  organisation knows. Exports are artifacts, not gates: they exit 0.
+  organisation knows — or an **HTML report**: one self-contained file (no scripts, nothing fetched)
+  to hand your privacy or compliance reviewer. Exports are artifacts, not gates: they exit 0.
 - `diff <baseline.sbom> <current.sbom>` — compare two SBOMs; **exits 1 when the PR adds a new
   non-`local` flow** (new egress), else 0. Diff the base-branch SBOM against the PR's to gate new AI egress.
 - Accept a reviewed flow with an inline `# borderlint: allow <reason>` **waiver** (justification
@@ -149,7 +150,7 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
   → PDPO / Macao PDPA / PIPL + the matching GBA Standard Contract; **APAC/EMEA seats `jp` (APPI), `kr`
   (PIPA), `sg`/`my` (PDPA s.26 / s.129), `au` (APP 8), `uk` (UK IDTA), `eu` (GDPR)** → their transfer
   mechanism. PIPL cross-border and GDPR are also surfaced for those destinations.
-- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM, an SBOM **`diff`** gate for new
+- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / HTML, an SBOM **`diff`** gate for new
   egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
 
 ## Scope
@@ -219,6 +220,10 @@ The hook runs `borderlint scan` over the repo (the `args` are required for a rea
 policy it runs inventory mode and always passes).
 
 ## Keeping the KB fresh
+
+**Browse the KB** at [iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/) —
+one page per provider and per model developer (residency, sovereignty, provenance, regime and
+cross-border references), generated straight from the bundled JSON on every KB change.
 
 A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) checks freshness on every axis:
 providers we don't yet cover (diffed against litellm's registry), **model families the

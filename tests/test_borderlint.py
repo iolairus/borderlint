@@ -1486,6 +1486,90 @@ def test_jvm_detection(tmp_path):
     assert md.jurisdiction == "hk" and md.provenance == "us" and md.model
 
 
+def test_kb_site_generator(tmp_path):
+    import importlib.util
+    import json as _json
+    import os
+    import re
+    root = os.path.join(os.path.dirname(__file__), "..")
+    spec = importlib.util.spec_from_file_location("kb_site", os.path.join(root, "scripts", "kb_site.py"))
+    kb_site = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(kb_site)
+    counts = kb_site.build(str(tmp_path))
+    # one page per provider + per developer org + index
+    with open(os.path.join(root, "borderlint", "data", "providers.json"), encoding="utf-8") as fh:
+        n_providers = len(_json.load(fh)["providers"])
+    assert counts["providers"] == n_providers
+    assert counts["orgs"] >= 1
+    assert len(list((tmp_path / "providers").iterdir())) == counts["providers"]
+    assert len(list((tmp_path / "models").iterdir())) == counts["orgs"]  # unique slugs
+    assert (tmp_path / "index.html").exists()
+    # unknown-jurisdiction provider is honest about region-dependence
+    vertex = (tmp_path / "providers" / "vertex_ai.html").read_text()
+    assert "Region-dependent" in vertex
+    # unique title/meta per page, install one-liner everywhere (spot-check two pages)
+    a = (tmp_path / "providers" / "openai.html").read_text()
+    b = (tmp_path / "providers" / "deepseek.html").read_text()
+    for doc in (a, b):
+        assert "pip install borderlint" in doc
+    t = lambda doc: re.search(r"<title>(.*?)</title>", doc).group(1)
+    m = lambda doc: re.search(r'name="description" content="(.*?)"', doc).group(1)
+    assert t(a) != t(b) and m(a) != m(b) and "OpenAI" in t(a)
+    # cn-destination page names its regime and links the arrangement
+    assert 'href="https://' in b and "PIPL" in b
+    # site tooling lives outside the shipped package
+    assert not os.path.exists(os.path.join(root, "borderlint", "kb_site.py"))
+
+
+def test_html_report(tmp_path, capsys):
+    import json as _json
+    from dataclasses import replace
+    from borderlint.policy import Finding
+    from borderlint.report import html as html_report
+    k = load_kb()
+    d = Detection("aws_bedrock", "endpoint_reference", "bedrock-runtime.ap-east-1.amazonaws.com",
+                  "src/app.py", 3, "hk", sovereignty="us", provenance="cn",
+                  model="deepseek.r1-v1:0", model_org="DeepSeek")
+    pol = {"home_location": "hk", "classifications": {"customer-pii": ["hk"]}}
+    fs = [Finding(d, "fail", ["sovereignty"]),
+          Finding(replace(d, waiver="ok'd"), "waived", ["sovereignty"]),
+          Finding(replace(d, jurisdiction="CN-GBA"), "fail", ["residency"])]
+    env = {"version": "x", "kb_providers": "2026-07-05", "timestamp": "T", "path": "p",
+           "commit": None, "policy_digest": "abc", "classification": "customer-pii"}
+    doc = html_report(fs, k, pol, env)
+    # header: resolved fields render, unresolved say so; policy rows present
+    assert "<th>Git commit</th><td>unavailable</td>" in doc
+    assert "<th>Policy SHA-256</th><td>abc</td>" in doc and "<td>customer-pii</td>" in doc
+    # grouped by jurisdiction, each row carrying all three axes
+    assert "<h2>Hong Kong <code>hk</code></h2>" in doc and "<h2>Mainland GBA <code>CN-GBA</code></h2>" in doc
+    assert "<td>Hong Kong</td><td>United States</td><td>Mainland China</td>" in doc
+    # severity chips + waiver register with escaped justification
+    assert 'class="chip fail"' in doc and "<h2>Waiver register</h2>" in doc and "ok&#x27;d" in doc
+    # regime tags + arrangement reference as a hyperlink (hk home, CN-GBA destination -> GBA SC)
+    assert "Regimes implicated:" in doc and "PDPO" in doc
+    assert '<a href="' in doc and "GBA Standard Contract" in doc
+    assert "Summary: 2 fail, 0 warn, 1 waived, 0 ok" in doc
+    # self-contained: nothing fetched when opened (<a href> reference links are fine)
+    for marker in ("<script", "<link ", "<img ", "@import", "url("):
+        assert marker not in doc, marker
+    # scanned content cannot inject markup
+    bad = Detection("openai", "sdk_import", "<script>alert(1)</script>", "a.py", 1, "us")
+    doc2 = html_report([Finding(bad, "ok", [])], k, None, env)
+    assert "<script" not in doc2 and "&lt;script&gt;" in doc2
+    # inventory mode: no verdicts, no severity column, no policy header rows
+    inv = html_report([Finding(d, "ok", [])], k, None, env)
+    assert 'class="chip' not in inv and "<th>Severity</th>" not in inv and "Policy SHA-256" not in inv
+    # CLI: html is an export -> exits 0 despite a violation
+    from borderlint import cli
+    src = tmp_path / "app.py"
+    src.write_text("import openai\n")
+    polf = tmp_path / "pol.json"
+    polf.write_text(_json.dumps({"classifications": {"customer-pii": ["hk"]}}))
+    assert cli.main(["scan", str(tmp_path), "-p", str(polf), "-c", "customer-pii", "-f", "html"]) == 0
+    outdoc = capsys.readouterr().out
+    assert "<!doctype html>" in outdoc and 'class="chip fail"' in outdoc
+
+
 def test_config_endpoint_ignores_path_values():
     # tsconfig-style baseUrl values are paths, not endpoints (TellMeWhy false positive)
     assert cfg('{"compilerOptions": {"baseUrl": "."}}', "tsconfig.json") == []
