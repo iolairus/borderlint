@@ -28,10 +28,10 @@ jira:
   default_issue_type: Task
 
 content:
-  # Default language offered for client-facing artifacts (discovery docs,
-  # stories, Jira exports, PR descriptions). Commands ALWAYS confirm the
-  # language with the user before generating; this is only the preselected option.
-  default_language: en   # es | en
+  # Language for client-facing artifacts (discovery docs, stories, Jira
+  # exports, PR descriptions). English is the only supported language;
+  # commands write it directly and never ask.
+  default_language: en   # en (only option)
 
 backlog:
   discovery_dir: backlog/discovery
