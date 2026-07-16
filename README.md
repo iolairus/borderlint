@@ -233,14 +233,23 @@ policy it runs inventory mode and always passes).
 ## Agentic coding
 
 The fastest-growing source of unreviewed AI egress is the coding agent itself, reaching for an
-SDK to solve the task in front of it. `integrations/` ships copy-paste rules that make the agent
-run borderlint *before* adding an AI dependency, endpoint, or model id — and surface any new
-non-`local` flow in the conversation, before it is committed:
+SDK to solve the task in front of it. `integrations/` ships an installable Claude Code plugin
+and copy-paste rules that make the agent run borderlint *before* adding an AI dependency,
+endpoint, or model id — and surface any new non-`local` flow in the conversation, before it is
+committed:
 
-- **Claude Code** — append [`integrations/claude-code.md`](integrations/claude-code.md) to your
-  project's `CLAUDE.md` / `AGENTS.md`, or install
-  [`integrations/claude-code-skill.md`](integrations/claude-code-skill.md) as
-  `.claude/skills/borderlint-check/SKILL.md`.
+- **Claude Code** — install the plugin (this repo is its marketplace):
+
+  ```
+  /plugin marketplace add iolairus/borderlint
+  /plugin install borderlint@borderlint
+  ```
+
+  Without plugins: copy
+  [`integrations/claude-plugin/skills/borderlint-check/SKILL.md`](integrations/claude-plugin/skills/borderlint-check/SKILL.md)
+  to `.claude/skills/borderlint-check/SKILL.md`, or append
+  [`integrations/claude-code.md`](integrations/claude-code.md) to your project's
+  `CLAUDE.md` / `AGENTS.md`.
 - **Cursor** — save [`integrations/cursor.mdc`](integrations/cursor.mdc) as
   `.cursor/rules/borderlint.mdc`.
 
