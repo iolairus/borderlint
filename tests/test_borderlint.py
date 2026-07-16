@@ -1878,3 +1878,31 @@ def test_env_directories_excluded_by_marker(tmp_path):
     ds = scan(tmp_path, kb)
     files = {d.file for d in ds}
     assert files == {str(tmp_path / "app.py")}
+
+
+def test_claude_plugin_manifests():
+    """plugin-packaging: manifests parse, required fields present, referenced paths exist."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with open(os.path.join(root, ".claude-plugin", "marketplace.json"), encoding="utf-8") as fh:
+        marketplace = json.load(fh)
+    assert marketplace["name"] == "borderlint" and marketplace["owner"]["name"]
+    plugins = marketplace["plugins"]
+    assert len(plugins) == 1 and plugins[0]["name"] == "borderlint"
+    plugin_dir = os.path.join(root, plugins[0]["source"])
+    assert os.path.isdir(plugin_dir), f"plugin source path missing: {plugins[0]['source']}"
+    with open(os.path.join(plugin_dir, ".claude-plugin", "plugin.json"), encoding="utf-8") as fh:
+        plugin = json.load(fh)
+    assert plugin["name"] == "borderlint"
+    skill_path = os.path.join(plugin_dir, "skills", "borderlint-check", "SKILL.md")
+    with open(skill_path, encoding="utf-8") as fh:
+        skill = fh.read()
+    frontmatter = skill.split("---")[1]
+    assert "name: borderlint-check" in frontmatter
+    desc = [l for l in frontmatter.splitlines() if l.startswith("description: ")]
+    assert desc and len(desc[0]) > len("description: ")
+    # body keeps the scan/surface/waiver instructions and the backstop paragraph
+    assert "borderlint scan ." in skill and "# borderlint: allow" in skill and "SBOM" in skill
+    # single-sourced: the legacy path is a pointer, not a second copy of the body
+    with open(os.path.join(root, "integrations", "claude-code-skill.md"), encoding="utf-8") as fh:
+        legacy = fh.read()
+    assert "Run the scan first" not in legacy and "claude-plugin/skills/borderlint-check" in legacy
