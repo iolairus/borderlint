@@ -124,7 +124,7 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
   runtime-routed aggregators and the official OpenAI/Anthropic/Bedrock/Vertex/Azure JVM SDKs),
   plus endpoint references in config/text files (incl. env-style keys like `MYAPP_LLM_SERVER_URL` in `.env`, compose, and settings files) and **OpenAI-compatible `/v1/chat/completions` calls**
   — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
-- **Providers:** 85+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
+- **Providers:** 90+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
   AI**), Azure, Bedrock, Mistral, Cohere, Groq, Together, Perplexity, xAI, Cerebras, Fireworks,
   Replicate, SambaNova, Meta Llama, **AWS SageMaker, Snowflake Cortex** + **Tencent, Alibaba, DeepSeek, Moonshot, Zhipu/Z.ai, Baidu,
   Volcengine, MiniMax**, plus **AI21 (IL), Jina (DE), Voyage, GigaChat (RU), Sarvam (IN), Scaleway &
@@ -155,14 +155,18 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
   shape as sovereignty, plus a `deny_models` family ban with provider-deny semantics; findings
   name the developer organisation when the map knows it.
 - **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
-  failure set, declared home regime.
+  failure set, declared home regime — scaffolded interactively by **`borderlint init`** (or
+  non-interactively with `--home`/`--classes` for CI).
 - **Regimes & arrangements:** declared home location → data-protection regime tag + the cross-border
   mechanism reference for a flagged flow (context only, never adjudicated). GBA seats `hk`/`mo`/`CN-GBA`
   → PDPO / Macao PDPA / PIPL + the matching GBA Standard Contract; **APAC/EMEA seats `jp` (APPI), `kr`
   (PIPA), `sg`/`my` (PDPA s.26 / s.129), `au` (APP 8), `uk` (UK IDTA), `eu` (GDPR)** → their transfer
   mechanism. PIPL cross-border and GDPR are also surfaced for those destinations.
-- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / HTML / badge, an SBOM **`diff`** gate for new
-  egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
+- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / evidence / HTML / badge, an SBOM **`diff`**
+  gate for new egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
+- **Agentic coding:** an installable **Claude Code plugin** (this repo is its own marketplace —
+  `/plugin marketplace add iolairus/borderlint`) and **Cursor** rules that make the agent scan
+  *before* adding an AI dependency, endpoint, or model id.
 
 ## Scope
 
