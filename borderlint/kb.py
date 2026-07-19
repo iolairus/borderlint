@@ -199,7 +199,7 @@ class KB:
         self.by_id = {}
         for p in providers:
             self.by_id.setdefault(p["id"], p)  # first wins; user providers are passed first
-        sdks, npm, jvm, eps = [], [], [], []
+        sdks, npm, jvm, dotnet, eps = [], [], [], [], []
         for p in providers:
             prio = 0 if p.get("_user") else 1  # user-supplied entries resolve in preference
             for s in p.get("sdks", []):
@@ -208,6 +208,8 @@ class KB:
                 npm.append((prio, n, p["id"]))
             for j in p.get("jvm", []):
                 jvm.append((prio, j, p["id"]))
+            for d in p.get("dotnet", []):
+                dotnet.append((prio, d, p["id"]))
             ej = p.get("endpoint_jurisdictions", {})
             for h in p.get("endpoints", []):
                 eps.append((prio, h, p["id"], ej.get(h, p.get("jurisdiction", "unknown"))))
@@ -215,6 +217,7 @@ class KB:
         self._sdks = sorted(sdks, key=lambda x: (x[0], -len(x[1])))
         self._npm = sorted(npm, key=lambda x: (x[0], -len(x[1])))
         self._jvm = sorted(jvm, key=lambda x: (x[0], -len(x[1])))
+        self._dotnet = sorted(dotnet, key=lambda x: (x[0], -len(x[1])))
         self._eps = sorted(eps, key=lambda x: (x[0], -len(x[1])))
         self.region_scheme = {p["id"]: p["region_scheme"] for p in providers if p.get("region_scheme")}
         self.updated: str | None = None  # KB last-reviewed date, set by load_kb
@@ -330,6 +333,13 @@ class KB:
         """Java/Kotlin import path → provider, dot-boundary prefix match (match_sdk semantics)."""
         for _prio, s, pid in self._jvm:
             if package == s or package.startswith(s + "."):
+                return pid
+        return None
+
+    def match_dotnet(self, namespace: str) -> str | None:
+        """C# using-directive namespace → provider, case-sensitive dot-boundary prefix match."""
+        for _prio, s, pid in self._dotnet:
+            if namespace == s or namespace.startswith(s + "."):
                 return pid
         return None
 

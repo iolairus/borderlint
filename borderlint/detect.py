@@ -14,6 +14,7 @@ IGNORE = {".git", "node_modules", "__pycache__", ".venv", "venv", "site-packages
 TEXT_EXT = {".env", ".ts", ".tsx", ".js", ".jsx", ".yaml", ".yml", ".toml", ".json", ".ini", ".cfg", ".sh"}
 JS_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}
 JVM_EXT = {".java", ".kt", ".kts"}
+CS_EXT = {".cs", ".csx"}
 MAX_FILE_BYTES = 5 * 1024 * 1024  # skip files larger than this; no source file is this big
 
 # AI endpoint declared via a config key or a base_url kwarg — anchored on the key, not the URL,
@@ -120,6 +121,22 @@ def _scan_jvm(path: str, src: str, kb) -> list[Detection]:
     out: list[Detection] = []
     for m in _JVM_IMPORT.finditer(src):
         pid = kb.match_jvm(m.group(1))
+        if pid:
+            line = src.count("\n", 0, m.start()) + 1
+            out.append(Detection(pid, "sdk_import", m.group(1), path, line, kb.default_jurisdiction(pid)))
+    return out
+
+
+# C# using directives: plain, `global`, `static`, and alias (`using X = Some.Namespace;`) forms.
+# The trailing `;` keeps `using` declarations/statements (`using var x = …`, `using (…)`) out:
+# their first token is never a bare dotted name ending in `;`.
+_CS_USING = re.compile(r"^\s*(?:global\s+)?using\s+(?:static\s+)?(?:\w+\s*=\s*)?([\w.]+)\s*;", re.M)
+
+
+def _scan_cs(path: str, src: str, kb) -> list[Detection]:
+    out: list[Detection] = []
+    for m in _CS_USING.finditer(src):
+        pid = kb.match_dotnet(m.group(1))
         if pid:
             line = src.count("\n", 0, m.start()) + 1
             out.append(Detection(pid, "sdk_import", m.group(1), path, line, kb.default_jurisdiction(pid)))
@@ -282,8 +299,9 @@ def scan(root, kb) -> list[Detection]:
         is_py = suffix == ".py"
         is_js = suffix in JS_EXT
         is_jvm = suffix in JVM_EXT
+        is_cs = suffix in CS_EXT
         is_text = suffix in TEXT_EXT or p.name == ".env"
-        if not (is_py or is_js or is_jvm or is_text):
+        if not (is_py or is_js or is_jvm or is_cs or is_text):
             continue
         try:
             if p.stat().st_size > MAX_FILE_BYTES:  # don't read a huge file into memory (DoS guard)
@@ -301,6 +319,8 @@ def scan(root, kb) -> list[Detection]:
             dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
         elif is_jvm:  # same shape as JS: imports + endpoint literals + call paths
             dets = _scan_jvm(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
+        elif is_cs:  # same shape as JVM: using directives + endpoint literals + call paths
+            dets = _scan_cs(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
         else:
             dets = _scan_text(str(p), src, kb) + cfg
         # one detection per flow per line: drop an api_call already produced by another scanner on its line

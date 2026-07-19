@@ -235,6 +235,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | A6 | Detect **observability/telemetry** endpoints that exfiltrate prompts/traces | later |
 | A7 | Detect **MCP servers / agent tool endpoints** by jurisdiction | later |
 | A8 | Scan **Java / Kotlin** (regex imports via the `jvm` KB key; endpoint/call-path/waiver parity with JS) | ✅ |
+| A9 | Scan **C#** (regex `using` directives via the `dotnet` KB key; endpoint/call-path/waiver parity with JVM) | ✅ |
 
 ### B. Classification — *locate each flow*
 | # | Capability | Status |
