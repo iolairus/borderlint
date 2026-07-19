@@ -47,6 +47,7 @@
     "baidu_ernie": "cn",
     "volcengine": "cn",
     "minimax": "cn",
+    "huawei_modelarts": "cn",
     "groq": "us",
     "together_ai": "us",
     "perplexity": "us",

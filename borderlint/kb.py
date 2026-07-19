@@ -65,6 +65,21 @@ _ALIYUN_REGION = {
 }
 
 
+# Huawei region tokens in MaaS hosts (api-<region>.modelarts-maas.com): AWS-style token syntax
+# with different geography (Huawei ap-southeast-1 = CN-Hong Kong, me-east-1 = Riyadh). Verified
+# against Huawei's ECS region table (33 regions); mainland cn-* tokens resolve as a class.
+_HUAWEI_RE = re.compile(r"\bapi-([a-z]{2}-[a-z]+-\d+)(?=\.modelarts-maas\.com)")
+_HUAWEI_REGION = {
+    "ap-southeast-1": "hk", "ap-southeast-2": "th", "ap-southeast-3": "sg",
+    "ap-southeast-4": "id", "ap-southeast-5": "ph",
+    "me-east-1": "sa", "ae-ad-1": "ae",
+    "af-north-1": "eg", "af-south-1": "za", "tr-west-1": "tr",
+    "eu-west-0": "fr", "eu-west-101": "ie",
+    "la-north-2": "mx", "na-mexico-1": "mx", "sa-brazil-1": "br", "la-south-2": "cl",
+    "my-kualalumpur-1": "my", "ru-moscow-1": "ru",
+}
+
+
 def _region_jurisdiction(text: str, scheme: str):
     if scheme == "aliyun":
         m = _ALIYUN_RE.search(text)
@@ -74,6 +89,16 @@ def _region_jurisdiction(text: str, scheme: str):
         if r in _ALIYUN_REGION:
             return _ALIYUN_REGION[r]
         return "cn" if r.startswith("cn-") else None  # mainland cities → cn; unmapped intl → unknown
+    if scheme == "huawei":
+        m = _HUAWEI_RE.search(text)
+        if not m:
+            return None  # token-less api.modelarts-maas.com → provider default cn
+        r = m.group(1)
+        if r in _HUAWEI_REGION:
+            return _HUAWEI_REGION[r]
+        # mainland tokens are a class; a captured-but-unmapped token is an explicit unknown —
+        # never None, which would fall through to the cn provider default
+        return "cn" if r.startswith("cn-") else "unknown"
     if scheme == "aws":
         m = _AWS_RE.search(text)
         if not m:

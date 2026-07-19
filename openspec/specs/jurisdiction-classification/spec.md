@@ -45,6 +45,18 @@ the specific endpoint that was detected.
 - **WHEN** a detection matches a PAI-EAS host whose region token is not in the Aliyun map
 - **THEN** the jurisdiction resolves to `unknown`, never to a guessed jurisdiction
 
+#### Scenario: Same token text, different cloud, different jurisdiction
+- **WHEN** a detection matches the Huawei MaaS host `api-ap-southeast-1.modelarts-maas.com`
+- **THEN** it resolves to `hk` (Huawei's ap-southeast-1 is CN-Hong Kong), even though the identical token resolves `sg` on an AWS or Aliyun host — schemes are dispatched per provider
+
+#### Scenario: Huawei mainland MaaS host carries no region token
+- **WHEN** a detection matches `api.modelarts-maas.com`
+- **THEN** it resolves to the provider default `cn`
+
+#### Scenario: Unmapped Huawei region token degrades to unknown
+- **WHEN** a detection matches a Huawei MaaS host whose region token is not in the Huawei map (for example a newly launched region)
+- **THEN** the jurisdiction resolves to `unknown`, never to the provider default `cn` and never to a guessed jurisdiction
+
 ### Requirement: Undetermined jurisdiction is unknown
 The system SHALL mark a flow's jurisdiction as unknown when it cannot be determined from the
 provider or endpoint alone, for example for region-in-endpoint providers such as Azure OpenAI or
