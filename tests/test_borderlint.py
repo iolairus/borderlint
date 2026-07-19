@@ -1753,6 +1753,32 @@ def test_huggingface_router(tmp_path):
     assert kb.category("huggingface") == "aggregator"
 
 
+def test_aliyun_coverage(tmp_path):
+    from borderlint.detect import scan
+    # PAI-EAS: mainland → cn, Hong Kong → hk, international → sg, unmapped token → unknown
+    f = tmp_path / "cfg.py"
+    f.write_text('A = "https://1662339.cn-hangzhou.pai-eas.aliyuncs.com/api/predict/svc"\n'
+                 'B = "https://1662339.cn-hongkong.pai-eas.aliyuncs.com/api/predict/svc"\n'
+                 'C = "https://1662339.ap-southeast-1.pai-eas.aliyuncs.com/api/predict/svc"\n'
+                 'D = "https://1662339.eu-north-9.pai-eas.aliyuncs.com/api/predict/svc"\n')
+    pai = {d.jurisdiction for d in scan(str(f), kb) if d.provider_id == "alibaba_pai"}
+    assert pai == {"cn", "hk", "sg", "unknown"}
+
+    # official DashScope Java SDK import
+    j = tmp_path / "Chat.java"
+    j.write_text("import com.alibaba.dashscope.aigc.generation.Generation;\n")
+    dj = [d for d in scan(str(j), kb) if d.provider_id == "alibaba_dashscope"][0]
+    assert dj.kind == "sdk_import" and dj.jurisdiction == "cn"
+
+    # ModelScope: Python import + Alibaba-hosted inference endpoint
+    m = tmp_path / "ms.py"
+    m.write_text("from modelscope import pipeline\n"
+                 'URL = "https://api-inference.modelscope.cn/v1/chat/completions"\n')
+    ms = {(d.kind, d.jurisdiction) for d in scan(str(m), kb) if d.provider_id == "modelscope"}
+    assert ("sdk_import", "cn") in ms
+    assert ("endpoint_reference", "cn") in ms
+
+
 def test_foundry_and_tokenhub(tmp_path):
     from borderlint.detect import scan
     # Foundry: Python inference SDK import + project endpoint (no region) + regional serverless host

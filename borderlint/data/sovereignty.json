@@ -39,6 +39,8 @@
     "deepseek": "cn",
     "tencent_hunyuan": "cn",
     "tencent_tokenhub": "cn",
+    "alibaba_pai": "cn",
+    "modelscope": "cn",
     "alibaba_dashscope": "cn",
     "moonshot": "cn",
     "zhipu": "cn",
