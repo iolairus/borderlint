@@ -25,7 +25,7 @@ The .NET estate is the other half of the enterprise story the JVM change told: b
 
 - `borderlint/detect.py`: `CS_EXT` + `_scan_cs()` (regex over `using` directives, mirroring `_scan_jvm`), one new branch in the `scan()` suffix dispatch.
 - `borderlint/kb.py`: build a `dotnet` match table from the new optional per-provider key (same pattern as `jvm`); `match_dotnet()` with dot-segment-aware longest-prefix matching.
-- `borderlint/data/providers.json` (+`sovereignty.json`): `dotnet` keys on ~8 providers; two new aggregator entries.
+- `borderlint/data/providers.json` (+`sovereignty.json`): `dotnet` keys on ~8 providers; three new aggregator entries (`semantic_kernel`, `microsoft_extensions_ai`, `huggingface`).
 - `tests/test_borderlint.py`: C# fixtures covering the `using` forms, aggregator resolution, endpoint-literal and waiver parity.
 - `README.md` / `CAPABILITIES.md` / `CONTRIBUTING.md` (KB schema mention). Zero new dependencies.
 

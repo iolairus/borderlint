@@ -49,6 +49,14 @@ Detection dispatches per file suffix in `scan()` (`detect.py:284-303`): JVM sour
    one-author libraries only). OpenRouter likewise has no official/de-facto JVM or .NET SDK —
    dominant usage is an OpenAI SDK pointed at `openrouter.ai`, which endpoint detection covers
    in every supported language.
+   *Addendum (task 1.4):* AWS Bedrock verified already covered in all languages. Added
+   `ms_fabric` — data-agent MCP endpoints only, matched on the path-scoped substring
+   `api.fabric.microsoft.com/v1/mcp` so generic Fabric REST management calls are not flagged as
+   AI flows (jurisdiction `unknown`: capacity region is not in the host; sovereignty `us`).
+   Added `tencent_tokenhub` — Tencent's OpenAI-compatible multi-model gateway
+   (`tokenhub.tencentmaas.com` → cn, `tokenhub-intl` → unknown per the minimax intl precedent,
+   plus the TokenPlan `api.lkeap.cloud.tencent.com` host); modeled as cn inference, not an
+   aggregator, because Tencent hosts the models it serves.
 5. **Two aggregator ids rather than one** — Microsoft.Extensions.AI is the vendor-neutral
    abstraction layer Semantic Kernel itself builds on; different NuGet, different namespace,
    different signal. Folding them would misreport the provider name in findings (the langchain4j

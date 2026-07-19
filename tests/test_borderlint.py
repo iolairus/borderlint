@@ -1753,6 +1753,22 @@ def test_huggingface_router(tmp_path):
     assert kb.category("huggingface") == "aggregator"
 
 
+def test_fabric_and_tokenhub_endpoints(tmp_path):
+    from borderlint.detect import scan
+    f = tmp_path / "cfg.py"
+    f.write_text('AGENT = "https://api.fabric.microsoft.com/v1/mcp/workspaces/ws/dataagents/da/agent"\n'
+                 'INTL = "https://tokenhub-intl.tencentmaas.com/v1"\n'
+                 'CN = "https://tokenhub.tencentmaas.com/v1"\n')
+    by = {(d.provider_id, d.jurisdiction) for d in scan(str(f), kb)}
+    assert ("ms_fabric", "unknown") in by
+    assert ("tencent_tokenhub", "unknown") in by  # intl host: data location undocumented
+    assert ("tencent_tokenhub", "cn") in by
+    # generic Fabric REST (non-MCP path) is data-platform management, not an AI flow
+    g = tmp_path / "rest.py"
+    g.write_text('API = "https://api.fabric.microsoft.com/v1/workspaces"\n')
+    assert not any(d.provider_id == "ms_fabric" for d in scan(str(g), kb))
+
+
 def test_kb_site_generator(tmp_path):
     import importlib.util
     import json as _json
