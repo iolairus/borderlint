@@ -27,4 +27,4 @@
 
 ## 6. Deploy
 
-- [ ] 6.1 After merge, confirm the pages workflow republishes (push trigger covers `scripts/kb_site.py` and `borderlint/data/**`); trigger `workflow_dispatch` if the curation landed without touching those paths — kb-website spec: Automated publication
+- [x] 6.1 After merge, confirm the pages workflow republishes (push trigger covers `scripts/kb_site.py` and `borderlint/data/**`); trigger `workflow_dispatch` if the curation landed without touching those paths — kb-website spec: Automated publication
