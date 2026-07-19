@@ -25,7 +25,7 @@
     "google_gemini": "us",
     "vertex_ai": "us",
     "azure_openai": "us",
-    "ms_fabric": "us",
+    "azure_foundry": "us",
     "aws_bedrock": "us",
     "mistral": "eu",
     "cohere": "ca",

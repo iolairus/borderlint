@@ -1753,20 +1753,27 @@ def test_huggingface_router(tmp_path):
     assert kb.category("huggingface") == "aggregator"
 
 
-def test_fabric_and_tokenhub_endpoints(tmp_path):
+def test_foundry_and_tokenhub(tmp_path):
     from borderlint.detect import scan
+    # Foundry: Python inference SDK import + project endpoint (no region) + regional serverless host
+    py = tmp_path / "chat.py"
+    py.write_text("from azure.ai.inference import ChatCompletionsClient\n")
+    assert any(d.provider_id == "azure_foundry" and d.kind == "sdk_import" for d in scan(str(py), kb))
+    cs = tmp_path / "Chat.cs"
+    cs.write_text('using Azure.AI.Inference;\n'
+                  'var proj = "https://myproj.services.ai.azure.com/models";\n'
+                  'var mass = "https://phi-4.eastus2.models.ai.azure.com";\n')
+    by = {(d.kind, d.jurisdiction) for d in scan(str(cs), kb) if d.provider_id == "azure_foundry"}
+    assert ("sdk_import", "unknown") in by  # not misread as Azure.AI.OpenAI
+    assert ("endpoint_reference", "unknown") in by  # project host carries no region
+    assert ("endpoint_reference", "us") in by  # eastus2 resolves via the azure scheme
+    # TokenHub: cn gateway; intl host has undocumented data location
     f = tmp_path / "cfg.py"
-    f.write_text('AGENT = "https://api.fabric.microsoft.com/v1/mcp/workspaces/ws/dataagents/da/agent"\n'
-                 'INTL = "https://tokenhub-intl.tencentmaas.com/v1"\n'
+    f.write_text('INTL = "https://tokenhub-intl.tencentmaas.com/v1"\n'
                  'CN = "https://tokenhub.tencentmaas.com/v1"\n')
-    by = {(d.provider_id, d.jurisdiction) for d in scan(str(f), kb)}
-    assert ("ms_fabric", "unknown") in by
-    assert ("tencent_tokenhub", "unknown") in by  # intl host: data location undocumented
-    assert ("tencent_tokenhub", "cn") in by
-    # generic Fabric REST (non-MCP path) is data-platform management, not an AI flow
-    g = tmp_path / "rest.py"
-    g.write_text('API = "https://api.fabric.microsoft.com/v1/workspaces"\n')
-    assert not any(d.provider_id == "ms_fabric" for d in scan(str(g), kb))
+    th = {(d.provider_id, d.jurisdiction) for d in scan(str(f), kb)}
+    assert ("tencent_tokenhub", "unknown") in th
+    assert ("tencent_tokenhub", "cn") in th
 
 
 def test_kb_site_generator(tmp_path):

@@ -5,7 +5,7 @@
 - [x] 1.1 Add `dotnet` namespace-prefix lists to providers.json for: openai, azure_openai, anthropic, aws_bedrock, sagemaker, vertex_ai, google_gemini, ollama — design decision 4
 - [x] 1.2 Add aggregator entries `semantic_kernel` (`Microsoft.SemanticKernel`) and `microsoft_extensions_ai` (`Microsoft.Extensions.AI`) to providers.json + provider→`unknown` entries under `providers` in sovereignty.json — design decisions 4-5
 - [x] 1.3 Check Hugging Face and OpenRouter for JVM/.NET SDKs; add `huggingface` aggregator entry (Python/npm/dotnet + router/api-inference endpoints — the KB had no HF entry at all); OpenRouter has no de-facto JVM/.NET SDK, endpoint coverage suffices — design decision 4 addendum
-- [x] 1.4 Coverage check for AWS Bedrock (already covered all languages), Microsoft Fabric (add `ms_fabric` with path-scoped data-agent MCP endpoint), Tencent TokenHub (add `tencent_tokenhub` cn gateway, intl host → unknown) — design decision 4 addendum
+- [x] 1.4 Coverage check for AWS Bedrock (already covered all languages), Azure AI Foundry (add `azure_foundry`: inference/projects SDKs across Python/npm/JVM/.NET + services/models.ai.azure.com endpoints, azure region scheme), Tencent TokenHub (add `tencent_tokenhub` cn gateway, intl host → unknown) — design decision 4 addendum
 
 ## 2. Engine
 

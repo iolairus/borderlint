@@ -50,9 +50,13 @@ Detection dispatches per file suffix in `scan()` (`detect.py:284-303`): JVM sour
    dominant usage is an OpenAI SDK pointed at `openrouter.ai`, which endpoint detection covers
    in every supported language.
    *Addendum (task 1.4):* AWS Bedrock verified already covered in all languages. Added
-   `ms_fabric` — data-agent MCP endpoints only, matched on the path-scoped substring
-   `api.fabric.microsoft.com/v1/mcp` so generic Fabric REST management calls are not flagged as
-   AI flows (jurisdiction `unknown`: capacity region is not in the host; sovereignty `us`).
+   `azure_foundry` — the Foundry SDK family across all four languages (`azure.ai.inference` /
+   `azure.ai.projects` Python, `@azure-rest/ai-inference` / `@azure/ai-projects` /
+   `@azure/ai-agents` npm, `com.azure.ai.inference` Java, `Azure.AI.Inference` /
+   `Azure.AI.Projects` .NET — all verified on Maven/npm/NuGet) plus the
+   `services.ai.azure.com` project and `models.ai.azure.com` serverless endpoints; regional
+   serverless hosts resolve via the existing azure region scheme, sovereignty `us`. Foundry
+   serves many vendors' models, so provenance comes from model references, as with Bedrock.
    Added `tencent_tokenhub` — Tencent's OpenAI-compatible multi-model gateway
    (`tokenhub.tencentmaas.com` → cn, `tokenhub-intl` → unknown per the minimax intl precedent,
    plus the TokenPlan `api.lkeap.cloud.tencent.com` host); modeled as cn inference, not an
