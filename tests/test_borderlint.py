@@ -1735,6 +1735,24 @@ def test_csharp_detection(tmp_path):
     assert md.jurisdiction == "hk" and md.provenance == "us" and md.model
 
 
+def test_huggingface_router(tmp_path):
+    from borderlint.detect import scan
+    # Python import resolves the aggregator with unknown jurisdiction
+    py = tmp_path / "hf.py"
+    py.write_text("from huggingface_hub import InferenceClient\n")
+    assert any(d.provider_id == "huggingface" and d.jurisdiction == "unknown" for d in scan(str(py), kb))
+    # C# de-facto client + both endpoint tiers: router → runtime-chosen provider, classic tier → us
+    cs = tmp_path / "Hf.cs"
+    cs.write_text('using HuggingFace;\n'
+                  'var url = "https://router.huggingface.co/v1";\n'
+                  'var legacy = "https://api-inference.huggingface.co/models/x";\n')
+    js = {(d.kind, d.jurisdiction) for d in scan(str(cs), kb) if d.provider_id == "huggingface"}
+    assert ("sdk_import", "unknown") in js
+    assert ("endpoint_reference", "unknown") in js
+    assert ("endpoint_reference", "us") in js
+    assert kb.category("huggingface") == "aggregator"
+
+
 def test_kb_site_generator(tmp_path):
     import importlib.util
     import json as _json

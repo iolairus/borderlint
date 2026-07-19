@@ -42,6 +42,13 @@ Detection dispatches per file suffix in `scan()` (`detect.py:284-303`): JVM sour
    modeled on langchain4j/spring_ai (`unknown`/`unknown`, runtime-routed). Cohere and Mistral have
    no confident .NET namespace — left to the weekly KB drift process. Every namespace above is
    verified against the published NuGet package during task 4 before merge.
+   *Addendum (task 1.3):* Hugging Face had no KB entry at all; added as an aggregator
+   (`huggingface_hub` / `@huggingface/inference` / tryAGI `HuggingFace` for .NET, plus
+   `router.huggingface.co` → unknown (Inference Providers proxy, destination chosen at runtime)
+   and `api-inference.huggingface.co` → us). No de-facto HF JVM client exists (fragmented
+   one-author libraries only). OpenRouter likewise has no official/de-facto JVM or .NET SDK —
+   dominant usage is an OpenAI SDK pointed at `openrouter.ai`, which endpoint detection covers
+   in every supported language.
 5. **Two aggregator ids rather than one** — Microsoft.Extensions.AI is the vendor-neutral
    abstraction layer Semantic Kernel itself builds on; different NuGet, different namespace,
    different signal. Folding them would misreport the provider name in findings (the langchain4j
