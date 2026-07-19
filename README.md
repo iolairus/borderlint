@@ -127,10 +127,10 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
   **Microsoft.Extensions.AI** as runtime-routed aggregators),
   plus endpoint references in config/text files (incl. env-style keys like `MYAPP_LLM_SERVER_URL` in `.env`, compose, and settings files) and **OpenAI-compatible `/v1/chat/completions` calls**
   — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
-- **Providers:** 99 across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
+- **Providers:** 100 across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
   AI**), Azure, Bedrock, Mistral, Cohere, Groq, Together, Perplexity, xAI, Cerebras, Fireworks,
   Replicate, SambaNova, Meta Llama, **AWS SageMaker, Snowflake Cortex** + **Tencent, Alibaba, DeepSeek, Moonshot, Zhipu/Z.ai, Baidu,
-  Volcengine, MiniMax**, plus **AI21 (IL), Jina (DE), Voyage, GigaChat (RU), Sarvam (IN), Scaleway &
+  Volcengine, MiniMax, Huawei ModelArts**, plus **AI21 (IL), Jina (DE), Voyage, GigaChat (RU), Sarvam (IN), Scaleway &
   OVHcloud (FR/EU)** and region-selectable clouds (**IBM watsonx, Oracle OCI, Cloudflare Workers AI,
   Heroku** → `unknown` until you pin a region) — with Python and JS/TS package names and the **Vercel
   AI SDK** (`@ai-sdk/*`).

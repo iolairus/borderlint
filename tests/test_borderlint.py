@@ -1779,6 +1779,36 @@ def test_aliyun_coverage(tmp_path):
     assert ("endpoint_reference", "cn") in ms
 
 
+def test_huawei_coverage(tmp_path):
+    from borderlint.detect import scan
+    # MaaS hosts: token-less mainland → cn; homonym trap ap-southeast-1 → hk on Huawei but sg on
+    # Aliyun; three-way me-east-1 → sa on Huawei but ae on Aliyun; unmapped token → explicit
+    # unknown, never the cn provider default
+    f = tmp_path / "cfg.py"
+    f.write_text('A = "https://api.modelarts-maas.com/v1"\n'
+                 'B = "https://api-ap-southeast-1.modelarts-maas.com/v1"\n'
+                 'C = "https://1662339.ap-southeast-1.pai-eas.aliyuncs.com/api/predict/svc"\n'
+                 'D = "https://api-me-east-1.modelarts-maas.com/v1"\n'
+                 'E = "https://1662339.me-east-1.pai-eas.aliyuncs.com/api/predict/svc"\n'
+                 'F = "https://api-eu-south-7.modelarts-maas.com/v1"\n')
+    by_provider = {}
+    for d in scan(str(f), kb):
+        by_provider.setdefault(d.provider_id, set()).add(d.jurisdiction)
+    assert by_provider["huawei_modelarts"] == {"cn", "hk", "sa", "unknown"}
+    assert by_provider["alibaba_pai"] == {"sg", "ae"}
+
+    # official Huawei SDK v3 imports: Python + Java resolve huawei_modelarts (cn)
+    p = tmp_path / "chat.py"
+    p.write_text("from huaweicloudsdkpangulargemodels.v3 import PanguLargeModelsClient\n")
+    dp = [d for d in scan(str(p), kb) if d.provider_id == "huawei_modelarts"][0]
+    assert dp.kind == "sdk_import" and dp.jurisdiction == "cn"
+    j = tmp_path / "Chat.java"
+    j.write_text("import com.huaweicloud.sdk.pangulargemodels.v3.PanguLargeModelsClient;\n"
+                 "import com.huaweicloud.sdk.ecs.v2.EcsClient;\n")
+    jj = [d for d in scan(str(j), kb) if d.provider_id == "huawei_modelarts"]
+    assert len(jj) == 1 and jj[0].kind == "sdk_import" and jj[0].jurisdiction == "cn"
+
+
 def test_foundry_and_tokenhub(tmp_path):
     from borderlint.detect import scan
     # Foundry: Python inference SDK import + project endpoint (no region) + regional serverless host
