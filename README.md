@@ -340,7 +340,7 @@ The AI coding agents used to build borderlint, scored on borderlint's own three 
 | Claude Opus 4.8 | Anthropic, first-party | `us` | `us` | `us` (Anthropic) |
 | Claude Fable 5 | Anthropic, first-party | `us` | `us` | `us` (Anthropic) |
 | Kimi K3 | Moonshot, first-party | `cn` | `cn` | `cn` (Moonshot) |
-| Qwen 3.6 | local, self-hosted | hk - My desk, Hong Kong, China | `local` | `cn` (Alibaba) |
+| Qwen 3.6 | local, self-hosted | `hk` - My desk, Hong Kong, China | `local` | `cn` (Alibaba) |
 | GLM 5.2 | OpenRouter → z.ai | `cn` | `cn` (+ `us` exposure at the router hop) | `cn` (Zhipu) |
 | Hunyuan 3 | OpenRouter → Novita AI | `unknown` | `unknown` (+ `us` exposure at the router hop) | `cn` (Tencent) |
 
