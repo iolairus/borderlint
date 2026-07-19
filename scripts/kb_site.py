@@ -114,6 +114,8 @@ def _provider_body(p, sov_map, regimes, arr_map) -> str:
         rows.append(("Endpoints", ", ".join(f"<code>{e(h)}</code>" for h in p["endpoints"])))
     pkgs = [f"<code>{e(s)}</code> (Python)" for s in p.get("sdks", [])]
     pkgs += [f"<code>{e(n)}</code> (npm)" for n in p.get("npm", [])]
+    pkgs += [f"<code>{e(j)}</code> (Java)" for j in p.get("jvm", [])]
+    pkgs += [f"<code>{e(d)}</code> (.NET)" for d in p.get("dotnet", [])]
     if pkgs:
         rows.append(("Packages", ", ".join(pkgs)))
     if ej:

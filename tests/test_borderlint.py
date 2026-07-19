@@ -420,6 +420,44 @@ def test_kb_drift_render_report():
     assert "… and 10 more families" in capped      # cap disclosed
 
 
+def test_kb_drift_sdk_coverage():
+    kd = _drift()
+    providers = [
+        {"id": "multi", "sdks": ["multi"], "npm": ["multi"], "jvm": ["com.multi"], "dotnet": ["Multi"]},
+        {"id": "pynpm", "sdks": ["pynpm"], "npm": ["pynpm"]},
+        {"id": "pyonly", "sdks": ["pyonly"], "npm": []},
+        {"id": "nosdk", "sdks": [], "npm": [], "endpoints": ["api.nosdk.example"]},
+        {"id": "exempt", "sdks": ["exempt"], "npm": []},
+    ]
+    supp = {"sdk_exempt": {"exempt": "Python-only vendor"}}
+    gaps = kd.sdk_coverage_gaps(providers, supp)
+    # fully-keyed and key-less providers ignored; exempt suppressed; missing keys named, sorted
+    assert gaps == [("pynpm", ["jvm", "dotnet"]), ("pyonly", ["jvm", "dotnet"])]
+    # loud failures: exemption for an unknown id, exemption without a reason
+    for bad in ({"sdk_exempt": {"ghost": "reason"}}, {"sdk_exempt": {"multi": "  "}}):
+        try:
+            kd.validate_suppression(bad, {"multi", "exempt"})
+            assert False, "expected ValueError"
+        except ValueError as e:
+            assert "ghost" in str(e) or "multi" in str(e)
+    # report: section renders missing keys, the count joins the summary head, and an
+    # SDK-only report is NOT "nothing actionable"; empty section is omitted
+    r = kd.render_report([], [], [], [], sdk_gaps=[("pynpm", ["jvm", "dotnet"])])
+    assert "### SDK coverage gaps" in r and "`pynpm` — missing `jvm`, `dotnet`" in r
+    assert "1 SDK gaps" in r and not r.startswith("**Nothing actionable.**")
+    assert "### SDK coverage gaps" not in kd.render_report([], [], [], [])
+    # the scanner never reads the exemption list: sdk_exempt lives only in the drift-only
+    # suppression file (structural assertion in test_kb_drift_suppression covers the file)
+    # shipped state: the curation pass leaves nothing flagged
+    import json
+    with open("borderlint/data/providers.json", encoding="utf-8") as fh:
+        doc = json.load(fh)
+    with open("scripts/kb_drift_aliases.json", encoding="utf-8") as fh:
+        shipped = json.load(fh)
+    kd.validate_suppression(shipped, {p["id"] for p in doc["providers"]})
+    assert kd.sdk_coverage_gaps(doc["providers"], shipped) == []
+
+
 def test_kb_has_iso_date():
     import re
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", load_kb().updated or "")
@@ -1902,6 +1940,12 @@ def test_kb_site_generator(tmp_path):
     # unknown-jurisdiction provider is honest about region-dependence
     vertex = (tmp_path / "providers" / "vertex_ai.html").read_text()
     assert "Region-dependent" in vertex
+    # multi-language SDK keys render per language (Bedrock: Java/Kotlin + .NET alongside npm)
+    bedrock = (tmp_path / "providers" / "aws_bedrock.html").read_text()
+    assert "software.amazon.awssdk.services.bedrockruntime</code> (Java)" in bedrock
+    assert "aws.sdk.kotlin.services.bedrockruntime</code> (Java)" in bedrock
+    assert "Amazon.BedrockRuntime</code> (.NET)" in bedrock
+    assert "@aws-sdk/client-bedrock-runtime</code> (npm)" in bedrock
     # unique title/meta per page, install one-liner everywhere (spot-check two pages)
     a = (tmp_path / "providers" / "openai.html").read_text()
     b = (tmp_path / "providers" / "deepseek.html").read_text()
