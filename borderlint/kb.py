@@ -53,7 +53,27 @@ _GCP_REGION = {
 }
 
 
+# Aliyun region tokens: mainland cities carry no trailing digit (cn-hangzhou), international
+# regions do (ap-southeast-1). Both shapes are matched; unmapped tokens degrade to unknown.
+_ALIYUN_RE = re.compile(r"\b((?:cn-[a-z]+|[a-z]{2}-[a-z]+-\d))(?=\.pai-eas\.aliyuncs\.com)")
+_ALIYUN_REGION = {
+    "cn-hongkong": "hk",
+    "ap-southeast-1": "sg", "ap-southeast-3": "my", "ap-southeast-5": "id",
+    "ap-northeast-1": "jp", "ap-northeast-2": "kr",
+    "us-east-1": "us", "us-west-1": "us",
+    "eu-central-1": "de", "eu-west-1": "gb", "me-east-1": "ae",
+}
+
+
 def _region_jurisdiction(text: str, scheme: str):
+    if scheme == "aliyun":
+        m = _ALIYUN_RE.search(text)
+        if not m:
+            return None
+        r = m.group(1)
+        if r in _ALIYUN_REGION:
+            return _ALIYUN_REGION[r]
+        return "cn" if r.startswith("cn-") else None  # mainland cities → cn; unmapped intl → unknown
     if scheme == "aws":
         m = _AWS_RE.search(text)
         if not m:

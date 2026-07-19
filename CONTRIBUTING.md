@@ -32,7 +32,7 @@ Each object in the `providers` array:
 | `dotnet` | no | string[] | C# namespace prefixes, e.g. `["OpenAI"]`. Matched case-sensitively on `using` directives (plain/`global`/`static`/alias) at dot boundaries (`OpenAI.Chat`, not `OpenAIUtils.X`). |
 | `endpoints` | no | string[] | Host substrings that identify the provider in code/config, e.g. `["api.openai.com"]`. |
 | `endpoint_jurisdictions` | no | object | Per-host override of `jurisdiction`, e.g. `{"dashscope-intl.aliyuncs.com": "sg"}`. |
-| `region_scheme` | no | `"aws"` \| `"azure"` \| `"gcp"` | The host carries the cloud region; borderlint resolves the region → jurisdiction (e.g. `bedrock-runtime.ap-east-1…` and `asia-east2-aiplatform.googleapis.com` → `hk`). |
+| `region_scheme` | no | `"aws"` \| `"azure"` \| `"gcp"` \| `"aliyun"` | The host carries the cloud region; borderlint resolves the region → jurisdiction (e.g. `bedrock-runtime.ap-east-1…` and `asia-east2-aiplatform.googleapis.com` → `hk`, `….cn-hongkong.pai-eas.aliyuncs.com` → `hk`). |
 
 Omit a field rather than setting it empty. At least one of `sdks`, `npm`, `jvm`, `dotnet`, or `endpoints`
 should be present, or the entry can never match.
