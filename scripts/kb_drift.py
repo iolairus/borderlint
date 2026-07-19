@@ -67,6 +67,11 @@ def validate_suppression(supp: dict, provider_ids: set[str]) -> dict:
     for entry, reason in supp.get("residue", {}).items():
         if not (reason or "").strip():
             raise ValueError(f"drift residue entry '{entry}' has no reason")
+    for pid, reason in supp.get("sdk_exempt", {}).items():
+        if pid not in provider_ids:
+            raise ValueError(f"drift sdk_exempt '{pid}' is not a bundled provider id")
+        if not (reason or "").strip():
+            raise ValueError(f"drift sdk_exempt '{pid}' has no reason")
     return supp
 
 
@@ -151,6 +156,24 @@ def sovereignty_gaps(provider_ids: list[str], sov_map: dict) -> list[tuple[str, 
                   if sov_map.get(pid) not in _SOVEREIGNTY_BLOCS)
 
 
+def sdk_coverage_gaps(providers: list[dict],
+                      suppression: dict | None = None) -> list[tuple[str, list[str]]]:
+    """Bundled providers with Python/npm package keys but no jvm/dotnet key — (id, missing).
+
+    Exempted via the suppression file's `sdk_exempt` map (id → reason). The check only
+    reports; SDK coordinates are assigned by hand after registry verification.
+    """
+    exempt = set(suppression.get("sdk_exempt", {})) if suppression else set()
+    out = []
+    for p in providers:
+        if p["id"] in exempt or not (p.get("sdks") or p.get("npm")):
+            continue
+        missing = [k for k in ("jvm", "dotnet") if not p.get(k)]
+        if missing:
+            out.append((p["id"], missing))
+    return sorted(out)
+
+
 def stale_kbs(kb_dates: dict, today: dt.date,
               interval_days: int = STALE_DAYS) -> list[tuple[str, str, int]]:
     """(name, updated, age_days) for KBs whose `updated` date is older than the interval."""
@@ -165,14 +188,17 @@ def stale_kbs(kb_dates: dict, today: dt.date,
 def render_report(providers_gap: list[str], families: list[tuple[str, int, str]],
                   sov_gaps: list[tuple[str, str | None]], stale: list[tuple[str, str, int]],
                   family_cap: int = FAMILY_CAP,
-                  residue: list[tuple[str, int]] | None = None) -> str:
+                  residue: list[tuple[str, int]] | None = None,
+                  sdk_gaps: list[tuple[str, list[str]]] | None = None) -> str:
     """Markdown issue body: empty sections omitted; empty report is the empty string."""
     parts = []
     residue_total = sum(n for _, n in residue) if residue else 0
-    if providers_gap or families or sov_gaps or stale or residue_total:
-        n_act = len(providers_gap) + len(families) + len(sov_gaps) + len(stale)
+    sdk = sdk_gaps or []
+    if providers_gap or families or sov_gaps or stale or residue_total or sdk:
+        n_act = len(providers_gap) + len(families) + len(sov_gaps) + len(stale) + len(sdk)
         head = (f"**Actionable:** {len(providers_gap)} providers \u00b7 {len(families)} model "
                 f"families \u00b7 {len(sov_gaps)} sovereignty gaps \u00b7 {len(stale)} stale KBs "
+                f"\u00b7 {len(sdk)} SDK gaps "
                 f"\u2014 **acknowledged residue:** {residue_total} ids")
         if n_act == 0:
             head = (f"**Nothing actionable.** Acknowledged residue: {residue_total} ids "
@@ -207,6 +233,14 @@ def render_report(providers_gap: list[str], families: list[tuple[str, int, str]]
             f"Last reviewed more than {STALE_DAYS} days ago — review and bump `updated`.\n\n"
             + "\n".join(f"- `{name}` — updated {date}, {age} days ago"
                         for name, date, age in stale))
+    if sdk:
+        parts.append(
+            "### SDK coverage gaps\n\n"
+            "Bundled providers with Python/npm package keys but no `jvm`/`dotnet` key. Add the "
+            "official SDK coordinate **by hand** after registry verification — or record a "
+            "reasoned exemption in `scripts/kb_drift_aliases.json` (`sdk_exempt`).\n\n"
+            + "\n".join(f"- `{pid}` — missing {', '.join(f'`{k}`' for k in missing)}"
+                        for pid, missing in sdk))
     if residue_total:
         rows = "\n".join(f"- {reason} — {n} id{'s' if n > 1 else ''}"
                          for reason, n in residue)
@@ -237,8 +271,10 @@ def main() -> int:
     kb_dates = {f.name: json.loads(f.read_text(encoding="utf-8")).get("updated")
                 for f in sorted(DATA_DIR.glob("*.json"))}
     stale = stale_kbs({k: v for k, v in kb_dates.items() if v}, dt.date.today())
+    sdk_gaps = sdk_coverage_gaps(providers_doc["providers"], suppression)
 
-    report = render_report(providers_gap, families, sov_gaps, stale, residue=residue)
+    report = render_report(providers_gap, families, sov_gaps, stale, residue=residue,
+                           sdk_gaps=sdk_gaps)
     if report:
         print(report)
     return 0
