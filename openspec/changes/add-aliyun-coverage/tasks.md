@@ -8,7 +8,7 @@
 
 ## 2. Engine
 
-- [x] 2.1 kb.py: `_ALIYUN_RE` + `_ALIYUN_REGION` (mainland cities → cn, cn-hongkong → hk, numbered international tokens per design) and the `aliyun` branch in the region-scheme resolver — spec: Region-specific endpoint resolution (both new scenarios)
+- [x] 2.1 kb.py: `_ALIYUN_RE` + `_ALIYUN_REGION` (mainland cities → cn, cn-hongkong → hk, numbered international tokens per design) and the `aliyun` branch in the region-scheme resolver — spec: Region-specific endpoint resolution (all three new scenarios)
 
 ## 3. Tests
 

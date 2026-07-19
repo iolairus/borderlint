@@ -26,11 +26,13 @@ and hub modeling precedents: `huggingface` (hub + inference API), `openrouter` (
 2. **New `aliyun` region scheme, not reuse of `aws`**: Aliyun mainland tokens carry no trailing
    digit (`cn-hangzhou`, `cn-shenzhen`, `cn-hongkong`), which `_AWS_RE`
    (`[a-z]{2}(-gov)?-[a-z]+-\d`) cannot match, and `cn-hongkong` → `hk` must not fall into a
-   generic `cn-*` rule. `_ALIYUN_RE` matches both shapes; `_ALIYUN_REGION` maps mainland cities →
-   `cn`, `cn-hongkong` → `hk`, and the numbered international tokens (`ap-southeast-1` → `sg`,
-   `ap-southeast-3` → `my`, `ap-southeast-5` → `id`, `ap-northeast-1` → `jp`, `ap-northeast-2` →
-   `kr`, `us-east-1`/`us-west-1` → `us`, `eu-central-1` → `de`, `eu-west-1` → `gb`,
-   `me-east-1` → `ae`). Unmapped token → None → provider default (`unknown`).
+   generic `cn-*` rule. `_ALIYUN_RE` matches both shapes; `_ALIYUN_REGION` maps `cn-hongkong` →
+   `hk` and the numbered international tokens (`ap-southeast-1` → `sg`, `ap-southeast-3` → `my`,
+   `ap-southeast-5` → `id`, `ap-northeast-1` → `jp`, `ap-northeast-2` → `kr`,
+   `us-east-1`/`us-west-1` → `us`, `eu-central-1` → `de`, `eu-west-1` → `gb`, `me-east-1` → `ae`).
+   Mainland tokens are mapped as a class: any `cn-*` token not in the explicit map resolves `cn`
+   (city enumeration would churn; `cn-hongkong` is the one exception and is checked first).
+   Tokens outside both the map and the class rule → None → provider default (`unknown`).
 3. **`alibaba_pai` as its own provider** (`endpoints: ["pai-eas.aliyuncs.com"]`,
    `region_scheme: "aliyun"`, `jurisdiction: "unknown"`) rather than folding into
    `alibaba_dashscope` — different product, different hosts, different region mechanics; folding
@@ -55,7 +57,9 @@ and hub modeling precedents: `huggingface` (hub + inference API), `openrouter` (
   Lumpur; `ap-southeast-5`: AWS Malaysia vs Aliyun Jakarta) — which is exactly why the scheme is
   dispatched per provider; no cross-provider bleed is possible.
 - [`pai-eas.aliyuncs.com` substring also matches internal-VPC variants
-  (`*.vpc.pai-eas.aliyuncs.com`)] → intended: same jurisdiction facts apply.
+  (`<uid>.vpc.<region>.pai-eas.aliyuncs.com` — vpc label before the region)] → intended: the
+  region token still sits immediately before the `.pai-eas` suffix, so the same resolution
+  applies.
 - [ModelScope SDK is predominantly local-pipeline usage] → import-level detection is the point
   (surface for review, waivable); the endpoint entry only fires on actual inference-API hosts.
 - [Aliyun region list churns] → unmapped tokens degrade to `unknown`, never to a wrong
