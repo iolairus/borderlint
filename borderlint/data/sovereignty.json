@@ -70,6 +70,8 @@
     "langchain": "unknown",
     "langchain4j": "unknown",
     "spring_ai": "unknown",
+    "semantic_kernel": "unknown",
+    "microsoft_extensions_ai": "unknown",
     "llama_index": "unknown",
     "aisuite": "unknown",
     "vercel_ai": "unknown",

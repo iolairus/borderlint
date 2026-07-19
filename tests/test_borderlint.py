@@ -1677,6 +1677,64 @@ def test_jvm_detection(tmp_path):
     assert md.jurisdiction == "hk" and md.provenance == "us" and md.model
 
 
+def test_csharp_detection(tmp_path):
+    from borderlint.detect import scan
+    # using forms: plain, global, static (official Anthropic prefix also covers Anthropic.SDK),
+    # alias (RHS resolves), dot-boundary negative, endpoint-literal parity
+    cs = tmp_path / "App.cs"
+    cs.write_text(
+        "using OpenAI.Chat;\n"
+        "global using Azure.AI.OpenAI;\n"
+        "using static Anthropic.SDK.Constants;\n"
+        "using Client = OpenAI.Chat.ChatClient;\n"
+        "using OpenAIUtils.Helpers;\n"
+        'class App { string url = "https://api.deepseek.com/v1"; }\n')
+    ds = scan(str(cs), kb)
+    by = {d.provider_id: d for d in ds}
+    assert by["openai"].kind == "sdk_import" and by["openai"].jurisdiction == "us"
+    assert by["azure_openai"].kind == "sdk_import"  # `global using` form
+    assert by["anthropic"].kind == "sdk_import"  # `using static` on the community namespace
+    assert by["deepseek"].kind == "endpoint_reference"  # _scan_text parity on .cs
+    # alias RHS resolved; OpenAIUtils must NOT resolve to openai (dot-boundary)
+    assert {d.evidence for d in ds if d.provider_id == "openai"} == {"OpenAI.Chat", "OpenAI.Chat.ChatClient"}
+
+    # using declaration is not a directive; aggregators resolve unknown; Bedrock siblings each match
+    d2 = tmp_path / "Svc.cs"
+    d2.write_text(
+        "using var client = new HttpClient();\n"
+        "using Microsoft.SemanticKernel;\n"
+        "using Microsoft.Extensions.AI;\n"
+        "using Amazon.BedrockRuntime;\n"
+        "using Amazon.Bedrock;\n")
+    ds2 = scan(str(d2), kb)
+    assert not any(d.evidence == "var" for d in ds2)  # `using var …` records nothing
+    by2 = {d.provider_id: d for d in ds2}
+    assert by2["semantic_kernel"].jurisdiction == "unknown"
+    assert by2["microsoft_extensions_ai"].jurisdiction == "unknown"
+    assert kb.category("semantic_kernel") == "aggregator" and kb.category("microsoft_extensions_ai") == "aggregator"
+    # sibling namespaces (not parent/child in .NET): each matches via its own listed prefix
+    assert {d.evidence for d in ds2 if d.provider_id == "aws_bedrock"} == {"Amazon.BedrockRuntime", "Amazon.Bedrock"}
+
+    # inline waiver on a flagged C# line
+    cw = tmp_path / "W.cs"
+    cw.write_text('string u = "https://api.deepseek.com"; // borderlint: allow reviewed DR flow\n')
+    d = [x for x in scan(str(cw), kb) if x.provider_id == "deepseek"][0]
+    assert d.waiver and "reviewed" in d.waiver
+
+    # OpenAI-compatible call path against a runtime host resolves custom_endpoint/unknown (.csx too)
+    cx = tmp_path / "Client.csx"
+    cx.write_text('var path = $"{baseUrl}/v1/chat/completions";\n')
+    assert any(d.provider_id == "custom_endpoint" and d.kind == "api_call" and d.jurisdiction == "unknown"
+               for d in scan(str(cx), kb))
+
+    # model reference binds provenance in a C# file
+    cm = tmp_path / "M.cs"
+    cm.write_text('var host = "bedrock-runtime.ap-east-1.amazonaws.com";\n'
+                  'var model = "anthropic.claude-3-5-haiku-20241022-v1:0";\n')
+    md = [x for x in scan(str(cm), kb) if x.provider_id == "aws_bedrock"][0]
+    assert md.jurisdiction == "hk" and md.provenance == "us" and md.model
+
+
 def test_kb_site_generator(tmp_path):
     import importlib.util
     import json as _json
