@@ -1,0 +1,6 @@
+# Force LF in the repo for every text file. CRLF from a Windows editor silently
+# breaks shell shebangs and config parsing, and makes every touched file show up
+# as a whole-file diff. `text=auto` normalizes on commit, so what lands in the
+# repo is LF regardless of the working tree; `eol=lf` keeps checkouts consistent
+# on every platform. Binaries are auto-detected and left untouched.
+* text=auto eol=lf
