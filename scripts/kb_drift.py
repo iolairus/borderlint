@@ -185,12 +185,17 @@ def stale_kbs(kb_dates: dict, today: dt.date,
     return out
 
 
-def render_report(providers_gap: list[str], families: list[tuple[str, int, str]],
+def render_report(today: dt.date, providers_gap: list[str],
+                  families: list[tuple[str, int, str]],
                   sov_gaps: list[tuple[str, str | None]], stale: list[tuple[str, str, int]],
                   family_cap: int = FAMILY_CAP,
                   residue: list[tuple[str, int]] | None = None,
                   sdk_gaps: list[tuple[str, list[str]]] | None = None) -> str:
-    """Markdown issue body: empty sections omitted; empty report is the empty string."""
+    """Markdown issue body: empty sections omitted; empty report is the empty string.
+
+    The summary head carries the reference date so week-over-week identical findings
+    still produce a changed body (the issue update is never a no-op).
+    """
     parts = []
     residue_total = sum(n for _, n in residue) if residue else 0
     sdk = sdk_gaps or []
@@ -199,10 +204,10 @@ def render_report(providers_gap: list[str], families: list[tuple[str, int, str]]
         head = (f"**Actionable:** {len(providers_gap)} providers \u00b7 {len(families)} model "
                 f"families \u00b7 {len(sov_gaps)} sovereignty gaps \u00b7 {len(stale)} stale KBs "
                 f"\u00b7 {len(sdk)} SDK gaps "
-                f"\u2014 **acknowledged residue:** {residue_total} ids")
+                f"\u2014 **acknowledged residue:** {residue_total} ids \u00b7 checked {today}")
         if n_act == 0:
             head = (f"**Nothing actionable.** Acknowledged residue: {residue_total} ids "
-                    "(see below).")
+                    f"(see below) \u00b7 checked {today}.")
         parts.append(head)
     if providers_gap:
         parts.append(
@@ -270,10 +275,11 @@ def main() -> int:
     sov_gaps = sovereignty_gaps([p["id"] for p in providers_doc["providers"]], kb.sovereignty_map)
     kb_dates = {f.name: json.loads(f.read_text(encoding="utf-8")).get("updated")
                 for f in sorted(DATA_DIR.glob("*.json"))}
-    stale = stale_kbs({k: v for k, v in kb_dates.items() if v}, dt.date.today())
+    today = dt.date.today()
+    stale = stale_kbs({k: v for k, v in kb_dates.items() if v}, today)
     sdk_gaps = sdk_coverage_gaps(providers_doc["providers"], suppression)
 
-    report = render_report(providers_gap, families, sov_gaps, stale, residue=residue,
+    report = render_report(today, providers_gap, families, sov_gaps, stale, residue=residue,
                            sdk_gaps=sdk_gaps)
     if report:
         print(report)
