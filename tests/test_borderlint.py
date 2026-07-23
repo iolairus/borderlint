@@ -1,5 +1,6 @@
 """Smallest checks that fail if the core logic breaks (one per key spec scenario)."""
 
+import datetime as dt
 import json
 import os
 import tempfile
@@ -383,13 +384,15 @@ def test_kb_drift_residue():
     except ValueError as e:
         assert "x-" in str(e)
     # summary line + collapsed counts, no raw id lists
-    r = kd.render_report(["prov1"], [("fam", 2, "fam-1")], [], [],
+    r = kd.render_report(dt.date(2026, 7, 20), ["prov1"], [("fam", 2, "fam-1")], [], [],
                          residue=[("pricing bucket", 7)])
     assert r.startswith("**Actionable:** 1 providers · 1 model families")
     assert "acknowledged residue:** 7 ids" in r and "<details>" in r
     assert "pricing bucket — 7 ids" in r
-    zero = kd.render_report([], [], [], [], residue=[("reviewed", 3)])
+    assert "checked 2026-07-20" in r                       # run date in the actionable head
+    zero = kd.render_report(dt.date(2026, 7, 20), [], [], [], [], residue=[("reviewed", 3)])
     assert zero.startswith("**Nothing actionable.**")
+    assert "checked 2026-07-20" in zero                    # run date in the residue-only head
     # shipped residue block validates and its reasons are non-empty
     import json
     with open("scripts/kb_drift_aliases.json", encoding="utf-8") as fh:
@@ -407,16 +410,22 @@ def test_kb_drift_staleness():
 
 def test_kb_drift_render_report():
     kd = _drift()
-    assert kd.render_report([], [], [], []) == ""  # empty report renders nothing
-    r = kd.render_report(["deepseek"], [("grok", 2, "grok-4")], [("x", None)],
+    today = dt.date(2026, 7, 20)
+    assert kd.render_report(today, [], [], [], []) == ""  # empty report renders nothing
+    r = kd.render_report(today, ["deepseek"], [("grok", 2, "grok-4")], [("x", None)],
                          [("old.json", "2026-01-01", 184)])
     assert all(h in r for h in ("### New providers", "### Uncovered model families",
                                 "### Sovereignty gaps", "### Stale knowledge bases"))
     assert "- deepseek" in r and "by hand" in r    # gap record carries no assigned bloc
-    only = kd.render_report([], [("grok", 2, "grok-4")], [], [])
+    assert "checked 2026-07-20" in r               # summary head states the run date
+    # identical findings on different dates differ: the weekly issue update is never a no-op
+    other = kd.render_report(dt.date(2026, 7, 27), ["deepseek"], [("grok", 2, "grok-4")],
+                             [("x", None)], [("old.json", "2026-01-01", 184)])
+    assert other != r and "checked 2026-07-27" in other
+    only = kd.render_report(today, [], [("grok", 2, "grok-4")], [], [])
     assert "### New providers" not in only         # empty sections omitted
     many = [(f"fam{i:03d}", 1, f"fam{i:03d}-1b") for i in range(60)]
-    capped = kd.render_report([], many, [], [])
+    capped = kd.render_report(today, [], many, [], [])
     assert "… and 10 more families" in capped      # cap disclosed
 
 
@@ -442,10 +451,10 @@ def test_kb_drift_sdk_coverage():
             assert "ghost" in str(e) or "multi" in str(e)
     # report: section renders missing keys, the count joins the summary head, and an
     # SDK-only report is NOT "nothing actionable"; empty section is omitted
-    r = kd.render_report([], [], [], [], sdk_gaps=[("pynpm", ["jvm", "dotnet"])])
+    r = kd.render_report(dt.date(2026, 7, 20), [], [], [], [], sdk_gaps=[("pynpm", ["jvm", "dotnet"])])
     assert "### SDK coverage gaps" in r and "`pynpm` — missing `jvm`, `dotnet`" in r
     assert "1 SDK gaps" in r and not r.startswith("**Nothing actionable.**")
-    assert "### SDK coverage gaps" not in kd.render_report([], [], [], [])
+    assert "### SDK coverage gaps" not in kd.render_report(dt.date(2026, 7, 20), [], [], [], [])
     # the scanner never reads the exemption list: sdk_exempt lives only in the drift-only
     # suppression file (structural assertion in test_kb_drift_suppression covers the file)
     # shipped state: the curation pass leaves nothing flagged
