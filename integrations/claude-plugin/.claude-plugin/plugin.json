@@ -1,5 +1,6 @@
 {
   "name": "borderlint",
+  "version": "1.0.0",
   "description": "AI data-flow governance for coding agents: run borderlint before adding any AI SDK, endpoint, or model id — residency, sovereignty, and provenance checked in the conversation, before commit.",
   "author": {
     "name": "iolairus"
