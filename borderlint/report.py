@@ -126,7 +126,38 @@ def _regimes(findings, policy) -> list[str]:
     return sorted(tags)
 
 
-def text(findings, kb, policy=None) -> str:
+def _explain_one(r: str, d, kb) -> str:
+    """Plain-language explanation and remediation hint for a single reason code."""
+    if r == "residency":
+        return (f"{kb.name(d.provider_id)} resolves to {juris(d.jurisdiction)}, which is not allowed for this "
+                f"data class. Update the policy allow-list or change the provider/endpoint.")
+    if r == "sovereignty":
+        return (f"{kb.name(d.provider_id)} is under {sov(getattr(d, 'sovereignty', 'unknown'))} sovereignty, which "
+                f"is not allowed for this data class. Consider a provider with an allowed sovereignty bloc.")
+    if r == "provenance":
+        return (f"Model provenance is {sov(getattr(d, 'provenance', 'unknown'))}, which is not allowed for this "
+                f"data class. Use a model from an allowed provenance bloc.")
+    if r == "unknown":
+        return "Jurisdiction could not be determined statically. Verify the endpoint or add it to the provider KB."
+    if r == "sovereignty_unknown":
+        return "Sovereignty could not be determined. The provider may be an aggregator or unmapped."
+    if r == "provenance_unknown":
+        return "Model provenance could not be determined. Add a model reference or use a first-party provider."
+    if r == "denied_provider":
+        return f"{kb.name(d.provider_id)} is explicitly denied by policy."
+    if r == "model_denied":
+        return "Model family is on the policy deny list."
+    return REASON.get(r, r)
+
+
+def explain_reason(finding, kb) -> str:
+    """Return plain-language explanation for a finding's reasons."""
+    if not finding.reasons:
+        return "Flow is allowed by policy."
+    return " ".join(_explain_one(r, finding.detection, kb) for r in finding.reasons)
+
+
+def text(findings, kb, policy=None, explain=False) -> str:
     if not findings:
         return "borderlint: no AI provider usage detected."
     lines = ["borderlint — AI data-flow & residency report", "=" * 46]
@@ -151,6 +182,8 @@ def text(findings, kb, policy=None) -> str:
             lines.append(f"        {d.file}:{d.line} ({d.kind}: {d.evidence}){suffix}")
             for r in f.reasons:
                 lines.append(f"           ! {REASON.get(r, r)}")
+                if explain:
+                    lines.append(f"             → {_explain_one(r, d, kb)}")
             if f.severity == "waived":
                 lines.append(f"           ~ waived: {d.waiver}")
     fails = sum(f.severity == "fail" for f in findings)
@@ -166,7 +199,7 @@ def text(findings, kb, policy=None) -> str:
     return "\n".join(lines)
 
 
-def as_json(findings, kb, policy=None) -> str:
+def as_json(findings, kb, policy=None, explain=False) -> str:
     return json.dumps({
         "findings": [{"provider": f.detection.provider_id, "name": kb.name(f.detection.provider_id),
                       "category": kb.category(f.detection.provider_id),
@@ -178,7 +211,8 @@ def as_json(findings, kb, policy=None) -> str:
                       "severity": f.severity, "reasons": f.reasons,
                       "kind": f.detection.kind, "evidence": f.detection.evidence,
                       "file": f.detection.file, "line": f.detection.line,
-                      "waiver": f.detection.waiver} for f in findings],
+                      "waiver": f.detection.waiver,
+                      **({"explanation": explain_reason(f, kb)} if explain else {})} for f in findings],
         "regimes": _regimes(findings, policy),
         "references": _arrangements(findings, policy),
     }, indent=2)

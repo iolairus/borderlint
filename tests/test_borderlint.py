@@ -503,6 +503,46 @@ def test_waiver_does_not_clear_deny():
     assert f[0].severity == "fail"
 
 
+def test_explain_flag_end_to_end(tmp_path, capsys):
+    """--explain reaches the renderer through the CLI; exit code unchanged by the flag."""
+    import json as _json
+    from borderlint import cli
+    (tmp_path / "app.py").write_text("import openai\n")
+    polf = tmp_path / "pol.json"
+    polf.write_text(_json.dumps({"classifications": {"customer-pii": ["hk"]}}))
+    args = ["scan", str(tmp_path), "-p", str(polf), "-c", "customer-pii"]
+    assert cli.main(args + ["--explain"]) == cli.main(args) == 1
+    with_explain, without = capsys.readouterr().out.split("Summary:")[0:2]
+    assert "→" in with_explain and "→" not in without
+
+
+def test_explain_text_output():
+    from borderlint.report import text
+    from borderlint.policy import Finding
+    d = Detection("openai", "sdk_import", "openai", "x.py", 1, "us")
+    f = Finding(d, "fail", ["residency", "sovereignty"])
+    out = text([f], kb, {"classifications": {"customer-pii": ["hk"]}}, explain=True)
+    assert "not allowed" in out
+    # one explanation line per reason, each explaining only its own reason
+    arrows = [ln for ln in out.splitlines() if "→" in ln]
+    assert len(arrows) == 2
+    assert "resolves to" in arrows[0] and "sovereignty" not in arrows[0]
+    assert "sovereignty" in arrows[1] and "resolves to" not in arrows[1]
+
+
+def test_explain_json_output():
+    from borderlint.report import as_json
+    from borderlint.policy import Finding
+    d = Detection("openai", "sdk_import", "openai", "x.py", 1, "us")
+    f = Finding(d, "fail", ["residency"])
+    pol = {"classifications": {"customer-pii": ["hk"]}}
+    out = json.loads(as_json([f], kb, pol, explain=True))
+    assert out["findings"][0]["explanation"]
+    # without --explain the field is absent, not null — schema unchanged for existing consumers
+    plain = json.loads(as_json([f], kb, pol))
+    assert "explanation" not in plain["findings"][0]
+
+
 def test_sarif_output():
     import json as _json
     from borderlint.report import sarif

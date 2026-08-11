@@ -51,6 +51,7 @@ def main(argv=None) -> int:
     s.add_argument("-c", "--classification", help="data class on the scanned path (required with --policy)")
     s.add_argument("-f", "--format", choices=["text", "json", "mermaid", "sarif", "sbom", "evidence", "html", "badge"], default="text")
     s.add_argument("--providers", help="custom provider knowledge base JSON")
+    s.add_argument("--explain", action="store_true", help="include plain-language explanations and remediation hints")
     dp = sub.add_parser("diff", help="Compare two AI data-flow SBOMs (baseline vs current).")
     dp.add_argument("baseline")
     dp.add_argument("current")
@@ -98,7 +99,8 @@ def main(argv=None) -> int:
         findings = [Finding(d, "ok", []) for d in detections]  # inventory mode
 
     envelope = _envelope(a, kb) if a.format in ("evidence", "html") else None
-    renderers = {"text": report.text, "json": report.as_json,
+    renderers = {"text": lambda f, k, p: report.text(f, k, p, a.explain),
+                 "json": lambda f, k, p: report.as_json(f, k, p, a.explain),
                  "mermaid": lambda f, k, p: report.mermaid(f, k, p, report.project_label(a.path)),
                  "sarif": report.sarif, "sbom": report.sbom,
                  "evidence": lambda f, k, p: report.evidence(f, k, p, envelope),
