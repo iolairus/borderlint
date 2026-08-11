@@ -126,41 +126,35 @@ def _regimes(findings, policy) -> list[str]:
     return sorted(tags)
 
 
-def explain_reason(finding, kb, policy=None) -> str:
+def _explain_one(r: str, d, kb) -> str:
+    """Plain-language explanation and remediation hint for a single reason code."""
+    if r == "residency":
+        return (f"{kb.name(d.provider_id)} resolves to {juris(d.jurisdiction)}, which is not allowed for this "
+                f"data class. Update the policy allow-list or change the provider/endpoint.")
+    if r == "sovereignty":
+        return (f"{kb.name(d.provider_id)} is under {sov(getattr(d, 'sovereignty', 'unknown'))} sovereignty, which "
+                f"is not allowed for this data class. Consider a provider with an allowed sovereignty bloc.")
+    if r == "provenance":
+        return (f"Model provenance is {sov(getattr(d, 'provenance', 'unknown'))}, which is not allowed for this "
+                f"data class. Use a model from an allowed provenance bloc.")
+    if r == "unknown":
+        return "Jurisdiction could not be determined statically. Verify the endpoint or add it to the provider KB."
+    if r == "sovereignty_unknown":
+        return "Sovereignty could not be determined. The provider may be an aggregator or unmapped."
+    if r == "provenance_unknown":
+        return "Model provenance could not be determined. Add a model reference or use a first-party provider."
+    if r == "denied_provider":
+        return f"{kb.name(d.provider_id)} is explicitly denied by policy."
+    if r == "model_denied":
+        return "Model family is on the policy deny list."
+    return REASON.get(r, r)
+
+
+def explain_reason(finding, kb) -> str:
     """Return plain-language explanation for a finding's reasons."""
-    d = finding.detection
-    reasons = finding.reasons
-    if not reasons:
+    if not finding.reasons:
         return "Flow is allowed by policy."
-    parts = []
-    for r in reasons:
-        if r == "residency":
-            allow = policy.get("classifications", {}) if policy else {}
-            cls = policy.get("classification") if policy else ""
-            prov = kb.name(d.provider_id)
-            juris_name = juris(d.jurisdiction)
-            parts.append(f"{prov} resolves to {juris_name}, which is not allowed for this data class. Update the policy allow-list or change the provider/endpoint.")
-        elif r == "sovereignty":
-            prov = kb.name(d.provider_id)
-            bloc = sov(getattr(d, "sovereignty", "unknown"))
-            parts.append(f"{prov} is under {bloc} sovereignty, which is not allowed for this data class. Consider a provider with an allowed sovereignty bloc.")
-        elif r == "provenance":
-            prov = kb.name(d.provider_id)
-            bloc = sov(getattr(d, "provenance", "unknown"))
-            parts.append(f"Model provenance is {bloc}, which is not allowed for this data class. Use a model from an allowed provenance bloc.")
-        elif r == "unknown":
-            parts.append("Jurisdiction could not be determined statically. Verify the endpoint or add it to the provider KB.")
-        elif r == "sovereignty_unknown":
-            parts.append("Sovereignty could not be determined. The provider may be an aggregator or unmapped.")
-        elif r == "provenance_unknown":
-            parts.append("Model provenance could not be determined. Add a model reference or use a first-party provider.")
-        elif r == "denied_provider":
-            parts.append(f"{kb.name(d.provider_id)} is explicitly denied by policy.")
-        elif r == "model_denied":
-            parts.append("Model family is on the policy deny list.")
-        else:
-            parts.append(REASON.get(r, r))
-    return " ".join(parts)
+    return " ".join(_explain_one(r, finding.detection, kb) for r in finding.reasons)
 
 
 def text(findings, kb, policy=None, explain=False) -> str:
@@ -189,7 +183,7 @@ def text(findings, kb, policy=None, explain=False) -> str:
             for r in f.reasons:
                 lines.append(f"           ! {REASON.get(r, r)}")
                 if explain:
-                    lines.append(f"             → {explain_reason(f, kb, policy)}")
+                    lines.append(f"             → {_explain_one(r, d, kb)}")
             if f.severity == "waived":
                 lines.append(f"           ~ waived: {d.waiver}")
     fails = sum(f.severity == "fail" for f in findings)
@@ -218,7 +212,7 @@ def as_json(findings, kb, policy=None, explain=False) -> str:
                       "kind": f.detection.kind, "evidence": f.detection.evidence,
                       "file": f.detection.file, "line": f.detection.line,
                       "waiver": f.detection.waiver,
-                      "explanation": explain_reason(f, kb, policy) if explain and f.reasons else None} for f in findings],
+                      **({"explanation": explain_reason(f, kb)} if explain else {})} for f in findings],
         "regimes": _regimes(findings, policy),
         "references": _arrangements(findings, policy),
     }, indent=2)
