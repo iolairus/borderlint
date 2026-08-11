@@ -11,7 +11,7 @@ borderlint currently emits terse reason codes. Users must map `residency`, `sove
 
 **Non-Goals:**
 - No LLM enrichment, no auto-fix, no policy generation.
-- No change to SARIF/evidence formats.
+- No change to SARIF/evidence formats; mermaid, sbom, html, and badge outputs are unchanged in v1 (`--explain` affects text and json only).
 
 ## Decisions
 

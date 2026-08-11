@@ -13,12 +13,3 @@ The system SHALL provide a remediation hint for each finding when `--explain` is
 #### Scenario: Remediation for residency
 - **WHEN** a finding has reason `residency`
 - **THEN** the output SHALL include a hint to update the policy allow-list or change the provider/endpoint
-
-## ADDED Requirements
-
-### Requirement: CLI explain flag
-The CLI SHALL accept `--explain` flag for `scan` command.
-
-#### Scenario: Flag parsing
-- **WHEN** user runs `borderlint scan . --policy p.json --classification c --explain`
-- **THEN** the system SHALL parse the flag and enable explanations in output

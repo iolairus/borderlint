@@ -35,6 +35,8 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 ```
 
 - No `--policy` → **inventory mode** (lists flows + jurisdictions, exits 0).
+- `--explain` — adds a plain-language explanation and remediation hint under each violation
+  (text: a `→` line per reason; json: an `explanation` field per finding). Advisory only; exit codes unchanged.
 - `--format json|mermaid|sarif|sbom|evidence|html|badge` — machine output, a flow map, **SARIF** for GitHub code-scanning,
   a deterministic **AI data-flow SBOM**, an **evidence pack** — a fileable markdown transfer
   inventory with an audit envelope (git commit, policy SHA-256, KB review dates), all three

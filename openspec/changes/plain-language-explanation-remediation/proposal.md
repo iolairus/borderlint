@@ -20,7 +20,6 @@ Developers and privacy reviewers need actionable, plain-language explanations fo
 ## Impact
 
 - `borderlint/cli.py`: parse `--explain`, pass flag through.
-- `borderlint/policy.py`: expose reason codes for templating.
 - `borderlint/report.py`: add explanation renderer, JSON schema extension.
 - No KB changes; no breaking API.
 
