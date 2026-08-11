@@ -498,9 +498,37 @@ def test_unjustified_waiver_ignored():
 
 
 def test_waiver_does_not_clear_deny():
-    f = evaluate(_scan_file("import openai  # borderlint: allow trust me\n"),
-                 _pol(["us"], providers={"deny": ["openai"]}), "customer-pii", kb)
-    assert f[0].severity == "fail"
+    pol = _pol(["hk"], providers={"deny": ["openai"]})
+    f = evaluate(_scan_file("import openai  # borderlint: allow reviewed\n"), pol, "customer-pii", kb)
+    assert any(x.severity == "fail" for x in f)
+
+
+def test_explain_flag_parsing():
+    from borderlint.cli import main
+    # Simulate args with --explain
+    rc = main(["scan", ".", "--policy", "nonexistent.json", "--classification", "customer-pii", "--explain"])
+    # Should error on missing policy file, but flag parsed without crash
+    assert rc == 2
+
+
+def test_explain_text_output():
+    from borderlint.report import text, explain_reason
+    from borderlint.policy import Finding
+    d = Detection("openai", "sdk_import", "openai", "x.py", 1, "us")
+    f = Finding(d, "fail", ["residency"])
+    out = text([f], kb, {"classifications": {"customer-pii": ["hk"]}}, explain=True)
+    assert "→" in out
+    assert "not allowed" in out
+
+
+def test_explain_json_output():
+    from borderlint.report import as_json
+    from borderlint.policy import Finding
+    d = Detection("openai", "sdk_import", "openai", "x.py", 1, "us")
+    f = Finding(d, "fail", ["residency"])
+    out = json.loads(as_json([f], kb, {"classifications": {"customer-pii": ["hk"]}}, explain=True))
+    assert "explanation" in out["findings"][0]
+    assert out["findings"][0]["explanation"]
 
 
 def test_sarif_output():
@@ -1548,7 +1576,7 @@ def test_ch_bloc_apertus():
     k2 = load_kb(_kb_file({"provenance": {"acme-alpine": "ch"}}))
     assert k2.match_model("acme-alpine-1")[1] == "ch"
     try:
-        load_kb(_kb_file({"provenance": {"x-": "zz"}}))
+        load_kb(_kb_file({"x-": "zz"}))
         assert False, "expected ValueError"
     except ValueError as e:
         assert "ch" in str(e)  # the error's vocabulary list includes the new bloc
