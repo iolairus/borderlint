@@ -100,6 +100,12 @@
     {"id": "deepgram", "name": "Deepgram", "category": "speech", "sdks": ["deepgram"], "npm": ["@deepgram/sdk"], "dotnet": ["Deepgram"], "endpoints": ["api.deepgram.com"], "jurisdiction": "us"},
     {"id": "assemblyai", "name": "AssemblyAI", "category": "speech", "sdks": ["assemblyai"], "npm": ["assemblyai"], "jvm": ["com.assemblyai.api"], "dotnet": ["AssemblyAI"], "endpoints": ["api.assemblyai.com"], "jurisdiction": "us"},
     {"id": "soniox", "name": "Soniox", "category": "speech", "sdks": [], "npm": [], "endpoints": ["api.soniox.com"], "jurisdiction": "us"},
-    {"id": "aws_polly", "name": "Amazon Polly", "category": "speech", "sdks": [], "npm": [], "endpoints": ["polly."], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region in host: polly.<region>.amazonaws.com"}
+    {"id": "aws_polly", "name": "Amazon Polly", "category": "speech", "sdks": [], "npm": [], "endpoints": ["polly."], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region in host: polly.<region>.amazonaws.com"},
+    {"id": "github", "name": "GitHub", "category": "service", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "MCP service target (github-mcp-server); the remote MCP host api.githubcopilot.com already resolves via the GitHub Models / Copilot provider. Microsoft-owned"},
+    {"id": "slack", "name": "Slack", "category": "service", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "MCP service target only — no endpoint patterns, resolved via the MCP server map (Salesforce-owned)"},
+    {"id": "google_drive", "name": "Google Drive", "category": "service", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "MCP service target only — no endpoint patterns, resolved via the MCP server map"},
+    {"id": "brave_search", "name": "Brave Search", "category": "service", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "MCP service target only — no endpoint patterns, resolved via the MCP server map"},
+    {"id": "notion", "name": "Notion", "category": "service", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "MCP service target only — no endpoint patterns, resolved via the MCP server map"},
+    {"id": "sentry", "name": "Sentry", "category": "service", "sdks": [], "npm": [], "endpoints": ["mcp.sentry.dev"], "jurisdiction": "us", "note": "MCP service target (stdio via the MCP server map; mcp.sentry.dev is Sentry's hosted remote MCP, found in real-world validation)"}
   ]
 }

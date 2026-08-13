@@ -229,6 +229,12 @@ def load_kb(path: str | None = None) -> "KB":
                         "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, ch, unknown)")
                 user_prov_patterns[pat.lower()] = (bloc, None)
     kb = KB(providers)
+    mcp_doc = json.loads(files("borderlint").joinpath("data/mcp_servers.json").read_text("utf-8"))
+    kb.mcp_servers = dict(mcp_doc.get("servers", {}))
+    kb.mcp_updated = mcp_doc.get("updated")
+    for pkg, pid in kb.mcp_servers.items():
+        if pid != "local" and pid not in kb.by_id:
+            raise ValueError(f"mcp_servers.json maps '{pkg}' to unknown provider id '{pid}'")
     kb.updated = bundled.get("updated")
     kb.sovereignty_map = sov_map
     kb.sovereignty_updated = sov_doc.get("updated")
@@ -266,6 +272,8 @@ class KB:
         self._eps = sorted(eps, key=lambda x: (x[0], -len(x[1])))
         self.region_scheme = {p["id"]: p["region_scheme"] for p in providers if p.get("region_scheme")}
         self.updated: str | None = None  # KB last-reviewed date, set by load_kb
+        self.mcp_servers: dict = {}  # MCP server package/binary id → provider id, set by load_kb
+        self.mcp_updated: str | None = None  # MCP server map last-reviewed date
         self.sovereignty_map: dict = {}  # provider id → sovereignty bloc, set by load_kb
         self.sovereignty_updated: str | None = None  # sovereignty map last-reviewed date
         self.provenance_defaults: dict = {}  # provider id → bloc for first-party-only providers
