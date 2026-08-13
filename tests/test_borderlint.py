@@ -543,6 +543,106 @@ def test_explain_json_output():
     assert "explanation" not in plain["findings"][0]
 
 
+def _mcp_scan(config, name=".mcp.json", sub=""):
+    from borderlint.detect import scan
+    root = tempfile.mkdtemp()
+    d = os.path.join(root, sub) if sub else root
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, name), "w", encoding="utf-8") as fh:
+        fh.write(config)
+    return scan(root, kb)
+
+
+def _srv(entry):
+    return json.dumps({"mcpServers": {"srv": entry}})
+
+
+def test_mcp_url_resolution():
+    d = _mcp_scan(_srv({"url": "https://api.deepseek.com/mcp"}))[0]
+    assert (d.kind, d.provider_id, d.jurisdiction) == ("mcp_server", "deepseek", "cn")
+    d = _mcp_scan(_srv({"url": "http://localhost:8931/sse"}))[0]
+    assert (d.provider_id, d.jurisdiction) == ("local", "local")
+    d = _mcp_scan(_srv({"url": "https://mcp.example.com/sse"}))[0]
+    assert (d.provider_id, d.jurisdiction) == ("custom_endpoint", "unknown")
+    d = _mcp_scan(_srv({"url": "${MCP_GATEWAY_URL}/sse"}))[0]
+    assert d.jurisdiction == "unknown"
+
+
+def test_mcp_stdio_resolution():
+    d = _mcp_scan(_srv({"command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"]}))[0]
+    assert (d.kind, d.provider_id, d.jurisdiction, d.sovereignty) == ("mcp_server", "github", "us", "us")
+    d = _mcp_scan(_srv({"command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/data"]}))[0]
+    assert (d.provider_id, d.jurisdiction) == ("local", "local")
+    d = _mcp_scan(_srv({"command": "npx", "args": ["some-random-mcp"]}))[0]
+    assert (d.provider_id, d.jurisdiction) == ("custom_endpoint", "unknown")
+    # version suffix stripped; docker image path resolves; bare binary command resolves
+    d = _mcp_scan(_srv({"command": "npx", "args": ["@sentry/mcp-server@latest"]}))[0]
+    assert d.provider_id == "sentry"
+    d = _mcp_scan(_srv({"command": "docker", "args": ["run", "-i", "--rm", "-e", "GITHUB_TOKEN", "ghcr.io/github/github-mcp-server"]}))[0]
+    assert d.provider_id == "github"
+    d = _mcp_scan(_srv({"command": "/usr/local/bin/github-mcp-server", "args": ["stdio"]}))[0]
+    assert d.provider_id == "github"
+
+
+def test_mcp_vscode_servers_key():
+    cfg = json.dumps({"servers": {"gh": {"command": "npx", "args": ["@modelcontextprotocol/server-github"]}}})
+    dets = _mcp_scan(cfg, name="mcp.json", sub=".vscode")
+    assert len(dets) == 1 and dets[0].kind == "mcp_server" and dets[0].provider_id == "github"
+
+
+def test_mcp_structural_parse_claims_file():
+    dets = _mcp_scan(_srv({"url": "https://api.deepseek.com/mcp"}))
+    assert len(dets) == 1 and dets[0].kind == "mcp_server"  # no endpoint_reference duplicate
+
+
+def test_mcp_malformed_falls_back_to_line_scan():
+    dets = _mcp_scan('{"mcpServers": {broken "x": {"url": "https://api.openai.com/v1"}}}')
+    assert not any(d.kind == "mcp_server" for d in dets)
+    assert any(d.provider_id == "openai" for d in dets)  # URL still surfaces via line scanning
+
+
+def test_mcp_ignored_directory():
+    assert _mcp_scan(_srv({"url": "https://api.deepseek.com/mcp"}), sub="node_modules") == []
+
+
+def test_mcp_server_names_do_not_bind_models():
+    cfg = json.dumps({"mcpServers": {"deepseek-tools": {"command": "npx", "args": ["@modelcontextprotocol/server-github"]}}})
+    d = _mcp_scan(cfg)[0]
+    assert d.provider_id == "github" and d.provenance == "unknown" and d.model is None
+
+
+def test_mcp_e2e_policy_gate(tmp_path, capsys):
+    from borderlint import cli
+    (tmp_path / ".mcp.json").write_text(_srv({"url": "https://api.deepseek.com/mcp"}))
+    polf = tmp_path / "pol.json"
+    polf.write_text(json.dumps({"classifications": {"customer-pii": ["hk"]}}))
+    rc = cli.main(["scan", str(tmp_path), "-p", str(polf), "-c", "customer-pii", "-f", "json"])
+    doc = json.loads(capsys.readouterr().out)
+    f = doc["findings"][0]
+    assert rc == 1 and f["kind"] == "mcp_server" and f["severity"] == "fail" and "residency" in f["reasons"]
+
+
+def test_mcp_map_unknown_provider_id_rejected():
+    import pytest
+    from borderlint import kb as kbmod
+    bad = {"updated": "2026-08-13", "servers": {"x-server": "no-such-provider"}}
+    real = kbmod.files
+    class _P:
+        def __init__(self, inner): self._inner = inner
+        def joinpath(self, name):
+            if name == "data/mcp_servers.json":
+                class _F:
+                    def read_text(self, enc): return json.dumps(bad)
+                return _F()
+            return self._inner.joinpath(name)
+    try:
+        kbmod.files = lambda pkg: _P(real(pkg))
+        with pytest.raises(ValueError, match="no-such-provider"):
+            kbmod.load_kb()
+    finally:
+        kbmod.files = real
+
+
 def test_sarif_output():
     import json as _json
     from borderlint.report import sarif

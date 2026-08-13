@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import os
 import re
 import warnings
@@ -185,6 +186,96 @@ def _scan_config_endpoints(path: str, src: str, kb) -> list[Detection]:
     return out
 
 
+_MCP_LAUNCHERS = {"npx", "uvx", "bunx", "pipx", "node", "python", "python3", "deno", "docker", "uv"}
+_MCP_SKIP_VALUE_FLAGS = {"-e", "--env", "--env-file", "-v", "--volume", "--mount", "--name", "--network", "-w", "--workdir"}
+
+
+def _is_mcp_config(p) -> bool:
+    if p.name in (".mcp.json", "claude_desktop_config.json"):
+        return True
+    return p.name == "mcp.json" and p.parent.name in (".cursor", ".vscode")
+
+
+def _strip_pkg_version(t: str) -> str:
+    """Drop a trailing @version from an npm-style package id (scoped or not)."""
+    if t.startswith("@"):
+        return "@" + t[1:].split("@", 1)[0]
+    return t.split("@", 1)[0]
+
+
+def _mcp_package(command: str, args: list) -> str:
+    """The server package/binary/image a stdio entry runs.
+
+    ponytail: token heuristic over launcher argv — skips flags, docker plumbing, and
+    env assignments, takes the first plausible package token; full CLI grammars per
+    launcher if real configs defeat it.
+    """
+    cmd = command.strip().replace("\\", "/").rsplit("/", 1)[-1]
+    if cmd.lower() not in _MCP_LAUNCHERS:
+        return cmd  # the command itself is the server binary
+    skip_next = False
+    for t in args:
+        if not isinstance(t, str) or skip_next:
+            skip_next = False
+            continue
+        if t in _MCP_SKIP_VALUE_FLAGS:
+            skip_next = True
+            continue
+        if t.startswith("-") or t in ("run", "exec") or "=" in t:
+            continue
+        return _strip_pkg_version(t)
+    return cmd
+
+
+def _key_line(src: str, key: str) -> int:
+    idx = src.find(f'"{key}"')
+    return src.count("\n", 0, idx) + 1 if idx >= 0 else 1
+
+
+def _scan_mcp_config(path: str, src: str, kb) -> list[Detection]:
+    """One detection per configured MCP server; raises ValueError on malformed JSON."""
+    doc = json.loads(src)
+    if not isinstance(doc, dict):
+        return []
+    servers = doc.get("mcpServers")
+    if not isinstance(servers, dict):
+        servers = doc.get("servers")  # VS Code .vscode/mcp.json uses a top-level `servers` key
+    if not isinstance(servers, dict):
+        return []
+    out: list[Detection] = []
+    for sname, entry in servers.items():
+        if not isinstance(entry, dict):
+            continue
+        line = _key_line(src, sname)
+        url = entry.get("url")
+        if isinstance(url, str) and url.strip():
+            if "${" in url:  # env-templated: destination resolved at runtime
+                out.append(Detection("custom_endpoint", "mcp_server", f"{sname} -> {url}", path, line, "unknown"))
+                continue
+            host = _host_of(url)
+            low = (host or "").lower()
+            if low in _LOOPBACK or low.endswith(".localhost"):
+                out.append(Detection("local", "mcp_server", f"{sname} -> {host}", path, line, "local"))
+            elif host and (hit := kb.match_endpoint(host)):
+                out.append(Detection(hit[0], "mcp_server", f"{sname} -> {hit[1]}", path, line, hit[2]))
+            else:
+                out.append(Detection("custom_endpoint", "mcp_server", f"{sname} -> {host or url}", path, line, "unknown"))
+            continue
+        cmd = entry.get("command")
+        if not isinstance(cmd, str) or not cmd.strip():
+            continue
+        args = entry.get("args") if isinstance(entry.get("args"), list) else []
+        pkg = _mcp_package(cmd, args)
+        pid = kb.mcp_servers.get(pkg)
+        if pid == "local":
+            out.append(Detection("local", "mcp_server", f"{sname} -> {pkg}", path, line, "local"))
+        elif pid:
+            out.append(Detection(pid, "mcp_server", f"{sname} -> {pkg}", path, line, kb.default_jurisdiction(pid)))
+        else:  # unmapped server package — surface loudly, never guess
+            out.append(Detection("custom_endpoint", "mcp_server", f"{sname} -> {pkg}", path, line, "unknown"))
+    return out
+
+
 def _scan_api_calls(path: str, src: str, kb) -> list[Detection]:
     """OpenAI-compatible calls by request-path signature; host resolved only if static in the literal."""
     out: list[Detection] = []
@@ -312,8 +403,16 @@ def scan(root, kb) -> list[Detection]:
         fw = _waivers(src)
         if fw:
             waivers[str(p)] = fw
-        cfg = _scan_config_endpoints(str(p), src, kb)  # AI-endpoint keys / base_url kwargs, any file
-        if is_py:
+        mcp_dets = None
+        if _is_mcp_config(p):
+            try:  # structural parse claims the file; malformed JSON falls back to line scanning
+                mcp_dets = _scan_mcp_config(str(p), src, kb)
+            except ValueError:
+                mcp_dets = None
+        cfg = [] if mcp_dets is not None else _scan_config_endpoints(str(p), src, kb)  # AI-endpoint keys / base_url kwargs, any file
+        if mcp_dets is not None:
+            dets = mcp_dets
+        elif is_py:
             dets = _scan_py(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
         elif is_js:  # imports + endpoint literals (text scan) + OpenAI-compatible call paths
             dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
@@ -326,7 +425,8 @@ def scan(root, kb) -> list[Detection]:
         # one detection per flow per line: drop an api_call already produced by another scanner on its line
         anchored = {(d.provider_id, d.jurisdiction, d.line) for d in dets if d.kind != "api_call"}
         dets = [d for d in dets if d.kind != "api_call" or (d.provider_id, d.jurisdiction, d.line) not in anchored]
-        dets = _attach_models(str(p), src, dets, kb)  # bind model refs → provenance (per file)
+        if mcp_dets is None:  # MCP server names are not model references; skip binding on claimed configs
+            dets = _attach_models(str(p), src, dets, kb)  # bind model refs → provenance (per file)
         for d in dets:
             key = (d.provider_id, d.kind, d.evidence, d.file, d.line)
             if key not in seen:

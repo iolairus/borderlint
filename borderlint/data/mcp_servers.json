@@ -1,0 +1,20 @@
+{
+  "updated": "2026-08-13",
+  "note": "MCP server package/binary/image identifier -> provider KB id. 'local' means the server performs no third-party egress of its own (filesystem, memory, or first-party infrastructure like your own database). Unmapped identifiers surface as an explicit unknown, never a guess.",
+  "servers": {
+    "@modelcontextprotocol/server-filesystem": "local",
+    "@modelcontextprotocol/server-memory": "local",
+    "@modelcontextprotocol/server-everything": "local",
+    "@modelcontextprotocol/server-sequential-thinking": "local",
+    "@modelcontextprotocol/server-postgres": "local",
+    "@modelcontextprotocol/server-sqlite": "local",
+    "@modelcontextprotocol/server-github": "github",
+    "github-mcp-server": "github",
+    "ghcr.io/github/github-mcp-server": "github",
+    "@modelcontextprotocol/server-slack": "slack",
+    "@modelcontextprotocol/server-gdrive": "google_drive",
+    "@modelcontextprotocol/server-brave-search": "brave_search",
+    "@notionhq/notion-mcp-server": "notion",
+    "@sentry/mcp-server": "sentry"
+  }
+}
