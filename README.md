@@ -225,7 +225,7 @@ rendered to PNG:
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v1.12.0
+- uses: iolairus/borderlint@v1.13.0
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -236,7 +236,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v1.12.0
+  rev: v1.13.0
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
