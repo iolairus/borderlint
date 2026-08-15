@@ -218,6 +218,44 @@ def as_json(findings, kb, policy=None, explain=False) -> str:
     }, indent=2)
 
 
+def suricata(findings, kb, policy=None, classification=None) -> str:
+    """Suricata TLS-SNI alert ruleset compiled from the KB and policy (findings unused by design)."""
+    from .policy import _allowed
+    allowed = None
+    if policy and classification:
+        allowed = _allowed(policy.get("classifications", {}).get(classification, []))
+    seen, hosts = set(), []
+    for _prio, h, pid, juris in kb._eps:
+        if h in seen:
+            continue
+        seen.add(h)
+        regional = pid in kb.region_scheme
+        if allowed is not None and not regional and juris in allowed:
+            continue  # host's jurisdiction is allowed: no rule
+        hosts.append((h, pid, juris, regional))
+    hosts.sort(key=lambda t: t[0])
+    mode = (f"policy-filtered, classification {classification}" if allowed is not None
+            else "inventory (no policy: every known AI endpoint alerts)")
+    lines = [
+        "# borderlint Suricata egress ruleset — generated wholesale; do not hand-edit or merge by sid.",
+        f"# Source: provider KB reviewed {kb.updated}; mode: {mode}.",
+        "# Alert posture (detection). For inline IPS enforcement: sed 's/^alert /drop /'.",
+        "# sids run from 1900000 in host order and shift when the KB changes — regenerate, don't diff.",
+        "# Substring SNI matches can overmatch lookalike hosts; region-dependent rules cover all regions of that provider.",
+        "",
+    ]
+    for i, (h, pid, juris, regional) in enumerate(hosts):
+        what = "AI egress" if allowed is None else "disallowed AI egress"
+        marker = ", region-dependent" if regional else ""
+        name = kb.name(pid).replace('"', "'").replace(";", ",")
+        lines.append(
+            f'alert tls any any -> any any (msg:"borderlint: {what} - {name} ({juris}{marker})"; '
+            f'tls.sni; content:"{h}"; nocase; classtype:policy-violation; '
+            f'metadata:borderlint_provider {pid}, borderlint_jurisdiction {juris}; '
+            f'sid:{1900000 + i}; rev:1;)')
+    return "\n".join(lines)
+
+
 def _mlabel(s: str) -> str:
     """A Mermaid label: double-quoted and entity-escaped (# before ", as the quote escape adds a #)."""
     return '"' + s.replace("#", "#35;").replace('"', "#quot;") + '"'
