@@ -5,15 +5,19 @@ TBD - created by archiving change mvp-residency-scanner. Update Purpose after ar
 ## Requirements
 ### Requirement: Scan command
 The CLI SHALL provide a `scan` command that takes a path to scan, an optional policy, an optional
-active classification, and an output format (human-readable, JSON, Mermaid, SARIF, SBOM, evidence, HTML, or shields.io badge endpoint).
+active classification, and an output format (human-readable, JSON, Mermaid, SARIF, SBOM, evidence, HTML, shields.io badge endpoint, or Suricata ruleset).
 
 #### Scenario: Scan a path against a policy
 - **WHEN** the user runs the scan command with a path, a policy, and a classification
 - **THEN** the path is scanned and detected flows are evaluated against the policy for that classification
 
+#### Scenario: Suricata format is accepted
+- **WHEN** the user runs `borderlint scan . --policy p.json --classification c --format suricata`
+- **THEN** a Suricata ruleset is emitted to stdout
+
 ### Requirement: CI exit code
 The CLI SHALL exit with a non-zero status when any violation is found and a zero status otherwise,
-except when an artifact-export format (`--format sbom`, `--format evidence`, `--format html`, or `--format badge`) is requested — an
+except when an artifact-export format (`--format sbom`, `--format evidence`, `--format html`, `--format badge`, or `--format suricata`) is requested — an
 export is not a gate and SHALL exit zero regardless of violations.
 
 #### Scenario: Violation fails the build
@@ -38,6 +42,10 @@ export is not a gate and SHALL exit zero regardless of violations.
 
 #### Scenario: Badge export does not gate
 - **WHEN** `--format badge` is requested and a scan finds a violation
+- **THEN** the CLI exits with a zero status
+
+#### Scenario: Suricata export does not gate
+- **WHEN** `--format suricata` is requested and a scan finds a violation
 - **THEN** the CLI exits with a zero status
 
 ### Requirement: Output formats

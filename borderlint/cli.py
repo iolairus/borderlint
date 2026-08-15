@@ -49,7 +49,7 @@ def main(argv=None) -> int:
     s.add_argument("path", nargs="?", default=".")
     s.add_argument("-p", "--policy", help="residency policy JSON (omit for inventory mode)")
     s.add_argument("-c", "--classification", help="data class on the scanned path (required with --policy)")
-    s.add_argument("-f", "--format", choices=["text", "json", "mermaid", "sarif", "sbom", "evidence", "html", "badge"], default="text")
+    s.add_argument("-f", "--format", choices=["text", "json", "mermaid", "sarif", "sbom", "evidence", "html", "badge", "suricata"], default="text")
     s.add_argument("--providers", help="custom provider knowledge base JSON")
     s.add_argument("--explain", action="store_true", help="include plain-language explanations and remediation hints")
     dp = sub.add_parser("diff", help="Compare two AI data-flow SBOMs (baseline vs current).")
@@ -105,9 +105,10 @@ def main(argv=None) -> int:
                  "sarif": report.sarif, "sbom": report.sbom,
                  "evidence": lambda f, k, p: report.evidence(f, k, p, envelope),
                  "html": lambda f, k, p: report.html(f, k, p, envelope),
-                 "badge": report.badge}
+                 "badge": report.badge,
+                 "suricata": lambda f, k, p: report.suricata(f, k, p, a.classification)}
     print(renderers[a.format](findings, kb, policy))
-    if a.format in ("sbom", "evidence", "html", "badge"):  # an export is an artifact, not a gate
+    if a.format in ("sbom", "evidence", "html", "badge", "suricata"):  # an export is an artifact, not a gate
         return 0
     return 1 if any(f.severity == "fail" for f in findings) else 0
 

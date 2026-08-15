@@ -5,7 +5,7 @@ discussion. `mcp-config-scanning` (rank 1) is already proposed as an
 OpenSpec change; these are the rest, in order. Each becomes a change via
 `/opsx:propose` when picked up.
 
-## 1. Egress allowlist output — policy as enforcement
+## 1. Egress allowlist output — policy as enforcement (PROPOSED 2026-08-13 as suricata-egress-rules — detection posture, Suricata TLS-SNI alert rules)
 
 A new renderer that derives an egress allowlist (FQDNs) from the policy's
 allowed flows, using the endpoint data already in the provider KB.

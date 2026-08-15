@@ -208,8 +208,9 @@ backstop, and accepted flows are recorded with the inline waiver rather than hid
 | `evidence` | A fileable markdown transfer inventory with audit envelope and regime annex |
 | `html` | One self-contained file to hand your DPO or General Counsel |
 | `badge` | shields.io endpoint JSON: pass/fail/flow-count |
+| `suricata` | A Suricata TLS-SNI alert ruleset compiled from the KB and policy — network-level detection of AI egress the code scan can't see |
 
-Exports (`sbom`, `evidence`, `html`, `badge`) are artifacts, not gates: they exit 0.
+Exports (`sbom`, `evidence`, `html`, `badge`, `suricata`) are artifacts, not gates: they exit 0.
 
 The **evidence pack** carries an audit envelope (git commit, policy SHA-256, KB review dates),
 all three governance axes with developer orgs, a waiver register, and a regime annex (PDPO,
@@ -223,7 +224,15 @@ inventory mode (flow count):
 {"schemaVersion": 1, "label": "borderlint", "message": "clean", "color": "green"}
 ```
 
-Publish it by writing the JSON to any static host (GitHub Pages, a gist) on every push:
+The **suricata** ruleset is derived from the KB and policy, not from scan findings — it covers
+providers your code doesn't use yet, so runtime egress (an env-configured base URL, an agent's
+tool call) still trips an alert at the network boundary. One rule per KB endpoint host whose
+jurisdiction the policy disallows (region-selectable clouds always alert, marked
+region-dependent); without a policy, every known AI endpoint alerts. Alert posture — the header
+documents converting to `drop` for inline IPS. sids are deterministic per KB version; regenerate
+rather than diff. Validated against Suricata 8.
+
+Publish the badge by writing the JSON to any static host (GitHub Pages, a gist) on every push:
 
 ```yaml
 - run: borderlint scan . --policy residency.json --classification customer-pii --format badge > badge.json

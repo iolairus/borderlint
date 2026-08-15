@@ -643,6 +643,46 @@ def test_mcp_map_unknown_provider_id_rejected():
         kbmod.files = real
 
 
+def _sur(policy=None, classification=None):
+    from borderlint.report import suricata
+    return suricata([], kb, policy, classification)
+
+
+def test_suricata_policy_selection():
+    out = _sur({"classifications": {"c": ["sg", "uk"]}}, "c")
+    assert 'content:"api.deepseek.com"' in out            # cn host: disallowed
+    assert 'content:"api.openai.com"' in out              # us host: disallowed
+    assert 'content:"dashscope-intl.aliyuncs.com"' not in out  # sg host of a mixed provider: allowed
+    assert 'content:"dashscope.aliyuncs.com"' in out      # cn host of the same provider: disallowed
+    assert 'content:"api.stability.ai"' not in out        # gb host allowed via the uk alias
+    assert 'content:"openrouter.ai"' in out               # unknown jurisdiction alerts
+
+
+def test_suricata_region_scheme_always_alerts():
+    out = _sur({"classifications": {"c": ["cn"]}}, "c")
+    assert "modelarts-maas.com" in out and "region-dependent" in out  # cn default, still alerts
+    assert 'content:"bedrock-runtime"' in out
+
+
+def test_suricata_inventory_and_determinism():
+    a, b = _sur(), _sur()
+    assert a == b  # byte-identical
+    n_hosts = len({h for _p, h, _pid, _j in kb._eps})
+    assert sum(ln.startswith("alert tls ") for ln in a.splitlines()) == n_hosts
+    assert "sid:1900000;" in a and "rev:1;" in a
+    assert 'metadata:borderlint_provider' in a and "classtype:policy-violation" in a
+
+
+def test_suricata_export_does_not_gate(tmp_path, capsys):
+    from borderlint import cli
+    (tmp_path / "app.py").write_text("import openai\n")
+    polf = tmp_path / "pol.json"
+    polf.write_text(json.dumps({"classifications": {"customer-pii": ["hk"]}}))
+    rc = cli.main(["scan", str(tmp_path), "-p", str(polf), "-c", "customer-pii", "-f", "suricata"])
+    out = capsys.readouterr().out
+    assert rc == 0 and "alert tls" in out and "disallowed AI egress" in out
+
+
 def test_sarif_output():
     import json as _json
     from borderlint.report import sarif
