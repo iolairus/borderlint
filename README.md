@@ -72,7 +72,11 @@ python -m borderlint scan ./service --policy residency.json --classification cus
 - `diff <baseline.sbom> <current.sbom>` — compare two SBOMs; **exits 1 when the PR adds a new
   non-`local` flow** (new egress), else 0.
 - `init [path]` — scaffold `residency.json` via a short interview (or non-interactively:
-  `borderlint init . --home hk --classes customer-pii,non-pii`).
+  `borderlint init . --home hk --classes customer-pii,non-pii`). Add `--profile <id>` to seed
+  the allow-list walk from a bundled regulator profile (`hkma`, `mas`) — conservative defaults
+  derived from the regulator's published guidance, with the citation and retrieval date shown
+  during init and recorded in the emitted policy. Advisory starting point, not legal advice;
+  every seeded jurisdiction can be dropped in the walk.
 - Accept a reviewed flow with an inline `# borderlint: allow <reason>` **waiver** (justification
   required; reported as *waived*, not hidden; can't override an explicit provider `deny`).
 - **MCP configs are scanned too**: `.mcp.json`, `claude_desktop_config.json`, and the Cursor /
