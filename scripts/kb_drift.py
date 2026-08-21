@@ -72,6 +72,11 @@ def validate_suppression(supp: dict, provider_ids: set[str]) -> dict:
             raise ValueError(f"drift sdk_exempt '{pid}' is not a bundled provider id")
         if not (reason or "").strip():
             raise ValueError(f"drift sdk_exempt '{pid}' has no reason")
+    for pid, reason in supp.get("data_practices_exempt", {}).items():
+        if pid not in provider_ids:
+            raise ValueError(f"drift data_practices_exempt '{pid}' is not a bundled provider id")
+        if not (reason or "").strip():
+            raise ValueError(f"drift data_practices_exempt '{pid}' has no reason")
     return supp
 
 
@@ -185,12 +190,41 @@ def stale_kbs(kb_dates: dict, today: dt.date,
     return out
 
 
+def data_practices_stale(dp_doc: dict, today: dt.date,
+                         interval_days: int = STALE_DAYS) -> list[tuple[str, str, int]]:
+    """(provider id, reviewed, age_days) for data-practices entries older than the interval."""
+    out = []
+    for pid, entry in sorted(dp_doc.get("entries", {}).items()):
+        reviewed = entry.get("reviewed")
+        if not reviewed:
+            out.append((pid, "missing date", -1))
+            continue
+        age = (today - dt.date.fromisoformat(reviewed)).days
+        if age > interval_days:
+            out.append((pid, reviewed, age))
+    return out
+
+
+def data_practices_gaps(provider_ids: list[str], dp_doc: dict,
+                        suppression: dict | None = None) -> list[str]:
+    """Bundled provider ids with no data-practices entry — ids only, sorted.
+
+    Suppressed via the curated suppression list's `data_practices_exempt` map (id → reason).
+    Gap records carry NO fact values: facts are assigned by hand via pull request.
+    """
+    exempt = set(suppression.get("data_practices_exempt", {})) if suppression else set()
+    covered = set(dp_doc.get("entries", {}))
+    return sorted(pid for pid in set(provider_ids) if pid not in covered and pid not in exempt)
+
+
 def render_report(today: dt.date, providers_gap: list[str],
                   families: list[tuple[str, int, str]],
                   sov_gaps: list[tuple[str, str | None]], stale: list[tuple[str, str, int]],
                   family_cap: int = FAMILY_CAP,
                   residue: list[tuple[str, int]] | None = None,
-                  sdk_gaps: list[tuple[str, list[str]]] | None = None) -> str:
+                  sdk_gaps: list[tuple[str, list[str]]] | None = None,
+                  dp_stale: list[tuple[str, str, int]] | None = None,
+                  dp_gaps: list[str] | None = None) -> str:
     """Markdown issue body: empty sections omitted; empty report is the empty string.
 
     The summary head carries the reference date so week-over-week identical findings
@@ -199,11 +233,15 @@ def render_report(today: dt.date, providers_gap: list[str],
     parts = []
     residue_total = sum(n for _, n in residue) if residue else 0
     sdk = sdk_gaps or []
-    if providers_gap or families or sov_gaps or stale or residue_total or sdk:
-        n_act = len(providers_gap) + len(families) + len(sov_gaps) + len(stale) + len(sdk)
+    dps = dp_stale or []
+    dpg = dp_gaps or []
+    if providers_gap or families or sov_gaps or stale or residue_total or sdk or dps or dpg:
+        n_act = (len(providers_gap) + len(families) + len(sov_gaps) + len(stale) + len(sdk)
+                 + len(dps) + len(dpg))
         head = (f"**Actionable:** {len(providers_gap)} providers \u00b7 {len(families)} model "
                 f"families \u00b7 {len(sov_gaps)} sovereignty gaps \u00b7 {len(stale)} stale KBs "
-                f"\u00b7 {len(sdk)} SDK gaps "
+                f"\u00b7 {len(sdk)} SDK gaps \u00b7 {len(dps)} stale data-practice entries "
+                f"\u00b7 {len(dpg)} data-practice gaps "
                 f"\u2014 **acknowledged residue:** {residue_total} ids \u00b7 checked {today}")
         if n_act == 0:
             head = (f"**Nothing actionable.** Acknowledged residue: {residue_total} ids "
@@ -246,6 +284,21 @@ def render_report(today: dt.date, providers_gap: list[str],
             "reasoned exemption in `scripts/kb_drift_aliases.json` (`sdk_exempt`).\n\n"
             + "\n".join(f"- `{pid}` — missing {', '.join(f'`{k}`' for k in missing)}"
                         for pid, missing in sdk))
+    if dps:
+        parts.append(
+            f"### Stale data-practice entries\n\n"
+            f"Reviewed more than {STALE_DAYS} days ago — re-verify each cited source and bump "
+            f"`reviewed`. Facts are advisory statements, not legal advice.\n\n"
+            + "\n".join(f"- `{pid}` — reviewed {date}, {age} days ago"
+                        for pid, date, age in dps))
+    if dpg:
+        parts.append(
+            "### Data-practice gaps\n\n"
+            "Bundled providers with no curated data-practice entry. Curate **by hand** via pull "
+            "request (each fact needs a source URL + locator + retrieval date) — or record a "
+            "reasoned exemption in `scripts/kb_drift_aliases.json` (`data_practices_exempt`). "
+            "Never auto-fill.\n\n"
+            + "\n".join(f"- `{pid}`" for pid in dpg))
     if residue_total:
         rows = "\n".join(f"- {reason} — {n} id{'s' if n > 1 else ''}"
                          for reason, n in residue)
@@ -278,9 +331,14 @@ def main() -> int:
     today = dt.date.today()
     stale = stale_kbs({k: v for k, v in kb_dates.items() if v}, today)
     sdk_gaps = sdk_coverage_gaps(providers_doc["providers"], suppression)
+    with open(DATA_DIR / "data_practices.json", encoding="utf-8") as fh:
+        dp_doc = json.load(fh)
+    dp_stale = data_practices_stale(dp_doc, today)
+    dp_gaps = data_practices_gaps([p["id"] for p in providers_doc["providers"]], dp_doc,
+                                  suppression)
 
     report = render_report(today, providers_gap, families, sov_gaps, stale, residue=residue,
-                           sdk_gaps=sdk_gaps)
+                           sdk_gaps=sdk_gaps, dp_stale=dp_stale, dp_gaps=dp_gaps)
     if report:
         print(report)
     return 0

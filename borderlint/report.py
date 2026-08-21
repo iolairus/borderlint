@@ -105,6 +105,14 @@ def _arrangements(findings, policy) -> list[str]:
     return [_ref(aid) for aid in _arrangement_ids(findings, policy)]
 
 
+def _cite_suffix(cite: dict) -> str:
+    """Markdown citation suffix for a data-practices fact: source link + retrieval date."""
+    if not cite or not cite.get("url"):
+        return ""
+    loc = f"; {cite['locator']}" if cite.get("locator") else ""
+    return f" — [source]({cite['url']}{loc}, retrieved {cite.get('retrieved', 'unavailable')})"
+
+
 def _regimes(findings, policy) -> list[str]:
     """Regime tag(s) implicated by a flagged flow — {PDPO, PIPL, Macao PDPA}, informational."""
     policy = policy or {}
@@ -623,6 +631,39 @@ def evidence(findings, kb, policy=None, envelope=None) -> str:
     else:
         out.append("No active waivers.")
     out.append("")
+
+    # Data-practices register (advisory): curated facts with citations; uncurated providers
+    # stay visible as "not curated". Never affects verdicts or summary counts.
+    seen_providers = list(dict.fromkeys(f.detection.provider_id for f in findings))
+    if seen_providers:
+        dp = getattr(kb, "data_practices", {}) or {}
+        out += ["## Data practices (advisory)", "",
+                "_Statements about providers' documented practices as of each fact's retrieval"
+                " date — not legal advice._", ""]
+        for pid in seen_providers:
+            entry = dp.get(pid)
+            if not entry:
+                out.append(f"- **{kb.name(pid)}** — not curated (no verified data-practice facts).")
+                continue
+            out.append(f"- **{kb.name(pid)}** (reviewed {entry.get('reviewed', 'unavailable')})")
+            td = entry.get("training_default")
+            if td is not None:
+                c = entry.get("citations", {}).get("training_default", {})
+                out.append(f"  - Trains on customer API data by default: **{td}**"
+                           + _cite_suffix(c))
+            ret = entry.get("retention")
+            if ret is not None:
+                c = entry.get("citations", {}).get("retention", {})
+                out.append(f"  - Retention: {ret}" + _cite_suffix(c))
+            sub = entry.get("subprocessors")
+            if sub:
+                out.append(f"  - Subprocessor list: <{sub['url']}>"
+                           f" (retrieved {sub['retrieved']}; {sub['locator']})")
+            ent = entry.get("enterprise_tier")
+            if ent is not None:
+                c = entry.get("citations", {}).get("enterprise_tier", {})
+                out.append(f"  - Enterprise tier: {ent}" + _cite_suffix(c))
+        out.append("")
 
     if has_policy:
         counts = {}

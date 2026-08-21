@@ -1,0 +1,137 @@
+{
+  "updated": "2026-08-21",
+  "note": "Advisory only. Hand-curated statements about providers' publicly documented data practices (training on customer API data, retention windows, subprocessor lists, enterprise-tier deltas) as of each fact's retrieval date. Never legal advice; never auto-filled from upstream feeds; never influences verdicts. Each entry carries its own 'reviewed' date; undocumented facts are recorded as null (explicitly unknown), never guessed.",
+  "schema": {
+    "entry": {
+      "training_default": "yes | no | opt-out | null (whether the provider trains on customer API data by default)",
+      "retention": "free-text retention window for API inputs/outputs, or null when not publicly documented",
+      "subprocessors": "{url, locator, retrieved} link to the subprocessor list, or null when none found",
+      "enterprise_tier": "free-text note on whether an enterprise/commercial tier changes the answers, or null",
+      "reviewed": "ISO-8601 date this entry was last human-reviewed",
+      "citations": "per-fact {url, locator, retrieved}; every non-null fact MUST carry one"
+    }
+  },
+  "entries": {
+    "openai": {
+      "training_default": "no",
+      "retention": "Abuse-monitoring logs retained up to 30 days by default; application state varies by endpoint (Responses API stores 30 days when store=true; some endpoints until deleted). Zero Data Retention or Modified Abuse Monitoring excludes customer content from abuse logs for approved customers.",
+      "subprocessors": {
+        "url": "https://openai.com/policies/sub-processor-list/",
+        "locator": "Linked from the data controls guide ('OpenAI uses sub-processors to provide its services')",
+        "retrieved": "2026-08-21"
+      },
+      "enterprise_tier": "Zero Data Retention and Modified Abuse Monitoring are subject to prior approval by OpenAI and acceptance of additional requirements (contact sales); Enterprise Key Management (BYOK) is available for application state.",
+      "reviewed": "2026-08-21",
+      "citations": {
+        "training_default": {
+          "url": "https://developers.openai.com/api/docs/guides/your-data",
+          "locator": "'As of March 1, 2023, data sent to the OpenAI API is not used to train or improve OpenAI models (unless you explicitly opt in)'; per-endpoint table shows 'Data used for training: No'",
+          "retrieved": "2026-08-21"
+        },
+        "retention": {
+          "url": "https://developers.openai.com/api/docs/guides/your-data",
+          "locator": "'Abuse monitoring logs ... retained for up to 30 days' and per-endpoint 'Storage requirements and retention controls' table",
+          "retrieved": "2026-08-21"
+        },
+        "enterprise_tier": {
+          "url": "https://developers.openai.com/api/docs/guides/your-data",
+          "locator": "'Currently, these controls are subject to prior approval by OpenAI and acceptance of additional requirements'; Enterprise Key Management (EKM) section",
+          "retrieved": "2026-08-21"
+        }
+      }
+    },
+    "anthropic": {
+      "training_default": "no",
+      "retention": null,
+      "subprocessors": {
+        "url": "https://www.anthropic.com/legal/data-processing-addendum",
+        "locator": "Commercial Terms of Service section C routes data processing through the DPA (which governs subprocessors); no standalone public subprocessor page was reachable at review time",
+        "retrieved": "2026-08-21"
+      },
+      "enterprise_tier": null,
+      "reviewed": "2026-08-21",
+      "citations": {
+        "training_default": {
+          "url": "https://www.anthropic.com/legal/commercial-terms",
+          "locator": "Section B (Customer Content): 'Anthropic may not train models on Customer Content from Services.'",
+          "retrieved": "2026-08-21"
+        }
+      }
+    },
+    "google_gemini": {
+      "training_default": "no",
+      "retention": "Paid Services: prompts and responses logged for a limited period solely for detecting/preventing Prohibited Use Policy violations; Grounding with Google Search/Maps stores prompts and outputs for 30 days. Unpaid Services: content may be used to improve Google products (do not submit confidential data).",
+      "subprocessors": {
+        "url": "https://cloud.google.com/terms/subprocessors",
+        "locator": "Google Cloud Platform Subprocessors page (last modified August 19, 2026 at review time)",
+        "retrieved": "2026-08-21"
+      },
+      "enterprise_tier": "The paid/unpaid split is the effective tier boundary: unpaid Gemini API quota and free-tier AI Studio use submissions to improve Google products; EEA/Switzerland/UK users get the paid (no-training) rules even on unpaid Services.",
+      "reviewed": "2026-08-21",
+      "citations": {
+        "training_default": {
+          "url": "https://ai.google.dev/gemini-api/terms",
+          "locator": "Paid Services - How Google Uses Your Data: 'Google doesn't use your prompts ... or responses to improve our products' (Unpaid Services section states the opposite for free usage)",
+          "retrieved": "2026-08-21"
+        },
+        "retention": {
+          "url": "https://ai.google.dev/gemini-api/terms",
+          "locator": "Paid Services: 'Google logs prompts and responses for a limited period of time, solely for detecting and preventing violations of the Prohibited Use Policy'; Grounding sections: 'store prompts ... for thirty (30) days'",
+          "retrieved": "2026-08-21"
+        },
+        "enterprise_tier": {
+          "url": "https://ai.google.dev/gemini-api/terms",
+          "locator": "Unpaid Services - How Google Uses Your Data; 'If you're in the European Economic Area, Switzerland, or the United Kingdom, the terms under Paid Services apply to all Services'",
+          "retrieved": "2026-08-21"
+        }
+      }
+    },
+    "azure_openai": {
+      "training_default": "no",
+      "retention": "Models are stateless: no prompts or completions are stored in the model. Stateful features (Responses API, Assistants Threads, Stored completions, Files/vector stores) persist data in the resource's Azure geography until deleted. Abuse monitoring stores prompt/completion samples only when flagged, in logically separated per-resource stores; modified abuse monitoring turns this off for approved customers.",
+      "subprocessors": {
+        "url": "https://aka.ms/DPA",
+        "locator": "Microsoft Products and Services Data Protection Addendum, linked from the data-privacy article intro",
+        "retrieved": "2026-08-21"
+      },
+      "enterprise_tier": "Modified abuse monitoring requires application and approval; customers can verify logging is off via the ContentLogging=false capability attribute in the Azure portal/CLI.",
+      "reviewed": "2026-08-21",
+      "citations": {
+        "training_default": {
+          "url": "https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy",
+          "locator": "'prompts and completions are NOT used to train any generative AI foundation models without your permission or instruction'; 'The models are stateless: no prompts or completions are stored in the model'",
+          "retrieved": "2026-08-21"
+        },
+        "retention": {
+          "url": "https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy",
+          "locator": "Sections 'Generating completions...' (stateless models), 'Data storage for Models sold by Azure features', and 'Preventing abuse' (flagged-sample storage, logical separation, modified abuse monitoring)",
+          "retrieved": "2026-08-21"
+        },
+        "enterprise_tier": {
+          "url": "https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy",
+          "locator": "'How can a customer verify if data storage for abuse monitoring is off?' (ContentLogging=false); 'managed customers may apply to modify abuse monitoring'",
+          "retrieved": "2026-08-21"
+        }
+      }
+    },
+    "aws_bedrock": {
+      "training_default": null,
+      "retention": "Zero data retention by default (zero operator access + ZDR security model): Bedrock does not store model inputs or outputs. Exceptions retain inputs/outputs up to 30 days for automated abuse detection (e.g. classifier-flagged traffic of certain hosted OpenAI GPT-5.x models; Claude Fable 5 retains up to 30 days). Setting data_retention_mode to 'none' enforces zero retention account/project-wide.",
+      "subprocessors": null,
+      "enterprise_tier": "Some models (Claude Mythos 5, Claude Fable 5) require opting into provider_data_share, which retains and shares inference data with Anthropic for up to 30 days; full ZDR access for models requiring retention is evaluated per-account/per-model via the AWS account team.",
+      "reviewed": "2026-08-21",
+      "citations": {
+        "retention": {
+          "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/data-retention.html",
+          "locator": "Data retention modes table ('none': 'No request or response data is written to durable storage'); 'What data is retained and for how long' (30-day abuse-detection retention)",
+          "retrieved": "2026-08-21"
+        },
+        "enterprise_tier": {
+          "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/abuse-detection.html",
+          "locator": "'For Anthropic Claude Fable 5, inputs and outputs will be retained for up to 30 days ... you must opt in to sharing retained traffic with Anthropic'; ZDR access section of the data-retention page",
+          "retrieved": "2026-08-21"
+        }
+      }
+    }
+  }
+}
