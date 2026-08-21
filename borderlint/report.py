@@ -106,11 +106,16 @@ def _arrangements(findings, policy) -> list[str]:
 
 
 def _cite_suffix(cite: dict) -> str:
-    """Markdown citation suffix for a data-practices fact: source link + retrieval date."""
+    """Markdown citation suffix for a data-practices fact: source link + retrieval date.
+
+    Only the URL belongs inside the link target; the locator note stays outside so the
+    href remains a valid URL.
+    """
     if not cite or not cite.get("url"):
         return ""
     loc = f"; {cite['locator']}" if cite.get("locator") else ""
-    return f" — [source]({cite['url']}{loc}, retrieved {cite.get('retrieved', 'unavailable')})"
+    return (f" — [source]({cite['url']}){loc},"
+            f" retrieved {cite.get('retrieved', 'unavailable')}")
 
 
 def _regimes(findings, policy) -> list[str]:

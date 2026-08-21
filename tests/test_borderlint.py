@@ -2444,7 +2444,8 @@ def test_evidence_data_practices_register():
     pack = evidence([Finding(d1, "fail", [])], k, _pol(["hk"]))
     assert "## Data practices (advisory)" in pack and "not legal advice" in pack
     assert "Trains on customer API data by default: **no**" in pack
-    assert "[source](https://developers.openai.com/api/docs/guides/your-data" in pack
+    # the href is exactly the URL; locator + retrieval date stay outside the link
+    assert "[source](https://developers.openai.com/api/docs/guides/your-data)" in pack
     assert "retrieved 2026-08-21" in pack
     assert "reviewed 2026-08-21" in pack
     # verdicts untouched: register adds no summary or severity changes
