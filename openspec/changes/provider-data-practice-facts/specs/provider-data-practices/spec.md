@@ -1,0 +1,56 @@
+# provider-data-practices Delta
+
+## ADDED Requirements
+
+### Requirement: Bundled curated data-practice facts
+The system SHALL bundle a hand-curated knowledge base of per-provider data-practice facts,
+where each provider entry records: whether the provider trains on customer API data by
+default (`yes`, `no`, or `opt-out`), the retention window for API inputs and outputs when
+publicly documented, a link to the subprocessor list when one exists, and whether an
+enterprise tier changes any of these answers. Every entry SHALL carry a top-level
+last-reviewed date in ISO-8601 (`YYYY-MM-DD`) form, consistent with the other bundled
+knowledge bases.
+
+#### Scenario: A fully curated provider entry
+- **WHEN** the data-practice knowledge base is loaded for a provider with all four facts curated
+- **THEN** the entry exposes the training default, the retention window, the subprocessor link, and the enterprise-tier note alongside its last-reviewed date
+
+#### Scenario: A partially curated provider entry
+- **WHEN** the data-practice knowledge base is loaded for a provider where only some facts are publicly documented
+- **THEN** the undocumented facts are recorded as explicitly unknown rather than omitted or guessed
+
+### Requirement: Source citation per fact
+Each data-practice fact SHALL carry a source citation consisting of a URL and a locator
+note identifying where in the source the statement is made, together with the date the
+fact was retrieved from that source.
+
+#### Scenario: A fact renders with its citation
+- **WHEN** a data-practice fact is surfaced anywhere by borderlint
+- **THEN** it is presented with its source URL, locator note, and retrieval date
+
+### Requirement: Human curation only
+The data-practice knowledge base SHALL be populated exclusively by human curation via pull
+request; the system SHALL NOT auto-fill any fact from upstream feeds, and the scheduled
+coverage check SHALL NOT propose values for missing facts.
+
+#### Scenario: Drift output proposes no facts
+- **WHEN** the scheduled check reports a provider missing from the data-practice knowledge base
+- **THEN** the gap record carries no training default, retention window, or subprocessor link
+
+### Requirement: Explicit absence handling
+borderlint SHALL state that data practices are not curated for a provider detected in a
+scan but absent from the data-practice knowledge base, rather than rendering empty values,
+and SHALL NOT fail the scan on that absence.
+
+#### Scenario: An uncurated provider in a scan
+- **WHEN** a scan detects a provider absent from the data-practice knowledge base
+- **THEN** the scan exits normally and surfaces the provider as not curated for data practices
+
+### Requirement: Advisory framing
+All rendered data-practice facts SHALL be framed as advisory statements about providers'
+documented practices as of their retrieval dates, with a visible disclaimer that they are
+not legal advice; facts SHALL never influence verdicts, policy evaluation, or exit codes.
+
+#### Scenario: Facts never change a verdict
+- **WHEN** a scan produces findings for a provider whose curated facts are present
+- **THEN** the verdicts and exit code are identical to a run without the data-practice knowledge base
