@@ -87,7 +87,51 @@ def _arrangement_ids_for(jset) -> list[str]:
     return out
 
 
-def _provider_body(p, sov_map, regimes, arr_map) -> str:
+def _data_practices_section(pid: str, name: str, dp_entry: dict | None) -> str:
+    """Advisory data-practices block: curated facts with cited sources, or an explicit
+    'not curated' statement. Never omitted silently for a provider page."""
+    e = lambda v: escape(str(v), quote=True)
+    parts = ['<h2>Data practices</h2>',
+             '<p class="axis">How does this provider treat the data you send it? Advisory'
+             ' statements about documented practices — not legal advice.</p>']
+    if not dp_entry:
+        parts.append(f"<p>Data practices are not curated for {e(name)} yet — no verified"
+                     " facts. Curation happens by hand via pull request.</p>")
+        return "\n".join(parts)
+
+    def cite(fact: str) -> str:
+        c = (dp_entry.get("citations") or {}).get(fact) or {}
+        if not c.get("url"):
+            return ""
+        loc = f" — {e(c['locator'])}" if c.get("locator") else ""
+        return (f' <a href="{e(c["url"])}">source</a>'
+                f"<small>{loc} (retrieved {e(c.get('retrieved', 'unavailable'))})</small>")
+
+    rows = []
+    td = dp_entry.get("training_default")
+    if td is not None:
+        label = {"yes": "Yes", "no": "No", "opt-out": "Opt-out available"}[td]
+        rows.append(("Trains on customer API data by default", f"<strong>{e(label)}</strong>"
+                     + cite("training_default")))
+    if dp_entry.get("retention") is not None:
+        rows.append(("Retention (API inputs/outputs)", e(dp_entry["retention"])
+                     + cite("retention")))
+    sub = dp_entry.get("subprocessors")
+    if sub:
+        rows.append(("Subprocessor list",
+                     f'<a href="{e(sub["url"])}">{e(sub["url"])}</a>'
+                     f"<small> — {e(sub['locator'])} (retrieved {e(sub['retrieved'])})</small>"))
+    if dp_entry.get("enterprise_tier") is not None:
+        rows.append(("Enterprise tier", e(dp_entry["enterprise_tier"])
+                     + cite("enterprise_tier")))
+    rows.append(("Entry last reviewed", e(dp_entry.get("reviewed", "unavailable"))))
+    parts.append("<table>")
+    parts += [f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in rows]
+    parts.append("</table>")
+    return "\n".join(parts)
+
+
+def _provider_body(p, sov_map, regimes, arr_map, dp_entry=None) -> str:
     e = lambda v: escape(str(v), quote=True)
     name = p["name"]
     j = p["jurisdiction"]
@@ -136,6 +180,7 @@ def _provider_body(p, sov_map, regimes, arr_map) -> str:
             "<table>"]
     body += [f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in rows]
     body.append("</table>")
+    body.append(_data_practices_section(p["id"], name, dp_entry))
     return "\n".join(body)
 
 
@@ -157,6 +202,7 @@ def build(out_dir: str) -> dict:
     prov = _load("provenance.json")
     regimes = _load("regimes.json")["regimes"]
     arrangements = {a["id"]: a for a in _load("arrangements.json")["arrangements"]}
+    data_practices = _load("data_practices.json")["entries"]
     e = lambda v: escape(str(v), quote=True)
     footer = (f"<p>Generated from the <a href=\"{REPO}\">borderlint</a> knowledge base — "
               f"providers reviewed {e(providers['updated'])}, sovereignty {e(sov['updated'])}, "
@@ -173,7 +219,8 @@ def build(out_dir: str) -> dict:
         title = f"{p['name']} data residency & sovereignty — {SITE_NAME}"
         desc = (f"AI data residency and sovereignty for {p['name']}: residency {jlabel}, "
                 f"sovereignty bloc {sov_map.get(p['id'], 'unknown')}. From the borderlint knowledge base.")
-        doc = _page(title, desc, _provider_body(p, sov_map, regimes, arrangements), depth=1, footer=footer)
+        doc = _page(title, desc, _provider_body(p, sov_map, regimes, arrangements,
+                                                data_practices.get(p["id"])), depth=1, footer=footer)
         with open(os.path.join(out_dir, "providers", f"{p['id']}.html"), "w", encoding="utf-8") as fh:
             fh.write(doc)
         plinks.append((p["name"], f"providers/{p['id']}.html"))

@@ -136,6 +136,16 @@ def _scan_file(content, suffix=".py"):
     return scan(p, kb)
 
 
+def _src(content, suffix=".py"):
+    """Write content to a temp file and return its path (for scan-into-kb2 flows)."""
+    import os
+    import tempfile
+    p = os.path.join(tempfile.mkdtemp(), "f" + suffix)
+    with open(p, "w", encoding="utf-8") as fh:
+        fh.write(content)
+    return p
+
+
 def dets(src):
     return _resolve_sovereignty(_scan_py("x.py", src, kb), kb)
 
@@ -465,6 +475,53 @@ def test_kb_drift_sdk_coverage():
         shipped = json.load(fh)
     kd.validate_suppression(shipped, {p["id"] for p in doc["providers"]})
     assert kd.sdk_coverage_gaps(doc["providers"], shipped) == []
+
+
+def test_kb_drift_data_practices():
+    kd = _drift()
+    today = dt.date(2026, 8, 21)
+    dp_doc = {"entries": {
+        "fresh": {"training_default": "no", "reviewed": "2026-08-01"},
+        "stale": {"training_default": "no", "reviewed": "2026-01-01"},
+        "nodate": {"training_default": "no"},
+    }}
+    # stale entry flagged with age; fresh not; missing date reported loudly
+    assert kd.data_practices_stale(dp_doc, today) == [("nodate", "missing date", -1),
+                                                      ("stale", "2026-01-01", 232)]
+    # gaps: ids only — no fact values ever leak into the report
+    providers = ["fresh", "stale", "uncovered", "exempt"]
+    supp = {"data_practices_exempt": {"exempt": "no public API terms"}}
+    assert kd.data_practices_gaps(providers, dp_doc, supp) == ["uncovered"]
+    assert kd.data_practices_gaps(providers, dp_doc) == ["exempt", "uncovered"]
+    # loud failures: exemption for an unknown id, exemption without a reason
+    for bad in ({"data_practices_exempt": {"ghost": "reason"}},
+                {"data_practices_exempt": {"fresh": "  "}}):
+        try:
+            kd.validate_suppression(bad, {"fresh"})
+            assert False, "expected ValueError"
+        except ValueError as e:
+            assert "ghost" in str(e) or "fresh" in str(e)
+    # report: both sections render, counts join the summary head, gap carries no facts
+    r = kd.render_report(dt.date(2026, 7, 20), [], [], [], [],
+                         dp_stale=[("openai", "2026-01-01", 201)],
+                         dp_gaps=["deepseek"])
+    assert "### Stale data-practice entries" in r and "`openai` — reviewed 2026-01-01, 201 days ago" in r
+    assert "### Data-practice gaps" in r and "- `deepseek`" in r
+    assert "Never auto-fill" in r
+    assert "1 stale data-practice entries · 1 data-practice gaps" in r
+    # empty sections omitted; empty report still renders nothing
+    empty = kd.render_report(dt.date(2026, 7, 20), [], [], [], [])
+    assert "### Stale data-practice entries" not in empty and "### Data-practice gaps" not in empty
+    # shipped state: seed entries are fresh and the flagship set is curated (gaps exist by
+    # design for the long tail, but the five seeded providers must never be flagged stale)
+    import json
+    with open("borderlint/data/data_practices.json", encoding="utf-8") as fh:
+        shipped_dp = json.load(fh)
+    with open("borderlint/data/providers.json", encoding="utf-8") as fh:
+        ids = [p["id"] for p in json.load(fh)["providers"]]
+    assert not kd.data_practices_stale(shipped_dp, dt.date.today())
+    assert {"openai", "anthropic", "google_gemini", "azure_openai", "aws_bedrock"} <= set(shipped_dp["entries"])
+    assert set(shipped_dp["entries"]) <= set(ids)
 
 
 def test_kb_has_iso_date():
@@ -2166,6 +2223,13 @@ def test_kb_site_generator(tmp_path):
     assert t(a) != t(b) and m(a) != m(b) and "OpenAI" in t(a)
     # cn-destination page names its regime and links the arrangement
     assert 'href="https://' in b and "PIPL" in b
+    # data-practices section: curated provider renders cited facts + disclaimer
+    assert "Data practices" in a and "not legal advice" in a
+    assert "Trains on customer API data by default" in a
+    assert '<a href="https://developers.openai.com/api/docs/guides/your-data">source</a>' in a
+    assert "(retrieved 2026-08-21)" in a
+    # uncurated provider states absence explicitly
+    assert "not curated for DeepSeek yet" in b
     # site tooling lives outside the shipped package
     assert not os.path.exists(os.path.join(root, "borderlint", "kb_site.py"))
 
@@ -2282,3 +2346,124 @@ def test_claude_plugin_manifests():
     with open(os.path.join(root, "integrations", "claude-code-skill.md"), encoding="utf-8") as fh:
         legacy = fh.read()
     assert "Run the scan first" not in legacy and "claude-plugin/skills/borderlint-check" in legacy
+
+
+# --- Data-practices knowledge base --------------------------------------------
+
+def _dp():
+    from borderlint.kb import load_data_practices
+    return load_data_practices()
+
+
+def test_data_practices_schema():
+    from borderlint import kb as kbmod
+    dp = _dp()
+    assert {"openai", "anthropic", "google_gemini", "azure_openai", "aws_bedrock"} <= set(dp)
+    for pid, entry in dp.items():
+        assert entry["training_default"] in ("yes", "no", "opt-out", None)
+        assert kbmod._iso_date(entry["reviewed"])
+    # every data-practices key is a real bundled provider id
+    with open("borderlint/data/providers.json", encoding="utf-8") as fh:
+        ids = {p["id"] for p in json.load(fh)["providers"]}
+    assert set(dp) <= ids
+    # every non-null fact carries a complete citation; citations name existing facts only.
+    # `subprocessors` is self-citing: its value IS the {url, locator, retrieved} object.
+    for pid, entry in dp.items():
+        facts = {k for k in ("training_default", "retention", "enterprise_tier")
+                 if entry.get(k) is not None}
+        cited = set(entry.get("citations", {}))
+        assert facts <= cited, f"{pid}: uncited facts {facts - cited}"
+        assert cited <= facts, f"{pid}: stray citations {cited - facts}"
+        if entry.get("subprocessors") is not None:
+            assert all(entry["subprocessors"].get(k)
+                       for k in ("url", "locator", "retrieved")), pid
+        for fact, cite in entry.get("citations", {}).items():
+            assert all(cite.get(k) for k in ("url", "locator", "retrieved")), (pid, fact)
+            assert cite["url"].startswith("https://")
+
+
+def test_data_practices_partial_entry_is_explicitly_unknown():
+    dp = _dp()
+    # partially curated entries record nulls — explicitly unknown, never guessed
+    assert dp["anthropic"]["retention"] is None
+    assert dp["aws_bedrock"]["training_default"] is None
+    assert dp["aws_bedrock"]["subprocessors"] is None
+
+
+def test_data_practices_loader_rejects_bad_entries():
+    from borderlint import kb as kbm
+    bad = [
+        {"openai": {"training_default": "maybe", "reviewed": "2026-08-21"}},
+        {"openai": {"training_default": "no", "reviewed": "21/08/2026"}},
+        {"openai": {"training_default": "no", "reviewed": "2026-08-21",
+                    "citations": {"retention": {"url": "https://x", "locator": "",
+                                                "retrieved": "2026-08-21"}}}},
+    ]
+    for entries in bad:
+        try:
+            kbm._validate_data_practices(entries)
+            assert False, f"expected ValueError for {entries}"
+        except ValueError as e:
+            assert "openai" in str(e)
+
+
+def test_data_practices_never_change_verdicts():
+    # same source scanned with and without curated entries → identical verdicts
+    from borderlint import kb as kbmod
+    from borderlint.detect import scan as scan_file
+    real_dp = kbmod.load_data_practices
+
+    def run(with_facts: bool):
+        kbmod.load_data_practices = (real_dp if with_facts else lambda: {})
+        try:
+            kb2 = load_kb()
+            dets = _resolve_sovereignty(scan_file(_src("import openai\n"), kb2), kb2)
+            findings = evaluate(dets, _pol(["hk"]), "customer-pii", kb2)
+            return [(f.detection.provider_id, f.severity) for f in findings]
+        finally:
+            kbmod.load_data_practices = real_dp
+
+    assert run(True) == run(False) == [("openai", "fail")]
+
+
+def test_data_practices_uncurated_provider_does_not_fail_scan():
+    # deepseek has no curated entry: detection still works and absence is visible
+    from borderlint.detect import scan as scan_file
+    kb2 = load_kb()
+    ds = scan_file(_src('u = "https://api.deepseek.com/v1"\n'), kb2)
+    assert any(d.provider_id == "deepseek" for d in ds)
+    assert "deepseek" not in kb2.data_practices
+
+
+def test_evidence_data_practices_register():
+    # curated provider: facts with citations + retrieval dates; disclaimer present
+    from borderlint.report import evidence
+    from borderlint.policy import Finding
+    k = load_kb()
+    d1 = _resolve_sovereignty(_scan_py("a.py", "import openai\n", k), k)[0]
+    pack = evidence([Finding(d1, "fail", [])], k, _pol(["hk"]))
+    assert "## Data practices (advisory)" in pack and "not legal advice" in pack
+    assert "Trains on customer API data by default: **no**" in pack
+    # the href is exactly the URL; locator + retrieval date stay outside the link
+    assert "[source](https://developers.openai.com/api/docs/guides/your-data)" in pack
+    assert "retrieved 2026-08-21" in pack
+    assert "reviewed 2026-08-21" in pack
+    # verdicts untouched: register adds no summary or severity changes
+    assert "1 fail" in pack.split("## Summary")[1].splitlines()[2]
+
+
+def test_evidence_data_practices_register_uncurated_visible():
+    # uncurated provider appears as not curated rather than being omitted
+    from borderlint.report import evidence
+    from borderlint.policy import Finding
+    k = load_kb()
+    d1 = _resolve_sovereignty(_scan_py("b.py", 'u = "https://api.deepseek.com"\n', k), k)[0]
+    pack = evidence([Finding(d1, "fail", [])], k, _pol(["hk"]))
+    assert "**DeepSeek** — not curated" in pack
+
+
+def test_evidence_register_absent_without_findings():
+    # no flows → no register section at all (nothing to describe)
+    from borderlint.report import evidence
+    k = load_kb()
+    assert "Data practices" not in evidence([], k, None)

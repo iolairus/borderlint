@@ -2,9 +2,23 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import re
 from importlib.resources import files
+
+_ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _iso_date(s: str) -> bool:
+    """True for a valid ISO-8601 YYYY-MM-DD date string."""
+    if not _ISO_DATE.match(s or ""):
+        return False
+    try:
+        dt.date.fromisoformat(s)
+        return True
+    except ValueError:
+        return False
 
 # Region-coded endpoints (the host carries the region) → ccTLD jurisdiction.
 _AWS_RE = re.compile(r"\b([a-z]{2}(?:-gov)?-[a-z]+-\d)\b")
@@ -179,6 +193,38 @@ def _load_provenance_map() -> dict:
     return json.loads(files("borderlint").joinpath("data/provenance.json").read_text("utf-8"))
 
 
+# --- Data-practices dimension -------------------------------------------------
+# Per-provider data-practice facts (training default, retention, subprocessors, enterprise
+# delta), hand-curated with per-fact citations. Strictly advisory: read-only for renderers,
+# never consulted by detection or policy evaluation.
+_TRAINING_DEFAULTS = frozenset({"yes", "no", "opt-out"})
+
+
+def _valid_training_default(token) -> bool:
+    return token is None or token in _TRAINING_DEFAULTS
+
+
+def _validate_data_practices(entries: dict) -> dict:
+    """Raise loudly on an invalid training default, missing review date, or incomplete citation."""
+    for pid, entry in entries.items():
+        if not _valid_training_default(entry.get("training_default")):
+            raise ValueError(
+                f"invalid training_default '{entry.get('training_default')}' for provider '{pid}' "
+                "(use one of yes, no, opt-out, or null when undocumented)")
+        if not _iso_date(entry.get("reviewed", "")):
+            raise ValueError(f"data-practices entry '{pid}' has no ISO-8601 'reviewed' date")
+        for fact, cite in entry.get("citations", {}).items():
+            if not all(cite.get(k) for k in ("url", "locator", "retrieved")):
+                raise ValueError(f"citation for '{fact}' on '{pid}' needs url, locator, retrieved")
+    return entries
+
+
+def load_data_practices() -> dict:
+    """Bundled provider id → data-practice entry (advisory; each fact carries its citation)."""
+    doc = json.loads(files("borderlint").joinpath("data/data_practices.json").read_text("utf-8"))
+    return _validate_data_practices(dict(doc.get("entries", {})))
+
+
 def _endpoints_provider(endpoints: dict) -> dict:
     for host, juris in endpoints.items():
         if not _valid_jurisdiction(juris):
@@ -241,6 +287,7 @@ def load_kb(path: str | None = None) -> "KB":
     kb.provenance_defaults = dict(prov_doc.get("provider_defaults", {}))
     kb.provenance_passthrough = [o.lower() for o in prov_doc.get("passthrough_orgs", [])]
     kb.provenance_updated = prov_doc.get("updated")
+    kb.data_practices = load_data_practices()
     kb.set_provenance_patterns(prov_patterns, user_prov_patterns)
     return kb
 

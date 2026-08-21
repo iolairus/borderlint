@@ -54,6 +54,37 @@ covered provider, or not an AI model provider at all, is recorded in
 `scripts/kb_drift_aliases.json` (with a reason for ignores) instead of the KB — same PR workflow,
 read only by the drift check.
 
+## Data-practice facts (`data_practices.json`)
+
+A separate, hand-curated KB answering the four questions privacy reviewers ask first:
+does the provider train on customer API data by default, what is the retention window for
+API inputs/outputs, where is the subprocessor list, and does an enterprise tier change the
+answers. Strictly advisory — it never influences verdicts or exit codes.
+
+Entry schema (one entry per provider id in `providers.json`):
+
+| Field | Required | Meaning |
+|---|---|---|
+| `training_default` | no | `"yes"` \| `"no"` \| `"opt-out"`; omit (JSON `null`) when undocumented |
+| `retention` | no | Free-text retention window for API inputs/outputs; conditions belong in the text |
+| `subprocessors` | no | `{url, locator, retrieved}` link to the provider's subprocessor list |
+| `enterprise_tier` | no | Free-text note on whether an enterprise/commercial tier changes the answers |
+| `reviewed` | yes | ISO-8601 date you last verified every fact in the entry |
+| `citations` | per fact | `{url, locator, retrieved}` for each non-null fact |
+
+Curation rules:
+
+- **Every fact needs a citation**: the source URL, a locator note naming where in the source
+  the statement is made, and the date you retrieved it. Read the primary documentation — never
+  copy from third-party summaries.
+- **Unknown means null.** If a fact isn't publicly documented, leave it `null`; the renderers
+  state "not curated" rather than guessing.
+- **Human curation only.** The drift check reports providers without entries and entries whose
+  `reviewed` date exceeds the 90-day interval — ids only, never proposed values. Facts are
+  never auto-filled from upstream feeds. A provider deliberately left uncurated gets a reasoned
+  entry under `data_practices_exempt` in `scripts/kb_drift_aliases.json`.
+- Facts are statements about documented practices as of their retrieval dates — not legal advice.
+
 ## Custom / private providers (no PR needed)
 
 To add providers for your own org without contributing them upstream, pass a user KB with
