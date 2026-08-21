@@ -2439,6 +2439,50 @@ def test_data_practices_uncurated_provider_does_not_fail_scan():
     assert entry["training_default"] is None and entry["retention"] is None
 
 
+# --- Xiaomi MiMo coverage -------------------------------------------------------
+
+def test_xiaomi_mimo_endpoint_detection():
+    # both hosts detect; global platform region-dependent, Token Plan host CN
+    kb2 = load_kb()
+    ds = _resolve_sovereignty(_scan_py(
+        "m.py", 'u = "https://api.xiaomimimo.com/v1"\nv = "https://token-plan-cn.xiaomimimo.com/v1"\n', kb2), kb2)
+    by = {d.evidence: d for d in ds if d.provider_id == "xiaomi_mimo"}
+    assert by["api.xiaomimimo.com"].jurisdiction == "unknown"
+    assert by["token-plan-cn.xiaomimimo.com"].jurisdiction == "cn"
+
+
+def test_xiaomi_mimo_provenance_resolution():
+    # bare, org-qualified, and redistributor-qualified ids all resolve to cn/Xiaomi
+    kb2 = load_kb()
+    for mid in ("mimo-v2.5-pro", "xiaomi/mimo-v2.5-pro", "novita/xiaomimimo/mimo-v2-flash"):
+        got = kb2.match_model(mid)
+        assert got is not None, mid
+        assert got[1] == "cn" and got[2] == "Xiaomi", (mid, got)
+    # drift coverage gap is closed for the formerly-residue id
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    gap = kb_drift.model_coverage_gap(
+        [("novita/xiaomimimo/mimo-v2-flash", "novita"), ("mimo-v2.5-pro", "xiaomi_mimo")], kb2)
+    assert gap == []
+
+
+def test_xiaomi_mimo_data_practices_curated():
+    from borderlint import kb as kbmod
+    dp = _dp()
+    entry = dp["xiaomi_mimo"]
+    assert entry["training_default"] == "no"
+    assert entry["subprocessors"] is None  # no published subprocessor list
+    assert kbmod._iso_date(entry["reviewed"])
+    # every non-null fact carries a complete citation
+    for fact in ("training_default", "retention", "enterprise_tier"):
+        assert entry.get(fact) is not None, fact
+        cite = entry["citations"][fact]
+        assert all(cite.get(k) for k in ("url", "locator", "retrieved")), fact
+    # the training citation quotes the actual privacy-policy commitment
+    assert "model training" in entry["citations"]["training_default"]["locator"]
+
+
 # --- Regulator profiles --------------------------------------------------------
 
 def _rp():

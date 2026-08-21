@@ -132,6 +132,8 @@
     "tencent/": {"org": "Tencent", "bloc": "cn"},
     "stepfun/": {"org": "StepFun", "bloc": "cn"},
     "xiaomi/": {"org": "Xiaomi", "bloc": "cn"},
+    "novita/xiaomimimo/": {"org": "Xiaomi", "bloc": "cn"},
+    "mimo-": {"org": "Xiaomi", "bloc": "cn"},
     "sakana/": {"org": "Sakana AI", "bloc": "jp"},
     "falcon-": {"org": "TII", "bloc": "ae"},
     "falcon2": {"org": "TII", "bloc": "ae"},
