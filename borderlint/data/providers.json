@@ -1,5 +1,5 @@
 {
-  "updated": "2026-07-13",
+  "updated": "2026-08-21",
   "providers": [
     {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "npm": ["openai", "@ai-sdk/openai"], "jvm": ["com.openai"], "dotnet": ["OpenAI"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
     {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "npm": ["@anthropic-ai/sdk", "@ai-sdk/anthropic"], "jvm": ["com.anthropic"], "dotnet": ["Anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
@@ -106,6 +106,7 @@
     {"id": "google_drive", "name": "Google Drive", "category": "service", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "MCP service target only — no endpoint patterns, resolved via the MCP server map"},
     {"id": "brave_search", "name": "Brave Search", "category": "service", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "MCP service target only — no endpoint patterns, resolved via the MCP server map"},
     {"id": "notion", "name": "Notion", "category": "service", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "MCP service target only — no endpoint patterns, resolved via the MCP server map"},
-    {"id": "sentry", "name": "Sentry", "category": "service", "sdks": [], "npm": [], "endpoints": ["mcp.sentry.dev"], "jurisdiction": "us", "note": "MCP service target (stdio via the MCP server map; mcp.sentry.dev is Sentry's hosted remote MCP, found in real-world validation)"}
+    {"id": "sentry", "name": "Sentry", "category": "service", "sdks": [], "npm": [], "endpoints": ["mcp.sentry.dev"], "jurisdiction": "us", "note": "MCP service target (stdio via the MCP server map; mcp.sentry.dev is Sentry's hosted remote MCP, found in real-world validation)"},
+    {"id": "nimble", "name": "Nimble (Nimbleway)", "category": "service", "sdks": [], "npm": [], "endpoints": ["sdk.nimbleway.com"], "jurisdiction": "il", "note": "web-data / search API (litellm `nimble` route → sdk.nimbleway.com/v2/search); queries egress to Nimbleway, Tel Aviv"}
   ]
 }
