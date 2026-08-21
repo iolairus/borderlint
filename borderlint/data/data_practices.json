@@ -132,6 +132,95 @@
           "retrieved": "2026-08-21"
         }
       }
+    },
+    "deepseek": {
+      "training_default": null,
+      "retention": null,
+      "subprocessors": null,
+      "enterprise_tier": null,
+      "reviewed": "2026-08-21",
+      "note": "DeepSeek's API terms of use and privacy policy (platform.deepseek.com PDFs) could not be retrieved at review time — content extraction failed on every attempt. Facts are left null rather than guessed from third-party summaries; re-review when primary sources are reachable.",
+      "citations": {}
+    },
+    "moonshot": {
+      "training_default": "opt-out",
+      "retention": "Input/output content is retained while your account is active (privacy policy: 'account, input, and payment information are retained while your account is active'); violation-related information until resolved. Servers located in Singapore; cross-border transfers use appropriate safeguards.",
+      "subprocessors": null,
+      "enterprise_tier": "Restrictions on training use of Customer Content are available via enterprise arrangements or separate written agreements with Moonshot AI (ToS section 4); without such an agreement, Customer Content may be used to provide, maintain, develop, support, and improve the Services.",
+      "reviewed": "2026-08-21",
+      "citations": {
+        "training_default": {
+          "url": "https://platform.kimi.ai/docs/agreement/modeluse.md",
+          "locator": "Terms of Service section 4 (Content): 'We may use Content to provide, maintain, develop, support, and improve the Services ... Customer who requires restrictions on the use of Customer Content for training or improving Moonshot AI models may contact Moonshot AI to discuss available enterprise arrangements'",
+          "retrieved": "2026-08-21"
+        },
+        "retention": {
+          "url": "https://platform.kimi.ai/docs/agreement/userprivacy.md",
+          "locator": "Privacy Policy section 6 (Retention): 'account, input, and payment information are retained while your account is active'; section 10: 'We store the information we collect in secure servers located in Singapore'",
+          "retrieved": "2026-08-21"
+        },
+        "enterprise_tier": {
+          "url": "https://platform.kimi.ai/docs/agreement/modeluse.md",
+          "locator": "Terms of Service section 4: enterprise arrangements or separate written agreements restrict training use of Customer Content",
+          "retrieved": "2026-08-21"
+        }
+      }
+    },
+    "alibaba_dashscope": {
+      "training_default": "no",
+      "retention": "Member Content (inputs and outputs) is processed on the customer's behalf; Alibaba Cloud deletes data per customer instructions on deletion/termination, subject to backup/disaster-recovery retention windows and legal-hold requirements (Product Terms 4.48.1(g)(iv)). Processing/storage location follows where Alibaba Cloud maintains Model Studio facilities and may differ from the customer's location.",
+      "subprocessors": null,
+      "enterprise_tier": "Training-use restrictions are the default posture: Alibaba Cloud will not use Member Content to develop or improve Model Studio models unless the customer separately provides consent. Third-party models listed in Model Studio carry their own third-party terms that the customer must review separately.",
+      "reviewed": "2026-08-21",
+      "citations": {
+        "training_default": {
+          "url": "https://www.alibabacloud.com/help/en/legal/latest/alibaba-cloud-international-website-product-terms-of-service",
+          "locator": "Section 4.48.1(e) (Model Studio): 'Alibaba Cloud will not use your Member Content to develop or improve the models on Model Studio, unless you separately provide your consent.'",
+          "retrieved": "2026-08-21"
+        },
+        "retention": {
+          "url": "https://www.alibabacloud.com/help/en/legal/latest/alibaba-cloud-international-website-product-terms-of-service",
+          "locator": "Section 4.48.1(g)(iv) (deletion on instruction subject to backup/legal retention) and 4.48.1(g)(viii) (processing location where facilities are maintained)",
+          "retrieved": "2026-08-21"
+        },
+        "enterprise_tier": {
+          "url": "https://www.alibabacloud.com/help/en/legal/latest/alibaba-cloud-international-website-product-terms-of-service",
+          "locator": "Section 4.48.1(e) (no model development/improvement on Member Content without separate consent) and 4.48.2 (third-party model services under separate third-party terms)",
+          "retrieved": "2026-08-21"
+        }
+      }
+    },
+    "tencent_hunyuan": {
+      "training_default": null,
+      "retention": null,
+      "subprocessors": null,
+      "enterprise_tier": null,
+      "reviewed": "2026-08-21",
+      "note": "Tencent Cloud's Hunyuan product/terms pages returned 404s at review time (international docs reorganised around TokenHub); only pricing pages were reachable, none stating training or retention commitments. Facts left null; re-review against Tencent Cloud's service agreement when a stable URL is available.",
+      "citations": {}
+    },
+    "zhipu": {
+      "training_default": null,
+      "retention": null,
+      "subprocessors": null,
+      "enterprise_tier": null,
+      "reviewed": "2026-08-21",
+      "note": "Z.ai / BigModel open-platform terms and privacy policy were unreachable at review time (docs.z.ai and open.bigmodel.cn legal pages 404'd or redirected without content). Facts left null; re-review when primary sources are reachable.",
+      "citations": {}
+    },
+    "nvidia_nim": {
+      "training_default": null,
+      "retention": "NVIDIA's general privacy policy: customer and enterprise personal data erased after more than five years without engagement; transfers to the US under Standard Contractual Clauses with EU-U.S./Swiss-U.S./UK Data Privacy Framework certification. NIM-API-specific inference-data terms were not retrievable at review time.",
+      "subprocessors": null,
+      "enterprise_tier": null,
+      "reviewed": "2026-08-21",
+      "citations": {
+        "retention": {
+          "url": "https://www.nvidia.com/en-us/about-nvidia/privacy-policy/",
+          "locator": "Data Retention section: 'We erase customer and enterprise personal data if there has been no engagement with you for more than five years'; Cross-Border Data Transfer section (SCCs, Data Privacy Framework)",
+          "retrieved": "2026-08-21"
+        }
+      }
     }
   }
 }

@@ -2229,7 +2229,8 @@ def test_kb_site_generator(tmp_path):
     assert '<a href="https://developers.openai.com/api/docs/guides/your-data">source</a>' in a
     assert "(retrieved 2026-08-21)" in a
     # uncurated provider states absence explicitly
-    assert "not curated for DeepSeek yet" in b
+    assert "not curated for Mistral AI yet" in (
+        (tmp_path / "providers" / "mistral.html").read_text())
     # site tooling lives outside the shipped package
     assert not os.path.exists(os.path.join(root, "borderlint", "kb_site.py"))
 
@@ -2427,12 +2428,15 @@ def test_data_practices_never_change_verdicts():
 
 
 def test_data_practices_uncurated_provider_does_not_fail_scan():
-    # deepseek has no curated entry: detection still works and absence is visible
+    # mistral has no curated entry: detection still works and absence is visible
     from borderlint.detect import scan as scan_file
     kb2 = load_kb()
-    ds = scan_file(_src('u = "https://api.deepseek.com/v1"\n'), kb2)
-    assert any(d.provider_id == "deepseek" for d in ds)
-    assert "deepseek" not in kb2.data_practices
+    ds = scan_file(_src('u = "https://api.mistral.ai/v1"\n'), kb2)
+    assert any(d.provider_id == "mistral" for d in ds)
+    assert "mistral" not in kb2.data_practices
+    # deepseek IS curated now — but with explicit nulls, not guessed facts
+    entry = kb2.data_practices["deepseek"]
+    assert entry["training_default"] is None and entry["retention"] is None
 
 
 def test_evidence_data_practices_register():
@@ -2457,9 +2461,9 @@ def test_evidence_data_practices_register_uncurated_visible():
     from borderlint.report import evidence
     from borderlint.policy import Finding
     k = load_kb()
-    d1 = _resolve_sovereignty(_scan_py("b.py", 'u = "https://api.deepseek.com"\n', k), k)[0]
+    d1 = _resolve_sovereignty(_scan_py("b.py", 'u = "https://api.mistral.ai/v1"\n', k), k)[0]
     pack = evidence([Finding(d1, "fail", [])], k, _pol(["hk"]))
-    assert "**DeepSeek** — not curated" in pack
+    assert "**Mistral AI** — not curated" in pack
 
 
 def test_evidence_register_absent_without_findings():
