@@ -1732,6 +1732,13 @@ def test_drift_aug17_resolutions():
     m = kb.match_endpoint("sdk.nimbleway.com")
     assert m[0] == "nimble" and m[2] == "il"
     assert kb.default_sovereignty("nimble") == "il"
+    # Aug-21 follow-on drift: OpenAI daybreak/chat-latest, Cognition SWE, Bedrock AgentCore
+    assert kb.match_model("daybreak-blue-latest")[1:] == ("us", "OpenAI")
+    assert kb.match_model("chat-latest")[2] == "OpenAI"
+    assert kb.match_model("swe-1.7")[1:] == ("us", "Cognition AI")
+    assert kb.match_endpoint("api.cognition.ai")[0] == "cognition"
+    m = kb.match_endpoint("bedrock-agentcore-runtime.ap-east-1.amazonaws.com")
+    assert m[0] == "aws_bedrock" and m[2] == "hk"  # AgentCore host resolves with the aws region scheme
 
 
 def test_ch_bloc_apertus():
