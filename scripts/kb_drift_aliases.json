@@ -47,6 +47,7 @@
     "zhipu": "no official Java/.NET SDK verified (official: Python, JS)"
   },
   "aliases": {
+    "agentcore": "aws_bedrock",
     "amazon_nova": "aws_bedrock",
     "azure": "azure_openai",
     "azure_ai": "azure_openai",
@@ -105,6 +106,9 @@
     "you_com": "litellm routes You.com as web search, not model serving (judged 2026-07-05)"
   },
   "residue": {
+    "nimble/search": "search API product name, not a model (structural); provider covered in providers.json as `nimble`",
+    "agentcore/search": "AWS Bedrock AgentCore web-search tool, not a model (structural); provider aliased to aws_bedrock",
+    "bedrock/guardrails": "Bedrock Guardrails safety feature, not a model (structural)",
     "fireworks-ai-": "litellm pricing bucket, not a model (structural)",
     "together-ai-": "litellm pricing bucket, not a model (structural)",
     "fal_ai/": "aggregator path-style image-endpoint ids; per-path patterns would be dishonest anchoring (structural)",

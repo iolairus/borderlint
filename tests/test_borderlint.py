@@ -1720,6 +1720,27 @@ def test_versioned_model_identifiers():
     assert kd.model_coverage_gap([("vertex_ai/claude-3-5-haiku@20241022", "vertex_ai")], k) == []
 
 
+def test_drift_aug17_resolutions():
+    """Aug-17 drift items: FW-* (Fireworks on Azure Foundry), Orpheus (Canopy Labs), Nimbleway."""
+    assert kb.match_model("FW-DeepSeek-V3.2")[1:] == ("cn", "DeepSeek")
+    assert kb.match_model("FW-GLM-5.2-Fast")[1] == "cn"
+    assert kb.match_model("FW-Kimi-K3")[1] == "cn"
+    assert kb.match_model("FW-MiniMax-M3")[1] == "cn"
+    assert kb.match_model("FW-Nemotron-3-Ultra-NVFP4")[1:] == ("us", "NVIDIA")
+    assert kb.match_model("FW-Inkling")[1:] == ("us", "Fireworks AI")
+    assert kb.match_model("orpheus-v1-english")[1:] == ("us", "Canopy Labs")
+    m = kb.match_endpoint("sdk.nimbleway.com")
+    assert m[0] == "nimble" and m[2] == "il"
+    assert kb.default_sovereignty("nimble") == "il"
+    # Aug-21 follow-on drift: OpenAI daybreak/chat-latest, Cognition SWE, Bedrock AgentCore
+    assert kb.match_model("daybreak-blue-latest")[1:] == ("us", "OpenAI")
+    assert kb.match_model("chat-latest")[2] == "OpenAI"
+    assert kb.match_model("swe-1.7")[1:] == ("us", "Cognition AI")
+    assert kb.match_endpoint("api.cognition.ai")[0] == "cognition"
+    m = kb.match_endpoint("bedrock-agentcore-runtime.ap-east-1.amazonaws.com")
+    assert m[0] == "aws_bedrock" and m[2] == "hk"  # AgentCore host resolves with the aws region scheme
+
+
 def test_ch_bloc_apertus():
     k = load_kb()
     assert k.match_model("swiss-ai/Apertus-70B-Instruct")[1] == "ch"
