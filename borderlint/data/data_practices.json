@@ -221,6 +221,30 @@
           "retrieved": "2026-08-21"
         }
       }
+    },
+    "xiaomi_mimo": {
+      "training_default": "no",
+      "retention": "Personal information retained only as long as necessary for the stated purposes or as required by law; deleted or anonymised once the purpose is fulfilled, on erasure request, or on service termination (subject to legal-hold isolation).",
+      "subprocessors": null,
+      "enterprise_tier": "Token Plan subscribers use a dedicated CN base URL (token-plan-cn.xiaomimimo.com) with tp- keys instead of the pay-as-you-go global endpoint; data-storage region selection is available on request, subject to compliance review and additional fees (service agreement 1.1).",
+      "reviewed": "2026-08-21",
+      "citations": {
+        "training_default": {
+          "url": "https://mimo.mi.com/docs/terms/privacy-policy",
+          "locator": "Section 3.1 (Collection of personal information from you): 'Xiaomi will not use the content you provide for model training or any other purposes.'",
+          "retrieved": "2026-08-21"
+        },
+        "retention": {
+          "url": "https://mimo.mi.com/docs/terms/privacy-policy",
+          "locator": "Section 6 (How long will your personal information be stored?): retained for the purposes described, deleted or anonymised after fulfilment/erasure/termination except where law requires isolation",
+          "retrieved": "2026-08-21"
+        },
+        "enterprise_tier": {
+          "url": "https://mimo.mi.com/docs/terms/user-agreement",
+          "locator": "Section 1.1 (data storage regions selectable on request, subject to compliance and additional fees) and section 4.4 (services outside the Chinese Mainland store data on servers in Europe and Singapore); Token Plan host per the First API Call quickstart",
+          "retrieved": "2026-08-21"
+        }
+      }
     }
   }
 }
