@@ -85,6 +85,36 @@ Curation rules:
   entry under `data_practices_exempt` in `scripts/kb_drift_aliases.json`.
 - Facts are statements about documented practices as of their retrieval dates — not legal advice.
 
+## Regulator profiles (`regulator_profiles.json`)
+
+Hand-curated profiles that pre-seed the `init` wizard's allow-list walk from a regulator's
+published AI guidance (`borderlint init --profile <id>`). Strictly advisory: every seeded
+jurisdiction stays operator-editable, and the wizard prints the profile's citation and an
+explicit not-legal-advice disclaimer whenever one is active.
+
+Profile schema (one entry per profile id):
+
+| Field | Required | Meaning |
+|---|---|---|
+| `seats` | yes | Supported seat(s) the profile targets (e.g. `["hk"]`); mismatch with `--home` warns but proceeds |
+| `regulator` | yes | Display name of the issuing regulator |
+| `citation` | yes | `{url, retrieved}` link to the guidance the defaults derive from |
+| `defaults` | yes | Per-classification allow-list of jurisdiction tokens (recognised vocabulary only) |
+| `notes` | no | Free-text explaining the conservative choices |
+| `reviewed` | yes | ISO-8601 date you last verified the profile against the guidance |
+
+Curation rules:
+
+- **Defaults must cite the guidance.** Record the source URL and retrieval date; read the
+  primary document, never third-party summaries.
+- **Conservative by default.** Seed onshore only unless the guidance itself endorses a
+  cross-border arrangement (e.g. CN-GBA under the GBA Standard Contract for non-pii);
+  explain deviations in `notes`.
+- **Human curation only.** The file carries a top-level `updated` date and joins the weekly
+  staleness check; nothing is fetched or updated at runtime.
+- Profiles are starting points derived from cited guidance as of its retrieval date — never
+  legal advice and never a determination of filing sufficiency.
+
 ## Custom / private providers (no PR needed)
 
 To add providers for your own org without contributing them upstream, pass a user KB with

@@ -225,6 +225,42 @@ def load_data_practices() -> dict:
     return _validate_data_practices(dict(doc.get("entries", {})))
 
 
+def _validate_regulator_profiles(profiles: dict) -> dict:
+    """Raise loudly on an invalid seat, jurisdiction token, or missing citation/review date."""
+    for pid, profile in profiles.items():
+        if not profile.get("seats"):
+            raise ValueError(f"regulator profile '{pid}' lists no supported seats")
+        for seat in profile["seats"]:
+            # Seats are two-letter ccTLDs here (hk, sg, ...); the wizard's seat list owns
+            # the full vocabulary — the loader only checks token well-formedness.
+            if not (len(seat) == 2 and seat.isalpha() and seat.islower()):
+                raise ValueError(f"regulator profile '{pid}' names unsupported seat '{seat}'")
+        if not profile.get("regulator", "").strip():
+            raise ValueError(f"regulator profile '{pid}' has no regulator name")
+        cite = profile.get("citation") or {}
+        if not all(cite.get(k) for k in ("url", "retrieved")):
+            raise ValueError(f"regulator profile '{pid}' needs a citation with url + retrieved")
+        if not _iso_date(profile.get("reviewed", "")):
+            raise ValueError(f"regulator profile '{pid}' has no ISO-8601 'reviewed' date")
+        for cls, allow in (profile.get("defaults") or {}).items():
+            if not isinstance(allow, list) or not allow:
+                raise ValueError(
+                    f"regulator profile '{pid}' class '{cls}' needs a non-empty allow-list")
+            for token in allow:
+                if not _valid_jurisdiction(token):
+                    raise ValueError(
+                        f"regulator profile '{pid}' class '{cls}' uses invalid jurisdiction "
+                        f"'{token}' (use a ccTLD/ISO code or one of CN-GBA, GBA, local, unknown)")
+    return profiles
+
+
+def load_regulator_profiles() -> dict:
+    """Bundled profile id → regulator profile (advisory seeds for the init wizard)."""
+    doc = json.loads(files("borderlint").joinpath(
+        "data/regulator_profiles.json").read_text("utf-8"))
+    return _validate_regulator_profiles(dict(doc.get("profiles", {})))
+
+
 def _endpoints_provider(endpoints: dict) -> dict:
     for host, juris in endpoints.items():
         if not _valid_jurisdiction(juris):

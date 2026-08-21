@@ -16,7 +16,7 @@ import sys
 from dataclasses import dataclass
 
 from .detect import scan
-from .kb import load_kb
+from .kb import load_kb, load_regulator_profiles
 from .policy import _alias
 
 # Supported home-base seats offered by the wizard.
@@ -47,6 +47,7 @@ class _InitArgs:
     classes: str | None = None
     output: str = "residency.json"
     force: bool = False
+    profile: str | None = None
 
 
 def _ask(input_fn, prompt: str, default: str | None = None) -> str:
@@ -91,37 +92,111 @@ def _observed_jurisdictions(path: str, providers: str | None) -> set[str]:
     return {d.jurisdiction for d in detections}
 
 
-def _walk_jurisdictions(input_fn, jurisdictions: set[str], classes: list[str], home: str) -> dict:
+def _resolve_profile(profile_id: str | None) -> tuple[dict | None, int]:
+    """Load the named bundled regulator profile.
+
+    Returns (profile, exit_code): (None, 0) when no id was given or all is well;
+    (None, non-zero) after printing an error when the id is unknown.
+    """
+    if not profile_id:
+        return None, 0
+    profiles = load_regulator_profiles()
+    profile = profiles.get(profile_id)
+    if not profile:
+        print(f"error: unknown profile '{profile_id}' "
+              f"(available: {', '.join(sorted(profiles))})", file=sys.stderr)
+        return None, 2
+    return profile, 0
+
+
+def _apply_profile_seed(allow: dict[str, list[str]], classes: list[str],
+                        home: str, profile: dict) -> None:
+    """Union the profile's default allow-lists into `allow` (home always wins its seat).
+
+    Interactive mode calls this before the walk so seeded jurisdictions appear as
+    pre-affirmed keep choices; non-interactive mode unions with observed jurisdictions.
+    """
+    defaults = profile.get("defaults") or {}
+    for cls in classes:
+        seeded = [j for j in defaults.get(cls, []) if j != home]
+        for jur in seeded:
+            if jur not in allow[cls]:
+                allow[cls].append(jur)
+
+
+def _announce_profile(profile: dict) -> None:
+    """Render the active profile's provenance and advisory framing to stderr."""
+    cite = profile.get("citation") or {}
+    print(f"profile: {profile['regulator']} — guidance {cite.get('url', 'unavailable')} "
+          f"(retrieved {cite.get('retrieved', 'unavailable')}); reviewed "
+          f"{profile.get('reviewed', 'unavailable')}", file=sys.stderr)
+    if profile.get("notes"):
+        print(f"notes: {profile['notes']}", file=sys.stderr)
+    print("This is a conservative starting point derived from the cited guidance — "
+          "not legal advice and not a determination of filing sufficiency. "
+          "Every seeded jurisdiction can be dropped in the walk.", file=sys.stderr)
+
+
+def _warn_seat_mismatch(home: str, profile: dict) -> None:
+    """Warn when the chosen home base is outside the profile's target seats (D6)."""
+    if home not in (profile.get("seats") or []):
+        print(f"warning: profile targets seat(s) {', '.join(profile['seats'])} but the "
+              f"home base is '{home}' — proceeding; review the seeded defaults carefully.",
+              file=sys.stderr)
+
+
+def _walk_jurisdictions(input_fn, jurisdictions: set[str], classes: list[str], home: str,
+                        seeded: set[str] | None = None) -> dict:
     """For each observed jurisdiction x each class, prompt keep/drop.
 
     The home base is pre-seeded into every class allow-list (a home seat is always acceptable to
-    itself). Returns {class: [jurisdictions...]}.
+    itself). Profile-seeded jurisdictions are pre-affirmed too: they are offered with keep as
+    the default answer and land in the allow-list unless explicitly dropped. Returns
+    {class: [jurisdictions...]}.
     """
+    seeded = seeded or set()
     allow: dict[str, list[str]] = {c: [home] for c in classes}
     for jur in sorted(jurisdictions):
         if jur == home:
             continue  # already seeded
         for cls in classes:
-            ans = _ask(input_fn, f"Keep '{jur}' for '{cls}'? (y/N)", "n")
+            if jur in seeded:
+                ans = _ask(input_fn, f"Keep '{jur}' for '{cls}'? (Y/n)", "y")
+            else:
+                ans = _ask(input_fn, f"Keep '{jur}' for '{cls}'? (y/N)", "n")
             if ans.lower() in ("y", "yes"):
                 if jur not in allow[cls]:
                     allow[cls].append(jur)
     return allow
 
 
-def _build_policy(home: str, allow: dict[str, list[str]]) -> dict:
+def _build_policy(home: str, allow: dict[str, list[str]],
+                  profile: dict | None = None, profile_id: str | None = None) -> dict:
     """Assemble the policy dict in the shorthand classifications-map shape.
 
     `fail_on` is intentionally omitted so the policy inherits the engine default
     (``["residency", "denied_provider", "model_denied"]``) — emitting it here would either
     downgrade a later-added ``deny_models`` match to a warning or silently opt every new user
     into the sovereignty dimension before they have written a sovereignty block.
+
+    With an active profile, `_profile` metadata keys carry the seed's provenance; the
+    policy loader ignores unknown keys, so the file stays strictly loadable.
     """
-    return {
+    policy = {
         "home_location": home,
         "on_unknown": _DEFAULT_ON_UNKNOWN,
         "classifications": {c: jur for c, jur in allow.items()},
     }
+    if profile:
+        cite = profile.get("citation") or {}
+        policy["_profile"] = {
+            "id": profile_id,
+            "regulator": profile.get("regulator"),
+            "guidance_url": cite.get("url"),
+            "retrieved": cite.get("retrieved"),
+            "reviewed": profile.get("reviewed"),
+        }
+    return policy
 
 
 def _write_policy(policy: dict, out_path: str, force: bool) -> bool:
@@ -152,9 +227,14 @@ def run_init(args: object, input_fn=input, providers: str | None = None) -> int:
         classes=getattr(args, "classes", None),
         output=getattr(args, "output", "residency.json"),
         force=getattr(args, "force", False),
+        profile=getattr(args, "profile", None),
     )
 
     non_interactive = a.home is not None and a.classes is not None
+
+    profile, rc = _resolve_profile(getattr(a, "profile", None))
+    if rc:
+        return rc
 
     if non_interactive:
         home = a.home
@@ -164,8 +244,13 @@ def run_init(args: object, input_fn=input, providers: str | None = None) -> int:
             return 2
         classes = [c.strip() for c in a.classes.split(",") if c.strip()]
         jurisdictions = _observed_jurisdictions(a.path, providers)
-        # Scripted users get a permissive starting point: home + every observed jurisdiction.
+        # Scripted users get a permissive starting point: home + every observed jurisdiction,
+        # unioned with the profile's defaults when one is active.
         allow = {c: [home] + sorted(j for j in jurisdictions if j != home) for c in classes}
+        if profile:
+            _warn_seat_mismatch(home, profile)
+            _announce_profile(profile)
+            _apply_profile_seed(allow, classes, home, profile)
     else:
         # A single supplied flag is honoured; only the missing piece is prompted for.
         home = a.home if (a.home and _is_supported_seat(a.home)) else _ask_home(input_fn)
@@ -176,12 +261,20 @@ def run_init(args: object, input_fn=input, providers: str | None = None) -> int:
         classes = ([c.strip() for c in a.classes.split(",") if c.strip()]
                    if a.classes else _ask_classes(input_fn))
         jurisdictions = _observed_jurisdictions(a.path, providers)
+        seeded: set[str] = set()
+        if profile:
+            _warn_seat_mismatch(home, profile)
+            _announce_profile(profile)
+            defaults = profile.get("defaults") or {}
+            for cls in classes:
+                seeded.update(j for j in defaults.get(cls, []) if j != home)
+            jurisdictions = set(jurisdictions) | seeded
         if not jurisdictions:
             print("note: no AI data flows detected; allow-lists seeded with the home base only.",
                   file=sys.stderr)
-        allow = _walk_jurisdictions(input_fn, jurisdictions, classes, home)
+        allow = _walk_jurisdictions(input_fn, jurisdictions, classes, home, seeded)
 
-    policy = _build_policy(home, allow)
+    policy = _build_policy(home, allow, profile, getattr(a, "profile", None))
     if not _write_policy(policy, a.output, a.force):
         return 2
     print(f"wrote policy to {a.output}")

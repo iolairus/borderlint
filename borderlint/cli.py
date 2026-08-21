@@ -60,6 +60,7 @@ def main(argv=None) -> int:
     ip.add_argument("path", nargs="?", default=".", help="path to scan for an inventory of AI data flows")
     ip.add_argument("--home", help="home base seat (hk, mo, CN-GBA, jp, kr, sg, au, uk, eu, my)")
     ip.add_argument("--classes", help="comma-separated data classifications to handle (non-interactive)")
+    ip.add_argument("--profile", help="seed the walk from a bundled regulator profile (e.g. hkma, mas)")
     ip.add_argument("-o", "--output", default="residency.json", help="output policy file (default: residency.json)")
     ip.add_argument("--force", action="store_true", help="overwrite an existing output file")
     a = ap.parse_args(argv)

@@ -2439,6 +2439,166 @@ def test_data_practices_uncurated_provider_does_not_fail_scan():
     assert entry["training_default"] is None and entry["retention"] is None
 
 
+# --- Regulator profiles --------------------------------------------------------
+
+def _rp():
+    from borderlint.kb import load_regulator_profiles
+    return load_regulator_profiles()
+
+
+def test_regulator_profiles_schema():
+    from borderlint import kb as kbmod
+    rp = _rp()
+    assert {"hkma", "mas"} <= set(rp)
+    for pid, profile in rp.items():
+        assert profile["seats"], pid
+        for seat in profile["seats"]:
+            assert len(seat) == 2 and seat.isalpha() and seat.islower(), (pid, seat)
+        assert profile["regulator"].strip()
+        cite = profile["citation"]
+        assert cite["url"].startswith("https://") and kbmod._iso_date(cite["retrieved"])
+        assert kbmod._iso_date(profile["reviewed"])
+        assert profile["defaults"], pid
+        # every default token is in the recognised jurisdiction vocabulary
+        from borderlint import kb as kbm
+        for cls, allow in profile["defaults"].items():
+            assert allow, (pid, cls)
+            for token in allow:
+                assert kbm._valid_jurisdiction(token), (pid, cls, token)
+
+
+def test_regulator_profiles_loader_rejects_bad_entries():
+    from borderlint import kb as kbm
+    good = {"seats": ["hk"], "regulator": "X", "citation": {"url": "https://x", "retrieved": "2026-08-21"},
+            "defaults": {"customer-pii": ["hk"]}, "reviewed": "2026-08-21"}
+    bad = [
+        ("no seats", {**good, "seats": []}),
+        ("bad seat", {**good, "seats": ["HKMA"]}),
+        ("no regulator", {**good, "regulator": "  "}),
+        ("no citation url", {**good, "citation": {"retrieved": "2026-08-21"}}),
+        ("bad review date", {**good, "reviewed": "21/08/2026"}),
+        ("empty class list", {**good, "defaults": {"customer-pii": []}}),
+        ("invalid token", {**good, "defaults": {"customer-pii": ["hk", "mars"]}}),
+    ]
+    for why, profile in bad:
+        try:
+            kbm._validate_regulator_profiles({"hkma": profile})
+            assert False, f"expected ValueError: {why}"
+        except ValueError as e:
+            assert "hkma" in str(e), (why, str(e))
+
+
+# --- Init --profile integration -------------------------------------------------
+
+def _init_tmp():
+    out = os.path.join(tempfile.mkdtemp(), "residency.json")
+    return out
+
+
+def test_init_without_profile_unchanged(tmp_path):
+    # no --profile: behaviour byte-identical to pre-profile (no provenance output/keys)
+    import json as _json
+    from borderlint.init import run_init
+    out = _init_tmp()
+    a = _InitArgs(path=_FIXTURE, home="hk", classes="customer-pii", output=out)
+    assert run_init(a) == 0
+    doc = _json.load(open(out, encoding="utf-8"))
+    assert "_profile" not in doc
+    assert doc["classifications"]["customer-pii"] == ["hk", "us"]  # home + observed
+
+
+def test_init_profile_seeds_interactive_walk(tmp_path, capsys):
+    # interactive (classes prompted): seeded CN-GBA offered keep-as-default (Y/n);
+    # observed unseeded us keeps drop-default (y/N). Answering y keeps both.
+    import json as _json
+    import argparse
+    from borderlint.init import run_init
+    out = _init_tmp()
+    prompts: list[str] = []
+
+    def fake_input(prompt):
+        prompts.append(prompt)
+        return "non-pii" if "Data classes" in prompt else "y"
+
+    ns = argparse.Namespace(path=_FIXTURE, home="hk", classes=None,
+                            output=out, force=False, profile="hkma")
+    assert run_init(ns, input_fn=fake_input) == 0
+    err = capsys.readouterr().err
+    assert "Hong Kong Monetary Authority" in err and "not legal advice" in err
+    doc = _json.load(open(out, encoding="utf-8"))
+    assert sorted(doc["classifications"]["non-pii"]) == ["CN-GBA", "hk", "us"]
+    # seeded jurisdiction carries keep-as-default; unseeded observed stays drop-as-default
+    assert any("Keep 'CN-GBA' for 'non-pii'? (Y/n)" in p for p in prompts)
+    assert any("Keep 'us' for 'non-pii'? (y/N)" in p for p in prompts)
+    assert doc["_profile"]["id"] == "hkma" and doc["_profile"]["regulator"]
+    assert doc["home_location"] == "hk" and "fail_on" not in doc
+
+
+def test_init_profile_noninteractive_union():
+    # scripted mode: allow-list = profile defaults ∪ observed ∪ home, deduplicated
+    import json as _json
+    import argparse
+    from borderlint.init import run_init
+    out = _init_tmp()
+    ns = argparse.Namespace(path=_FIXTURE, home="hk", classes="customer-pii,non-pii",
+                            output=out, force=False, profile="hkma")
+    assert run_init(ns) == 0
+    doc = _json.load(open(out, encoding="utf-8"))
+    cp = doc["classifications"]["customer-pii"]
+    np = doc["classifications"]["non-pii"]
+    assert set(cp) >= {"hk", "us"}          # home + observed
+    assert "sg" not in cp                    # hkma seeds sg for non-pii only
+    assert set(np) >= {"hk", "us"}           # observed flows are non-pii too
+    # non-pii carries the CN-GBA seed from the hkma profile
+    assert "CN-GBA" in np
+
+
+def test_init_emitted_policy_loads_and_shape_matches():
+    # file loads via load_policy; keys match unprofiled shape plus _profile metadata only
+    import json as _json
+    import argparse
+    from borderlint.init import run_init
+    from borderlint.policy import load_policy
+    base_out, prof_out = _init_tmp(), _init_tmp()
+    base_ns = argparse.Namespace(path=_FIXTURE, home="hk", classes="customer-pii",
+                                 output=base_out, force=False, profile=None)
+    prof_ns = argparse.Namespace(path=_FIXTURE, home="hk", classes="customer-pii",
+                                 output=prof_out, force=False, profile="hkma")
+    assert run_init(base_ns) == 0
+    assert run_init(prof_ns) == 0
+    base = _json.load(open(base_out, encoding="utf-8"))
+    prof = _json.load(open(prof_out, encoding="utf-8"))
+    assert set(prof) - set(base) <= {"_profile"}
+    loaded = load_policy(prof_out)   # must parse without error
+    assert loaded["home_location"] == "hk"
+
+
+def test_init_unknown_profile_rejected(capsys):
+    import argparse
+    from borderlint.init import run_init
+    out = _init_tmp()
+    ns = argparse.Namespace(path=_FIXTURE, home="hk", classes="customer-pii",
+                            output=out, force=False, profile="oscer")
+    assert run_init(ns) == 2
+    assert not os.path.exists(out)
+    err = capsys.readouterr().err
+    assert "unknown profile 'oscer'" in err and "hkma" in err
+
+
+def test_init_profile_seat_mismatch_warns_but_proceeds(tmp_path, capsys):
+    # D6: profile targets hk; running with home=sg warns and continues
+    import json as _json
+    import argparse
+    from borderlint.init import run_init
+    out = _init_tmp()
+    ns = argparse.Namespace(path=_FIXTURE, home="sg", classes="non-pii",
+                            output=out, force=False, profile="hkma")
+    assert run_init(ns) == 0
+    assert "warning: profile targets seat(s) hk" in capsys.readouterr().err
+    doc = _json.load(open(out, encoding="utf-8"))
+    assert "CN-GBA" in doc["classifications"]["non-pii"]  # seed still applied
+
+
 def test_evidence_data_practices_register():
     # curated provider: facts with citations + retrieval dates; disclaimer present
     from borderlint.report import evidence
