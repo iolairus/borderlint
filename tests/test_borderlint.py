@@ -2391,6 +2391,28 @@ def test_data_practices_partial_entry_is_explicitly_unknown():
     assert dp["aws_bedrock"]["subprocessors"] is None
 
 
+def test_data_practices_cn_entries_curated():
+    # deepseek: policy-level opt-out; PRC residency; no fixed retention window
+    ds = _dp()["deepseek"]
+    assert ds["training_default"] == "opt-out"
+    assert "People's Republic of China" in ds["retention"]
+    assert ds["subprocessors"] is None
+    # tencent_hunyuan: retention cited verbatim-scope, training stays null
+    th = _dp()["tencent_hunyuan"]
+    assert th["training_default"] is None
+    assert "30 days" in th["retention"] and "output information" in th["retention"]
+    # zhipu: no for identifiable content; carve-out disclosed; subprocessors self-citing
+    zp = _dp()["zhipu"]
+    assert zp["training_default"] == "no"
+    assert "anonym" in zp["citations"]["training_default"]["locator"].lower()
+    sub = zp["subprocessors"]
+    assert all(sub.get(k) for k in ("url", "locator", "retrieved"))
+    # no stale unreachable-source notes remain on any curated entry
+    for pid in ("deepseek", "tencent_hunyuan", "zhipu"):
+        note = _dp()[pid].get("note") or ""
+        assert "unreachable" not in note and "could not be retrieved" not in note
+
+
 def test_data_practices_loader_rejects_bad_entries():
     from borderlint import kb as kbm
     bad = [
@@ -2434,9 +2456,8 @@ def test_data_practices_uncurated_provider_does_not_fail_scan():
     ds = scan_file(_src('u = "https://api.mistral.ai/v1"\n'), kb2)
     assert any(d.provider_id == "mistral" for d in ds)
     assert "mistral" not in kb2.data_practices
-    # deepseek IS curated now — but with explicit nulls, not guessed facts
-    entry = kb2.data_practices["deepseek"]
-    assert entry["training_default"] is None and entry["retention"] is None
+    # deepseek is curated now — opt-out training posture, PRC residency (see
+    # test_data_practices_cn_entries_curated for the full fact assertions)
 
 
 # --- Xiaomi MiMo coverage -------------------------------------------------------

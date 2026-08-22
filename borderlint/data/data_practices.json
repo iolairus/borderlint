@@ -134,13 +134,28 @@
       }
     },
     "deepseek": {
-      "training_default": null,
-      "retention": null,
+      "training_default": "opt-out",
+      "retention": "Personal data is collected, processed and stored in the People's Republic of China (controller: Hangzhou DeepSeek Artificial Intelligence Co., Ltd.). No fixed retention window is published: data is retained 'for as long as necessary to provide our Services and for the other purposes set out in this Privacy Policy', then destroyed, deleted or anonymised when no longer required. No zero-data-retention tier or enterprise no-train arrangement is documented.",
       "subprocessors": null,
-      "enterprise_tier": null,
-      "reviewed": "2026-08-21",
-      "note": "DeepSeek's API terms of use and privacy policy (platform.deepseek.com PDFs) could not be retrieved at review time — content extraction failed on every attempt. Facts are left null rather than guessed from third-party summaries; re-review when primary sources are reachable.",
-      "citations": {}
+      "enterprise_tier": "No self-serve API opt-out mechanism or enterprise training carve-out is documented; the privacy policy describes a right to opt out of model-training use of your personal data at policy level. The Open Platform Terms of Service defer personal-data handling back to the privacy policy rather than exempting paid API traffic.",
+      "reviewed": "2026-08-22",
+      "citations": {
+        "training_default": {
+          "url": "https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html",
+          "locator": "Privacy Policy (updated 2026-02-10), purposes section: personal data processed 'to improve and develop the Services and to train and improve our technology, such as our machine learning models and algorithms', with a described right to opt out of such use; no API-specific carve-out",
+          "retrieved": "2026-08-22"
+        },
+        "retention": {
+          "url": "https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html",
+          "locator": "'To provide you with our services, we directly collect, process and store your Personal Data in People's Republic of China'; retention 'for as long as necessary to provide our Services', destroyed/deleted/anonymised when no longer required",
+          "retrieved": "2026-08-22"
+        },
+        "enterprise_tier": {
+          "url": "https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html",
+          "locator": "Open Platform Terms of Service (effective 2026-04-29): personal-data handling defers to the Privacy Policy; no separate exemption for developer API inputs",
+          "retrieved": "2026-08-22"
+        }
+      }
     },
     "moonshot": {
       "training_default": "opt-out",
@@ -192,21 +207,41 @@
     },
     "tencent_hunyuan": {
       "training_default": null,
-      "retention": null,
+      "retention": "TokenHub Privacy Policy Module: Configuration Data and Diagnostic and Usage Data (explicitly including 'output information') are 'generally retain[ed] ... for up to 30 days after your task request' for feature provision and troubleshooting, and may be retained longer (for example as long as you use the Features) for billing. Whether raw input prompts fall inside this scope is not explicit in the document.",
       "subprocessors": null,
       "enterprise_tier": null,
-      "reviewed": "2026-08-21",
-      "note": "Tencent Cloud's Hunyuan product/terms pages returned 404s at review time (international docs reorganised around TokenHub); only pricing pages were reachable, none stating training or retention commitments. Facts left null; re-review against Tencent Cloud's service agreement when a stable URL is available.",
-      "citations": {}
+      "reviewed": "2026-08-22",
+      "note": "Scope caveat: the cited retention window governs Tencent-as-controller configuration/diagnostic data; no explicit statement about training on customer inference inputs was found in the TokenHub Privacy Policy Module or Terms of Service at review time.",
+      "citations": {
+        "retention": {
+          "url": "https://www.tencentcloud.com/document/product/1300/78952",
+          "locator": "PRIVACY POLICY MODULE section 6 (DATA RETENTION), last updated 2026-08-13: 'we generally retain information for up to 30 days after your task request ... but may process or retain such data for a longer period (for example as long as you use the Features) for billing purposes'; section 3 includes 'output information' in Diagnostic and Usage Data",
+          "retrieved": "2026-08-22"
+        }
+      }
     },
     "zhipu": {
-      "training_default": null,
-      "retention": null,
-      "subprocessors": null,
+      "training_default": "no",
+      "retention": "Personal information is stored within China only ('目前我们不会跨境传输或存储您的个人信息' — no cross-border transfer or storage at present), retained for the minimum period necessary for the stated purposes. On deletion, service expiry or termination a buffer period applies (per product docs), after which all data including cached and backup copies is deleted; deletion is irreversible.",
+      "subprocessors": {
+        "url": "https://docs.bigmodel.cn/cn/terms/privacy-policy.md",
+        "locator": "Section 三(一) shared third-party SDK/API table: Alipay face-verification and web payment APIs, WeChat Native Pay (Tenpay), Sensors Analytics (behaviour analytics), NetEase Qiyu (customer support), Aliyun SMS/mail push, Baidu Cloud SMS — each with the personal-info fields collected and purpose; covers the platform's account/payment/analytics surface",
+        "retrieved": "2026-08-22"
+      },
       "enterprise_tier": null,
-      "reviewed": "2026-08-21",
-      "note": "Z.ai / BigModel open-platform terms and privacy policy were unreachable at review time (docs.z.ai and open.bigmodel.cn legal pages 404'd or redirected without content). Facts left null; re-review when primary sources are reachable.",
-      "citations": {}
+      "reviewed": "2026-08-22",
+      "citations": {
+        "training_default": {
+          "url": "https://docs.bigmodel.cn/cn/terms/user-agreement.md",
+          "locator": "User Agreement (effective 2025-05-20) section 三.9(1): uploaded data belongs to the user and '除执行您的服务要求外，不会进行任何未获授权的使用及披露' (no unauthorised use or disclosure beyond executing your service requests). Carve-out disclosed: Privacy Policy sections 二.7(4)/四.10 reserve anonymised derivatives for '机器学习或模型算法训练' (machine learning / model algorithm training) without further consent — identifiable content is not used; anonymised data may be.",
+          "retrieved": "2026-08-22"
+        },
+        "retention": {
+          "url": "https://docs.bigmodel.cn/cn/terms/privacy-policy.md",
+          "locator": "Section 五(一) storage location (China only, no cross-border transfer at present); section 五(二) retention for the minimum necessary period; User Agreement section 三.9(3): buffer-period storage after deletion/expiry, then all copies including caches and backups deleted",
+          "retrieved": "2026-08-22"
+        }
+      }
     },
     "nvidia_nim": {
       "training_default": null,
