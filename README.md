@@ -55,8 +55,8 @@ a home base (HK, Macao, the GBA, Japan, Korea, Singapore, Australia, the UK, the
 and flagged flows are tagged with the regime in play (PDPO, PIPL, APPI, PIPA, PDPA, the Privacy
 Act, GDPR …) and its cross-border reference. Western and Chinese providers are treated evenly.
 
-Browse the full knowledge base — 100 providers, model developers, regimes — at
-[iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/).
+Browse the full knowledge base — 109 providers with curated data-practice facts for the majors,
+model developers, regimes — at [iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/).
 
 ## Use
 
@@ -217,9 +217,10 @@ backstop, and accepted flows are recorded with the inline waiver rather than hid
 Exports (`sbom`, `evidence`, `html`, `badge`, `suricata`) are artifacts, not gates: they exit 0.
 
 The **evidence pack** carries an audit envelope (git commit, policy SHA-256, KB review dates),
-all three governance axes with developer orgs, a waiver register, and a regime annex (PDPO,
-PIPL + GBA SC, Macao PDPA, PDPA-SG) that fills what the scan proves and leaves marked blanks
-for what only the organisation knows.
+all three governance axes with developer orgs, a waiver register, a **data-practices register**
+(cited training-default / retention / subprocessor facts per flow's provider; uncurated providers
+marked explicitly), and a regime annex (PDPO, PIPL + GBA SC, Macao PDPA, PDPA-SG) that fills what
+the scan proves and leaves marked blanks for what only the organisation knows.
 
 The **badge** renders green for clean, red for violations, yellow for warnings, blue for
 inventory mode (flow count):
@@ -291,7 +292,7 @@ rendered to PNG:
 - **Providers:** 100+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
   AI**), Azure, Bedrock, Mistral, Cohere, Groq, Together, Perplexity, xAI, Cerebras, Fireworks,
   Replicate, SambaNova, Meta Llama, **AWS SageMaker, Snowflake Cortex** + **Tencent, Alibaba, DeepSeek, Moonshot, Zhipu/Z.ai, Baidu,
-  Volcengine, MiniMax, Huawei ModelArts**, plus **AI21 (IL), Jina (DE), Voyage, GigaChat (RU), Sarvam (IN), Scaleway &
+  Xiaomi MiMo, Volcengine, MiniMax, Huawei ModelArts**, plus **AI21 (IL), Jina (DE), Voyage, GigaChat (RU), Sarvam (IN), Scaleway &
   OVHcloud (FR/EU)** and region-selectable clouds (**IBM watsonx, Oracle OCI, Cloudflare Workers AI,
   Heroku** → `unknown` until you pin a region) — with Python and JS/TS package names and the **Vercel
   AI SDK** (`@ai-sdk/*`).
@@ -327,6 +328,13 @@ rendered to PNG:
   → PDPO / Macao PDPA / PIPL + the matching GBA Standard Contract; **APAC/EMEA seats `jp` (APPI), `kr`
   (PIPA), `sg`/`my` (PDPA s.26 / s.129), `au` (APP 8), `uk` (UK IDTA), `eu` (GDPR)** → their transfer
   mechanism. PIPL cross-border and GDPR are also surfaced for those destinations.
+- **Regulator profiles:** `init --profile hkma|mas` seeds the policy walk from cited regulator
+  guidance (see `Use` above).
+- **Data practices:** hand-curated, citation-backed facts per provider — does it train on your API
+  data by default, what retention applies, where the subprocessor list lives, does an enterprise
+  tier change the answer. Rendered as a register in the `evidence` pack (uncurated providers stay
+  visible as "not curated") and as a section on each KB-website provider page; every fact carries a
+  source URL, locator note, and retrieval date. Strictly advisory — never gates.
 - **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / evidence / HTML / badge, an SBOM **`diff`**
   gate for new egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
 - **Agentic coding:** an installable **Claude Code plugin** (this repo is its own marketplace —
