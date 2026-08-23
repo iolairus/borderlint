@@ -2368,13 +2368,16 @@ def test_data_practices_schema():
         ids = {p["id"] for p in json.load(fh)["providers"]}
     assert set(dp) <= ids
     # every non-null fact carries a complete citation; citations name existing facts only.
-    # `subprocessors` is self-citing: its value IS the {url, locator, retrieved} object.
+    # `subprocessors` is self-citing: its value IS the {url, locator, retrieved} object — an
+    # entry MAY also list it under citations (redundant but harmless), so allow it here.
     for pid, entry in dp.items():
         facts = {k for k in ("training_default", "retention", "enterprise_tier")
                  if entry.get(k) is not None}
         cited = set(entry.get("citations", {}))
         assert facts <= cited, f"{pid}: uncited facts {facts - cited}"
-        assert cited <= facts, f"{pid}: stray citations {cited - facts}"
+        assert cited <= facts | {"subprocessors"}, f"{pid}: stray citations {cited - facts}"
+        if "subprocessors" in cited:
+            assert entry.get("subprocessors") is not None, pid
         if entry.get("subprocessors") is not None:
             assert all(entry["subprocessors"].get(k)
                        for k in ("url", "locator", "retrieved")), pid
@@ -2411,6 +2414,48 @@ def test_data_practices_cn_entries_curated():
     for pid in ("deepseek", "tencent_hunyuan", "zhipu"):
         note = _dp()[pid].get("note") or ""
         assert "unreachable" not in note and "could not be retrieved" not in note
+
+
+def test_data_practices_faang_entries_curated():
+    from borderlint import kb as kbmod
+    dp = _dp()
+    # meta_llama: Standard Services no-train posture; tier split disclosed in enterprise_tier
+    ml = dp["meta_llama"]
+    assert ml["training_default"] == "no"
+    assert "not use Content from Standard Services to train Meta Models" in (
+        ml["citations"]["training_default"]["locator"])
+    assert "Discounted Services" in ml["enterprise_tier"]
+    # vertex_ai: training restriction + per-feature retention conditions
+    va = dp["vertex_ai"]
+    assert va["training_default"] == "no"
+    assert "prior permission" in va["citations"]["training_default"]["locator"]
+    assert "30 days" in va["retention"] and "24" in va["retention"]
+    # azure_foundry: mirrors the azure_openai posture, catalog caveat present
+    af = dp["azure_foundry"]
+    assert af["training_default"] == "no"
+    assert "NOT used to train any generative AI foundation models" in (
+        af["citations"]["training_default"]["locator"])
+    assert "catalog" in af["enterprise_tier"].lower()
+    # github_copilot: current GenAI Services Terms; per-product retention variance
+    gc = dp["github_copilot"]
+    assert gc["training_default"] == "no"
+    assert "will not use Inputs or Outputs to train generative AI models" in (
+        gc["citations"]["training_default"]["locator"])
+    assert "Varies by Copilot product" in gc["retention"]
+    # all four: every non-null fact cited, no unavailability claims, keys in providers.json
+    import json as _json
+    with open("borderlint/data/providers.json", encoding="utf-8") as fh:
+        ids = {p["id"] for p in _json.load(fh)["providers"]}
+    for pid in ("meta_llama", "vertex_ai", "azure_foundry", "github_copilot"):
+        entry = dp[pid]
+        assert pid in ids
+        assert kbmod._iso_date(entry["reviewed"])
+        note = entry.get("note") or ""
+        assert "unreachable" not in note.lower()
+        for fact in ("training_default", "retention", "enterprise_tier"):
+            if entry.get(fact) is not None:
+                cite = entry["citations"][fact]
+                assert all(cite.get(k) for k in ("url", "locator", "retrieved")), (pid, fact)
 
 
 def test_data_practices_loader_rejects_bad_entries():
