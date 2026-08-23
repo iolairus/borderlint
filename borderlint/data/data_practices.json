@@ -114,6 +114,39 @@
         }
       }
     },
+    "azure_foundry": {
+      "training_default": "no",
+      "retention": "Models are stateless: no prompts or completions are stored in the model. Stateful features (Responses API, Assistants Threads, Stored completions, Files/vector stores) persist data in the resource's Azure geography until deleted; Global and DataZone deployment types may process prompts/responses across regions within their scope. Abuse monitoring stores prompt/completion samples only when flagged, in logically separated per-resource stores; modified abuse monitoring turns this off for approved customers.",
+      "subprocessors": {
+        "url": "https://aka.ms/DPA",
+        "locator": "Microsoft Products and Services Data Protection Addendum, which governs data processing by Models sold by Azure (linked from the data-privacy article intro)",
+        "retrieved": "2026-08-23"
+      },
+      "enterprise_tier": "Modified abuse monitoring requires application and approval; customers can verify logging is off via the ContentLogging=false capability attribute in the Azure portal/CLI. Catalog scope caveat: Foundry also serves partner/community model catalogs whose own terms may differ — verify per deployed model.",
+      "reviewed": "2026-08-23",
+      "citations": {
+        "training_default": {
+          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/data-privacy",
+          "locator": "'Your prompts (inputs) and completions (outputs), your embeddings, and your training data ... are NOT used to train any generative AI foundation models without your permission or instruction'; 'The models are stateless: no prompts or completions are stored in the model'",
+          "retrieved": "2026-08-23"
+        },
+        "retention": {
+          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/data-privacy",
+          "locator": "Sections 'Generating completions...' (stateless models, geography processing incl. Global/DataZone), 'Data storage for Models sold by Azure features', and 'Preventing abuse' (flagged-sample storage, logical separation, modified abuse monitoring)",
+          "retrieved": "2026-08-23"
+        },
+        "subprocessors": {
+          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/data-privacy",
+          "locator": "Article intro: 'Microsoft Products and Services Data Protection Addendum (https://aka.ms/DPA), which governs data processing by Models sold by Azure'",
+          "retrieved": "2026-08-23"
+        },
+        "enterprise_tier": {
+          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/data-privacy",
+          "locator": "'How can a customer verify if data storage for abuse monitoring is off?' (ContentLogging=false); 'managed customers may apply to modify abuse monitoring'",
+          "retrieved": "2026-08-23"
+        }
+      }
+    },
     "aws_bedrock": {
       "training_default": null,
       "retention": "Zero data retention by default (zero operator access + ZDR security model): Bedrock does not store model inputs or outputs. Exceptions retain inputs/outputs up to 30 days for automated abuse detection (e.g. classifier-flagged traffic of certain hosted OpenAI GPT-5.x models; Claude Fable 5 retains up to 30 days). Setting data_retention_mode to 'none' enforces zero retention account/project-wide.",
@@ -243,6 +276,58 @@
         }
       }
     },
+    "github_copilot": {
+      "training_default": "no",
+      "retention": "Varies by Copilot product/feature: the editor experience transmits prompts only to generate suggestions in real time and deletes them once suggestions are generated (not stored at rest without permission); retention exceptions include CLI/tool prompts, customised private language models, and alternative data-handling configurations. Per-product documentation governs each feature's exact window.",
+      "subprocessors": null,
+      "enterprise_tier": "Tier/terms split: volume-licensing customers are governed by the GitHub Generative AI Services Terms (section 3: 'GitHub will not use Inputs or Outputs to train generative AI models, unless you have given us documented instructions to do so'); Copilot Business/Enterprise purchased directly from GitHub prior to 2026-03-05 remain under the deprecated Product-Specific Terms; individual users fall under the GitHub Terms of Service AI-features section.",
+      "reviewed": "2026-08-23",
+      "citations": {
+        "training_default": {
+          "url": "https://github.com/customer-terms/github-generative-ai-services-terms?locale=en-US",
+          "locator": "GitHub Generative AI Services Terms (Version March 2026) section 3 (Use of Data for Model Training): 'GitHub will not use Inputs or Outputs to train generative AI models, unless you have given us documented instructions to do so'",
+          "retrieved": "2026-08-23"
+        },
+        "retention": {
+          "url": "https://github.com/customer-terms/github-copilot-product-specific-terms?locale=en-US",
+          "locator": "Deprecated Copilot Product Specific Terms section 6.A ('Prompts are transmitted only to generate Suggestions in real-time, are deleted once Suggestions are generated, and are not used for any other purpose') and 6.B (retention exceptions); superseded terms retained as the clearest per-feature retention statement — current governing document is the Generative AI Services Terms, whose section 6 defers retention details to product documentation",
+          "retrieved": "2026-08-23"
+        },
+        "enterprise_tier": {
+          "url": "https://github.com/customer-terms/github-generative-ai-services-terms?locale=en-US",
+          "locator": "Section 1 applicability (volume licensing vs personal customers vs Microsoft purchases); deprecation note on the Product-Specific Terms effective 5 March 2026",
+          "retrieved": "2026-08-23"
+        }
+      }
+    },
+    "meta_llama": {
+      "training_default": "no",
+      "retention": "Content and Usage Data retained as needed to provide the Services, for legal compliance, in connection with Meta's rights under the terms, when systems flag data for a potential policy violation, and for security/safety/abuse/policy review. No fixed retention window is published.",
+      "subprocessors": {
+        "url": "https://forwork.meta.com/legal/mfw-subprocessor-list/",
+        "locator": "Meta's published subprocessor list, referenced from Model API Terms of Service section 5.1 (Standard Services processor terms); may be updated by Meta from time to time",
+        "retrieved": "2026-08-23"
+      },
+      "enterprise_tier": "Tier split: Standard Services — 'Meta will not use Content from Standard Services to train Meta Models' (section 5.1). Discounted Services (discounted model tier) — content MAY be used to train, develop and improve Meta AI models by default, disassociated from your account/key before training use (section 6.1); traffic requiring no-training must use Standard Services.",
+      "reviewed": "2026-08-23",
+      "citations": {
+        "training_default": {
+          "url": "https://ai.developer.meta.com/legal/terms-of-service",
+          "locator": "Model API Terms of Service section 5.1: 'Meta will not use Content from Standard Services to train Meta Models' (updated 2026-08-21)",
+          "retrieved": "2026-08-23"
+        },
+        "retention": {
+          "url": "https://ai.developer.meta.com/legal/terms-of-service",
+          "locator": "Section 4.4 (Retention): five enumerated retention bases; no fixed window published",
+          "retrieved": "2026-08-23"
+        },
+        "enterprise_tier": {
+          "url": "https://ai.developer.meta.com/legal/terms-of-service",
+          "locator": "Section 6.1 (Discounted Services): 'You agree that Meta may use your Content to train, develop, evaluate, and improve Meta's artificial intelligence models, products, and services', disassociation steps before training use; section 6.2 directs confidential traffic to Standard Services",
+          "retrieved": "2026-08-23"
+        }
+      }
+    },
     "nvidia_nim": {
       "training_default": null,
       "retention": "NVIDIA's general privacy policy: customer and enterprise personal data erased after more than five years without engagement; transfers to the US under Standard Contractual Clauses with EU-U.S./Swiss-U.S./UK Data Privacy Framework certification. NIM-API-specific inference-data terms were not retrievable at review time.",
@@ -278,6 +363,25 @@
           "url": "https://mimo.mi.com/docs/terms/user-agreement",
           "locator": "Section 1.1 (data storage regions selectable on request, subject to compliance and additional fees) and section 4.4 (services outside the Chinese Mainland store data on servers in Europe and Singapore); Token Plan host per the First API Call quickstart",
           "retrieved": "2026-08-21"
+        }
+      }
+    },
+    "vertex_ai": {
+      "training_default": "no",
+      "retention": "Per-feature retention conditions on the generative-AI platform: prompt logging for abuse monitoring applies unless an exemption is requested; Grounding with Search keeps derived queries up to 3 days and Grounding with Maps stores prompts/outputs 30 days (neither can be disabled); request-response logging and Live-API session resumption are opt-in (24h TTL); published Gemini models cache customer data in-memory for 24 hours, project-isolated, not at rest. Zero data retention is achievable by configuration.",
+      "subprocessors": null,
+      "enterprise_tier": null,
+      "reviewed": "2026-08-23",
+      "citations": {
+        "training_default": {
+          "url": "https://cloud.google.com/terms/service-terms",
+          "locator": "Service Specific Terms 'Training Restriction': 'Google won't use your data to train or fine-tune any AI/ML models without your prior permission or instruction' — applies to all managed models on the generative-AI platform, GA and pre-GA",
+          "retrieved": "2026-08-23"
+        },
+        "retention": {
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/resources/zero-data-retention",
+          "locator": "Zero-data-retention page (last updated 2026-08-21): abuse-monitoring prompt logging with exception path; Grounding with Search (3-day derived queries) and Maps (30-day prompts/outputs) storage cannot be disabled; opt-in request-response logging and Live-API session resumption (24h); in-memory caching of inputs/outputs/derived data, project-level isolation, 24h TTL, 'does not violate zero data retention', disableable at project level",
+          "retrieved": "2026-08-23"
         }
       }
     }
