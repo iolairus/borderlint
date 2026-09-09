@@ -2741,3 +2741,45 @@ def test_evidence_register_absent_without_findings():
     from borderlint.report import evidence
     k = load_kb()
     assert "Data practices" not in evidence([], k, None)
+
+
+# --- September 2026 drift resolution --------------------------------------------
+
+def test_scx_ai_endpoint_detection():
+    # first au provider: endpoint, jurisdiction, and sovereignty all resolve
+    kb2 = load_kb()
+    ds = _resolve_sovereignty(_scan_py("m.py", 'u = "https://api.scx.ai/v1"\n', kb2), kb2)
+    by = {d.evidence: d for d in ds if d.provider_id == "scx_ai"}
+    assert by["api.scx.ai"].jurisdiction == "au"
+    assert by["api.scx.ai"].sovereignty == "au"
+
+
+def test_sept_drift_families_resolve_provenance():
+    # every family from the 2026-09-07 run, in the hub-qualified form litellm users write
+    kb2 = load_kb()
+    cases = [
+        ("deepinfra/ByteDance/Seed-1.8", "cn", "ByteDance"),
+        ("Seed-2.0-pro", "cn", "ByteDance"),
+        ("novita/baidu/cobuddy", "cn", "Baidu"),
+        ("deepinfra/stepfun-ai/Step-3.7-Flash", "cn", "StepFun"),
+        ("azure_ai/MAI-Thinking-1", "us", "Microsoft AI"),
+        ("gemini/nano-banana-pro-preview", "us", "Google"),
+        ("together_ai/intfloat/multilingual-e5-large-instruct", "us", "Microsoft"),
+        ("deepinfra/thinkingmachines/Inkling", "us", "Thinking Machines Lab"),
+        ("openrouter/poolside/laguna-s-2.1:free", "us", "poolside"),
+        ("together_ai/Prism-ML/Ternary-Bonsai-27B", "us", "PrismML"),
+        ("watsonx/bigscience/mt0-xxl", "us", "BigScience (Hugging Face)"),
+        ("wandb/JetBrains/Mellum2-12B-A2.5B-Instruct", "eu", "JetBrains"),
+        ("novita/mindai/macaron-v1-tall", "sg", "MindAI"),
+    ]
+    for mid, bloc, org in cases:
+        got = kb2.match_model(mid)
+        assert got is not None, mid
+        assert got[1] == bloc and got[2] == org, (mid, got)
+
+
+def test_sept_drift_generic_stems_do_not_overmatch():
+    # near-misses on the generic stems stay unresolved (design D3)
+    kb2 = load_kb()
+    for mid in ("seedling-1b", "stepwise-2", "mt5-base", "multilingual-bert", "nano-1"):
+        assert kb2.match_model(mid) is None, mid

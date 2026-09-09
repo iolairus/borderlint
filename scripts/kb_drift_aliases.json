@@ -52,6 +52,7 @@
     "azure": "azure_openai",
     "azure_ai": "azure_openai",
     "azure_text": "azure_openai",
+    "bing_grounding": "azure_foundry",
     "bedrock": "aws_bedrock",
     "bedrock_converse": "aws_bedrock",
     "bedrock_mantle": "aws_bedrock",
@@ -61,6 +62,8 @@
     "fireworks_ai-embedding-models": "fireworks_ai",
     "gemini": "google_gemini",
     "palm": "google_gemini",
+    "qwencloud": "alibaba_dashscope",
+    "qwen_ai_platform": "alibaba_dashscope",
     "tencent": "tencent_hunyuan",
     "text-completion-codestral": "mistral",
     "text-completion-openai": "openai",
@@ -106,6 +109,7 @@
     "you_com": "litellm routes You.com as web search, not model serving (judged 2026-07-05)"
   },
   "residue": {
+    "bing_grounding/search": "Grounding-with-Bing search tool id, not a model (structural); provider aliased to azure_foundry (judged 2026-09-09)",
     "nimble/search": "search API product name, not a model (structural); provider covered in providers.json as `nimble`",
     "agentcore/search": "AWS Bedrock AgentCore web-search tool, not a model (structural); provider aliased to aws_bedrock",
     "bedrock/guardrails": "Bedrock Guardrails safety feature, not a model (structural)",
