@@ -45,8 +45,8 @@ converge and real gaps drown in resolved noise.
 ## Impact
 
 - `borderlint/data/providers.json` (+1 entry), `sovereignty.json` (+1 mapping),
-  `provenance.json` (+~12 patterns), `scripts/kb_drift_aliases.json` (+3 aliases, +1 residue
-  entry).
+  `provenance.json` (+36 patterns — family stems, org prefixes, and hub-qualified route
+  literals per design D3), `scripts/kb_drift_aliases.json` (+3 aliases, +1 residue entry).
 - Detection tests for the new endpoint and pattern resolutions; KB website and evidence pack
   render the new provider from the bundled data with no code change.
 - Freshness issue #39's actionable sections drop from 4 providers + 13 families to zero.

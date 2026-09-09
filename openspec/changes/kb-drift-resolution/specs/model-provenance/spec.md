@@ -2,7 +2,7 @@
 
 ## ADDED Requirements
 
-### Requirement: September drift-run model families resolve provenance
+### Requirement: Seed, MAI, Laguna, Mellum, and Macaron model families resolve provenance
 The bundled provenance map SHALL resolve model identifiers of the twelve families surfaced by
 the 2026-09-07 freshness run — ByteDance Seed, Baidu CoBuddy, and StepFun Step (bloc `cn`);
 Microsoft MAI, Google nano-banana, Microsoft Research multilingual-e5, Thinking Machines Lab
