@@ -4,9 +4,10 @@
 TBD - created by archiving change mvp-residency-scanner. Update Purpose after archive.
 ## Requirements
 ### Requirement: Bundled east-west provider knowledge base
-The system SHALL ship a bundled knowledge base that maps AI providers — both Western and Chinese
-(for example OpenAI, Anthropic, Google, Mistral, Cohere, Tencent Hunyuan, Alibaba DashScope,
-DeepSeek, Xiaomi MiMo) — to their SDK names, endpoint hosts, and a jurisdiction.
+The system SHALL ship a bundled knowledge base that maps AI providers — Western, Chinese, and
+other blocs (for example OpenAI, Anthropic, Google, Mistral, Cohere, Tencent Hunyuan, Alibaba
+DashScope, DeepSeek, Xiaomi MiMo, SCX.ai) — to their SDK names, endpoint hosts, and a
+jurisdiction.
 
 #### Scenario: Western and Chinese providers both resolve
 - **WHEN** a detection identifies `openai` and another identifies `deepseek`
@@ -20,6 +21,10 @@ DeepSeek, Xiaomi MiMo) — to their SDK names, endpoint hosts, and a jurisdictio
 #### Scenario: Xiaomi MiMo Token Plan host resolves to cn
 - **WHEN** a detection matches `token-plan-cn.xiaomimimo.com`
 - **THEN** it resolves to provider `xiaomi_mimo` with jurisdiction `cn`
+
+#### Scenario: SCX.ai endpoint resolves to au
+- **WHEN** a detection matches `api.scx.ai`
+- **THEN** it resolves to provider `scx_ai` with jurisdiction `au` and sovereignty bloc `au`
 
 ### Requirement: Jurisdiction codes and special tokens
 The system SHALL express jurisdictions as lowercase ccTLD/ISO-3166 country codes, plus the special
