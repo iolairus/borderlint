@@ -20,9 +20,10 @@
   Moonshot AI cn, `coding-xiaomi-mimo` + `xiaomi-mimo` → Xiaomi cn, `hy3`/`hy4` → Tencent
   cn, `agnes-` → Agnes AI (Sapiens AI) sg, `command-a` → Cohere ca, `longcat-` → Meituan cn
 - [x] 2.3 Add publisher patterns (bare + hub-qualified forms per design D3, from the
-  enumerated member list): Nex AGI cn, Dots Studio cn, Meituan cn, TypeSafe jev us, Relace
-  us, Inference.net schematron us, Perceptron us, Arcee trinity us, Writer palmyra (incl.
-  `writer.`) us, Perplexity sonar us, Reka us, bare `whisper` us, `flux.` eu
+  enumerated member list): Nex AGI cn, Dots Studio cn, Meituan cn, ByteDance
+  bytedance-seed cn, TypeSafe jev us, Relace us, Inference.net schematron us, Perceptron
+  us, Arcee trinity us, Writer palmyra (incl. `writer.`) us, Perplexity sonar us (qualified
+  forms only — bare `sonar`/`whisper` rejected, see D3), Reka us, `flux.` eu
 - [x] 2.4 Add fine-tune inheritance patterns: `l3-`/`l3.` (+ `openrouter/sao10k/l3`) → Meta
   us; `cydonia-`/`skyfall-`/`unslopnemo` (+ hub forms) → Mistral AI (TheDrummer tune) eu;
   `magnum-` (+ hub form) → Alibaba (Anthracite tune of Qwen2.5) cn; `aion-` → cn with
@@ -31,9 +32,10 @@
 
 ## 3. Drift suppression
 
-- [x] 3.1 Add residue entries to `scripts/kb_drift_aliases.json`: `stealth/` (prefix —
-  OpenRouter cloaked releases deliberately unattributed at launch, judged 2026-09-21),
-  `unbiased/pareto` (composite router product, no single weight-provenance),
+- [x] 3.1 Add the alias `transcribe` → `aws_transcribe` and residue entries to
+  `scripts/kb_drift_aliases.json`: `openrouter/stealth/` (prefix — OpenRouter cloaked
+  releases deliberately unattributed at launch, judged 2026-09-21),
+  `openrouter/unbiased/pareto` (composite router product, no single weight-provenance),
   `azure_ai/model-router` (routing feature, structural), `transcribe/starttranscriptionjob`
   (API operation, structural)
 
@@ -44,7 +46,7 @@
   `us`; `typesafe` entry loads with empty endpoints and jurisdiction `us`
 - [x] 4.2 Provenance tests: one resolution per confirmed group, in the hub-qualified forms
   litellm users write (aihubmix rebadges via the passthrough, magnum/cydonia inheritance,
-  aion vs aion-rp precedence, agnes sg, sonar/whisper bare forms)
+  aion vs aion-rp precedence, agnes sg, the qualified sonar/whisper forms)
 - [x] 4.3 Near-miss tests: one unrelated id per generic stem (`l`, `cc`, `coding`, `hy`,
   `whisper`, `sonar`, `trinity`, `union`) stays provenance `unknown`
 

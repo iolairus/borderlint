@@ -95,9 +95,10 @@ API operation, not models).
   an unmatched basename is still uncovered and surfaces in the drift report.
 - [`cc-glm` mapping is an inference, not documentation] → recorded as such in the pattern's
   org label context; if aihubmix documents a different base, the drift review corrects it.
-- [Bare `whisper`/`sonar` over-match derivatives] → both namespaces are owned by the
-  assigned orgs' families (whisper forks are OpenAI-weight derivatives; Sonar is
-  Perplexity's line); near-miss tests pin adjacent non-members.
+- [Qualified-only whisper/sonar coverage misses bare literals in code] → accepted: bare
+  exact `whisper`/`sonar` model strings resolve through the tier-2 provider default in
+  provider context, and the alternative (bare patterns) demonstrably over-matched tool
+  names (`whispering-pines`, `sonar-scanner`) — see D3.
 
 ## Open Questions
 

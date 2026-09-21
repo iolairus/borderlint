@@ -5,8 +5,8 @@
 ### Requirement: LongCat, Nex, Agnes, Jev, and companion model families resolve provenance
 The bundled provenance map SHALL resolve the model families surfaced by the 2026-09-21
 freshness run to their developer organisations' blocs, keeping the full literal as evidence:
-Nex AGI, Dots Studio (Xiaohongshu), Meituan LongCat, Tencent Hunyuan hy3/hy4, Anthracite
-magnum, and AionLabs aion (bloc `cn`); TypeSafe jev, Relace, Inference.net schematron,
+Nex AGI, Dots Studio (Xiaohongshu), Meituan LongCat, Tencent Hunyuan hy3/hy4, ByteDance's
+bytedance-seed publisher org, Anthracite magnum, and AionLabs aion (bloc `cn`); TypeSafe jev, Relace, Inference.net schematron,
 Perceptron, Arcee trinity, Writer palmyra, Perplexity sonar, Reka, the azure_ai whisper
 form, Sao10K l3-series, and aion-rp (bloc `us`); Black Forest Labs flux and TheDrummer's
 cydonia/skyfall/unslopnemo (bloc `eu`); Agnes AI (bloc `sg`). Fine-tuned families SHALL
