@@ -63,6 +63,7 @@
     "gemini": "google_gemini",
     "palm": "google_gemini",
     "qwencloud": "alibaba_dashscope",
+    "transcribe": "aws_transcribe",
     "qwen_ai_platform": "alibaba_dashscope",
     "tencent": "tencent_hunyuan",
     "text-completion-codestral": "mistral",
@@ -109,6 +110,10 @@
     "you_com": "litellm routes You.com as web search, not model serving (judged 2026-07-05)"
   },
   "residue": {
+    "openrouter/stealth/": "OpenRouter cloaked stealth releases are deliberately unattributed at launch; provenance recorded on reveal (judged 2026-09-21; union-alpha since revealed as Unbiased Pareto)",
+    "openrouter/unbiased/pareto": "composite router product — fans each request across many frontier/open models, so no single weight-provenance is honest (judged 2026-09-21)",
+    "azure_ai/model-router": "Azure Foundry model-routing feature, not a model (structural)",
+    "transcribe/starttranscriptionjob": "AWS Transcribe API operation, not a model (structural); provider covered as `aws_transcribe`",
     "bing_grounding/search": "Grounding-with-Bing search tool id, not a model (structural); provider aliased to azure_foundry (judged 2026-09-09)",
     "nimble/search": "search API product name, not a model (structural); provider covered in providers.json as `nimble`",
     "agentcore/search": "AWS Bedrock AgentCore web-search tool, not a model (structural); provider aliased to aws_bedrock",

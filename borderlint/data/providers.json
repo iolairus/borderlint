@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-09",
+  "updated": "2026-09-21",
   "providers": [
     {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "npm": ["openai", "@ai-sdk/openai"], "jvm": ["com.openai"], "dotnet": ["OpenAI"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
     {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "npm": ["@anthropic-ai/sdk", "@ai-sdk/anthropic"], "jvm": ["com.anthropic"], "dotnet": ["Anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
@@ -110,6 +110,9 @@
     {"id": "sentry", "name": "Sentry", "category": "service", "sdks": [], "npm": [], "endpoints": ["mcp.sentry.dev"], "jurisdiction": "us", "note": "MCP service target (stdio via the MCP server map; mcp.sentry.dev is Sentry's hosted remote MCP, found in real-world validation)"},
     {"id": "nimble", "name": "Nimble (Nimbleway)", "category": "service", "sdks": [], "npm": [], "endpoints": ["sdk.nimbleway.com"], "jurisdiction": "il", "note": "web-data / search API (litellm `nimble` route → sdk.nimbleway.com/v2/search); queries egress to Nimbleway, Tel Aviv"},
     {"id": "cognition", "name": "Cognition AI", "sdks": [], "npm": [], "endpoints": ["api.cognition.ai"], "jurisdiction": "us", "note": "Devin / Windsurf SWE models (litellm `cognition` route, base_url api.cognition.ai/v1)"},
-    {"id": "scx_ai", "name": "SCX.ai", "sdks": [], "npm": [], "endpoints": ["api.scx.ai"], "jurisdiction": "au", "note": "ASX-listed Australian sovereign-AI inference platform serving open models on AU-hosted infrastructure (litellm `scx-ai` route, base_url api.scx.ai/v1)"}
+    {"id": "scx_ai", "name": "SCX.ai", "sdks": [], "npm": [], "endpoints": ["api.scx.ai"], "jurisdiction": "au", "note": "ASX-listed Australian sovereign-AI inference platform serving open models on AU-hosted infrastructure (litellm `scx-ai` route, base_url api.scx.ai/v1)"},
+    {"id": "aihubmix", "name": "AiHubMix (router)", "category": "aggregator", "sdks": [], "npm": [], "endpoints": ["aihubmix.com", "api.inferera.com"], "jurisdiction": "unknown", "note": "OpenAI-compatible multi-model aggregator (500+ models, one key); operating entity undisclosed — third-party 'US LLC' descriptions are not documented facts, so jurisdiction stays unknown. inferera.com is the documented backup domain"},
+    {"id": "aws_transcribe", "name": "Amazon Transcribe", "category": "speech", "sdks": [], "npm": [], "endpoints": ["transcribe."], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region in host: transcribe.<region>.amazonaws.com (batch/management API; litellm `transcribe` SigV4 pass-through route)"},
+    {"id": "typesafe", "name": "TypeSafe AI", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "Jev typed-decision models (San Francisco). Upstream API hostname undocumented — litellm reaches it only via proxy pass-through (`typesafe/` route); endpoint added when documented, never guessed"}
   ]
 }
