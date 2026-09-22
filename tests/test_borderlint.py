@@ -2783,3 +2783,88 @@ def test_sept_drift_generic_stems_do_not_overmatch():
     kb2 = load_kb()
     for mid in ("seedling-1b", "stepwise-2", "mt5-base", "multilingual-bert", "nano-1"):
         assert kb2.match_model(mid) is None, mid
+
+
+# --- September 2026 drift resolution, wave 2 ------------------------------------
+
+def test_wave2_provider_endpoints():
+    # aihubmix aggregator unknown; AWS Transcribe region-resolves with us sovereignty
+    kb2 = load_kb()
+    src = ('a = "https://aihubmix.com/v1"\nb = "https://api.inferera.com/v1"\n'
+           'c = "https://transcribe.eu-west-1.amazonaws.com"\n')
+    ds = _resolve_sovereignty(_scan_py("m.py", src, kb2), kb2)
+    by = {d.evidence: d for d in ds}
+    assert by["aihubmix.com"].provider_id == "aihubmix"
+    assert by["aihubmix.com"].jurisdiction == "unknown"
+    assert by["api.inferera.com"].provider_id == "aihubmix"
+    t = [d for d in ds if d.provider_id == "aws_transcribe"][0]
+    assert t.jurisdiction == "ie"  # eu-west-1 region-resolves
+    assert t.sovereignty == "us"
+
+
+def test_wave2_typesafe_entry_no_endpoints():
+    # provider without a documented hostname loads with an empty endpoint list
+    kb2 = load_kb()
+    e = kb2.by_id["typesafe"]
+    assert e["endpoints"] == []
+    assert e["jurisdiction"] == "us"
+    assert "undocumented" in e["note"]
+
+
+def test_wave2_families_resolve_provenance():
+    # every confirmed group, in the hub-qualified forms litellm users write
+    kb2 = load_kb()
+    cases = [
+        ("aihubmix/coding-glm-5.3", "cn", "Zhipu AI"),          # passthrough + rebadge
+        ("aihubmix/coding-kimi-k3", "cn", "Moonshot AI"),
+        ("aihubmix/coding-xiaomi-mimo-v2.5-pro", "cn", "Xiaomi"),
+        ("aihubmix/cc-glm-5.1", "cn", "Zhipu AI"),
+        ("aihubmix/agnes-2.5-flash", "sg", "Agnes AI (Sapiens AI)"),
+        ("aihubmix/hy3", "cn", "Tencent"),
+        ("command-a-plus-05-2026", "ca", "Cohere"),
+        ("openrouter/meituan/longcat-2.0", "cn", "Meituan"),
+        ("openrouter/nex-agi/nex-n2.5-mini:free", "cn", "Nex AGI"),
+        ("openrouter/dots-studio/dots-3-note-preview:free", "cn", "Dots Studio (Xiaohongshu)"),
+        ("openrouter/bytedance-seed/seed-2-1-turbo", "cn", "ByteDance"),
+        ("typesafe/jev-1.13.0", "us", "TypeSafe AI"),
+        ("openrouter/relace/relace-apply-3", "us", "Relace"),
+        ("openrouter/inference-net/schematron-v2-small", "us", "Inference.net"),
+        ("openrouter/perceptron/perceptron-mk1", "us", "Perceptron AI"),
+        ("together_ai/arcee-ai/trinity-mini", "us", "Arcee AI"),
+        ("writer.palmyra-vision-7b", "us", "Writer"),
+        ("openrouter/perplexity/sonar", "us", "Perplexity"),
+        ("openrouter/rekaai/reka-edge", "us", "Reka AI"),
+        ("azure_ai/whisper", "us", "OpenAI"),
+        ("azure_ai/FLUX.2-flex", "eu", "Black Forest Labs"),
+    ]
+    for mid, bloc, org in cases:
+        got = kb2.match_model(mid)
+        assert got is not None, mid
+        assert got[1] == bloc and got[2] == org, (mid, got)
+
+
+def test_wave2_finetunes_inherit_base_bloc():
+    # community tunes carry the base family's bloc; aion-rp outranks aion- by prefix length
+    kb2 = load_kb()
+    cases = [
+        ("openrouter/sao10k/l3-lunaris-8b", "us"),
+        ("openrouter/sao10k/l3.1-euryale-70b", "us"),
+        ("openrouter/thedrummer/cydonia-24b-v4.1", "eu"),
+        ("openrouter/thedrummer/skyfall-36b-v2", "eu"),
+        ("openrouter/thedrummer/unslopnemo-12b", "eu"),
+        ("openrouter/anthracite-org/magnum-v4-72b", "cn"),
+        ("openrouter/aion-labs/aion-2.0", "cn"),
+        ("openrouter/aion-labs/aion-rp-llama-3.1-8b", "us"),
+    ]
+    for mid, bloc in cases:
+        got = kb2.match_model(mid)
+        assert got is not None, mid
+        assert got[1] == bloc, (mid, got)
+
+
+def test_wave2_generic_stems_do_not_overmatch():
+    # near-misses on this wave's generic stems stay unresolved (design D3)
+    kb2 = load_kb()
+    for mid in ("l2-classic", "hy-line-2", "coding-copilot-x", "whispering-pines",
+                "sonarqube-scan", "trinity", "union-square", "cc-mode"):
+        assert kb2.match_model(mid) is None, mid
