@@ -2868,3 +2868,69 @@ def test_wave2_generic_stems_do_not_overmatch():
     for mid in ("l2-classic", "hy-line-2", "coding-copilot-x", "whispering-pines",
                 "sonarqube-scan", "trinity", "union-square", "cc-mode"):
         assert kb2.match_model(mid) is None, mid
+
+
+# --- October 2026 drift resolution, wave 3 --------------------------------------
+
+def test_wave3_provider_endpoints():
+    # both SF open-weight hosts resolve with us jurisdiction and sovereignty
+    kb2 = load_kb()
+    src = ('a = "https://api.prisminference.com/v1"\n'
+           'b = "https://api.sailresearch.com/v1"\n')
+    ds = _resolve_sovereignty(_scan_py("m.py", src, kb2), kb2)
+    by = {d.provider_id: d for d in ds}
+    for pid in ("prism", "sail"):
+        assert by[pid].jurisdiction == "us", pid
+        assert by[pid].sovereignty == "us", pid
+
+
+def test_wave3_passthroughs_resolve_served_catalog():
+    # host route prefixes carry no provenance; the served family's org does
+    kb2 = load_kb()
+    cases = [
+        ("prism/deepseek-v4-flash", "cn", "DeepSeek"),
+        ("sail/zai-org/GLM-5.3", "cn", "Zhipu AI"),
+        ("sail/moonshotai/Kimi-K3", "cn", "Moonshot AI"),
+        ("sail/openai/gpt-oss-120b", "us", "OpenAI"),
+        ("sail/google/gemma-4-31B-it", "us", "Google"),
+        ("sail/nvidia/Gemma-4-31B-IT-NVFP4", "us", "NVIDIA"),  # FP4 build; base also us
+    ]
+    for mid, bloc, org in cases:
+        got = kb2.match_model(mid)
+        assert got is not None, mid
+        assert got[1] == bloc and got[2] == org, (mid, got)
+
+
+def test_wave3_families_resolve_provenance():
+    kb2 = load_kb()
+    cases = [
+        ("azure_ai/MAI-Cyber-1-Flash", "us", "Microsoft AI"),
+        ("azure_ai/MAI-Image-2.6-Flash", "us", "Microsoft AI"),
+        ("azure_ai/FW-GPT-OSS-120B", "us", "OpenAI"),
+        ("gemini/deep-research-max-preview-04-2026", "us", "Google"),
+        ("vertex_ai/virtual-try-on-001", "us", "Google"),
+        ("together_ai/together/Tev1-4B-experimental", "us", "Together AI"),
+        ("c4ai-aya-expanse-32b", "ca", "Cohere"),
+        ("openrouter/apodex/apodex-1.1-mini:free", "us", "Apodex"),
+    ]
+    for mid, bloc, org in cases:
+        got = kb2.match_model(mid)
+        assert got is not None, mid
+        assert got[1] == bloc and got[2] == org, (mid, got)
+
+
+def test_wave3_ember_inherits_kimi_base_bloc():
+    # Fireworks' post-train of Kimi K3 carries the base family's bloc (design D2)
+    kb2 = load_kb()
+    got = kb2.match_model("openrouter/fireworks/ember-1")
+    assert got is not None
+    assert got[1] == "cn"
+    assert "Moonshot" in got[2] and "Fireworks" in got[2]
+
+
+def test_wave3_generic_stems_do_not_overmatch():
+    # near-misses on this wave's stems stay unresolved (design D3)
+    kb2 = load_kb()
+    for mid in ("deepfake-detector-2", "virtual-assistant-1", "embering-7b",
+                "maize-1", "c4-quantized", "togetherness-1"):
+        assert kb2.match_model(mid) is None, mid

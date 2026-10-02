@@ -6,10 +6,10 @@ TBD - created by archiving change mvp-residency-scanner. Update Purpose after ar
 ### Requirement: Bundled east-west provider knowledge base
 The system SHALL ship a bundled knowledge base that maps AI providers — Western, Chinese, and
 other blocs (for example OpenAI, Anthropic, Google, Mistral, Cohere, Tencent Hunyuan, Alibaba
-DashScope, DeepSeek, Xiaomi MiMo, SCX.ai, AiHubMix, AWS Transcribe, TypeSafe AI) — to their
-SDK names, endpoint hosts, and a jurisdiction. A provider whose upstream API hostname is not
-documented MAY carry no endpoint hosts; the entry still records the provider's jurisdiction
-and sovereignty and MUST NOT carry a guessed hostname.
+DashScope, DeepSeek, Xiaomi MiMo, SCX.ai, AiHubMix, AWS Transcribe, TypeSafe AI, Prism
+Inference, Sail Research) — to their SDK names, endpoint hosts, and a jurisdiction. A provider
+whose upstream API hostname is not documented MAY carry no endpoint hosts; the entry still
+records the provider's jurisdiction and sovereignty and MUST NOT carry a guessed hostname.
 
 #### Scenario: Western and Chinese providers both resolve
 - **WHEN** a detection identifies `openai` and another identifies `deepseek`
@@ -42,6 +42,11 @@ and sovereignty and MUST NOT carry a guessed hostname.
 - **WHEN** the bundled knowledge base entry for `typesafe` is loaded
 - **THEN** it carries jurisdiction `us` and sovereignty `us` with an empty endpoint list
   and a note recording that the upstream hostname is undocumented
+
+#### Scenario: Open-weight host platforms resolve to us
+- **WHEN** detections match `api.prisminference.com` and `api.sailresearch.com`
+- **THEN** they resolve to providers `prism` and `sail` respectively, each with
+  jurisdiction `us` and sovereignty bloc `us`
 
 ### Requirement: Jurisdiction codes and special tokens
 The system SHALL express jurisdictions as lowercase ccTLD/ISO-3166 country codes, plus the special
