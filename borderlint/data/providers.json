@@ -1,5 +1,5 @@
 {
-  "updated": "2026-09-21",
+  "updated": "2026-10-02",
   "providers": [
     {"id": "openai", "name": "OpenAI", "sdks": ["openai"], "npm": ["openai", "@ai-sdk/openai"], "jvm": ["com.openai"], "dotnet": ["OpenAI"], "endpoints": ["api.openai.com"], "jurisdiction": "us"},
     {"id": "anthropic", "name": "Anthropic", "sdks": ["anthropic"], "npm": ["@anthropic-ai/sdk", "@ai-sdk/anthropic"], "jvm": ["com.anthropic"], "dotnet": ["Anthropic"], "endpoints": ["api.anthropic.com"], "jurisdiction": "us"},
@@ -113,6 +113,8 @@
     {"id": "scx_ai", "name": "SCX.ai", "sdks": [], "npm": [], "endpoints": ["api.scx.ai"], "jurisdiction": "au", "note": "ASX-listed Australian sovereign-AI inference platform serving open models on AU-hosted infrastructure (litellm `scx-ai` route, base_url api.scx.ai/v1)"},
     {"id": "aihubmix", "name": "AiHubMix (router)", "category": "aggregator", "sdks": [], "npm": [], "endpoints": ["aihubmix.com", "api.inferera.com"], "jurisdiction": "unknown", "note": "OpenAI-compatible multi-model aggregator (500+ models, one key); operating entity undisclosed — third-party 'US LLC' descriptions are not documented facts, so jurisdiction stays unknown. inferera.com is the documented backup domain"},
     {"id": "aws_transcribe", "name": "Amazon Transcribe", "category": "speech", "sdks": [], "npm": [], "endpoints": ["transcribe."], "jurisdiction": "unknown", "region_scheme": "aws", "note": "region in host: transcribe.<region>.amazonaws.com (batch/management API; litellm `transcribe` SigV4 pass-through route)"},
-    {"id": "typesafe", "name": "TypeSafe AI", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "Jev typed-decision models (San Francisco). Upstream API hostname undocumented — litellm reaches it only via proxy pass-through (`typesafe/` route); endpoint added when documented, never guessed"}
+    {"id": "typesafe", "name": "TypeSafe AI", "sdks": [], "npm": [], "endpoints": [], "jurisdiction": "us", "note": "Jev typed-decision models (San Francisco). Upstream API hostname undocumented — litellm reaches it only via proxy pass-through (`typesafe/` route); endpoint added when documented, never guessed"},
+    {"id": "prism", "name": "Prism Inference", "sdks": [], "npm": [], "endpoints": ["api.prisminference.com"], "jurisdiction": "us", "note": "OpenAI/Anthropic-compatible inference for coding agents serving open-weight models (DeepSeek V4 flash variants primary; litellm `prism/` route, base_url api.prisminference.com/v1). San Francisco; model provenance from the served family, not the host"},
+    {"id": "sail", "name": "Sail Research", "sdks": [], "npm": [], "endpoints": ["api.sailresearch.com"], "jurisdiction": "us", "note": "Agent-infra inference platform serving third-party open weights under HF org paths (litellm `sail/` route, base_url api.sailresearch.com/v1; completion-windows batch pricing). San Francisco; model provenance from the publisher org in the id"}
   ]
 }
