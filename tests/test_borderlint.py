@@ -2893,6 +2893,7 @@ def test_wave3_passthroughs_resolve_served_catalog():
         ("sail/moonshotai/Kimi-K3", "cn", "Moonshot AI"),
         ("sail/openai/gpt-oss-120b", "us", "OpenAI"),
         ("sail/google/gemma-4-31B-it", "us", "Google"),
+        ("sail/nvidia/Gemma-4-31B-IT-NVFP4", "us", "NVIDIA"),  # FP4 build; base also us
     ]
     for mid, bloc, org in cases:
         got = kb2.match_model(mid)
