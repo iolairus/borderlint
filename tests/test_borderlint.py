@@ -2934,3 +2934,61 @@ def test_wave3_generic_stems_do_not_overmatch():
     for mid in ("deepfake-detector-2", "virtual-assistant-1", "embering-7b",
                 "maize-1", "c4-quantized", "togetherness-1"):
         assert kb2.match_model(mid) is None, mid
+
+
+# --- October 2026 drift resolution, wave 4 --------------------------------------
+
+def test_wave4_selfhosted_runtime_entries():
+    # self-hosted decision runtimes: empty endpoints, local jurisdiction and sovereignty
+    kb2 = load_kb()
+    for pid in ("bespoke", "laya", "strands_decider"):
+        e = kb2.by_id[pid]
+        assert e["endpoints"] == [], pid
+        assert e["jurisdiction"] == "local", pid
+        assert kb2.sovereignty_map[pid] == "local", pid
+
+
+def test_wave4_qwen_adapters_inherit_alibaba_bloc():
+    # LoRA/pointer-head adapters carry the Qwen base's bloc (design D2)
+    kb2 = load_kb()
+    for mid in ("bespokelabs/Bespoke-Nimble-9B", "Bespoke-Nimble-9B",
+                "bespoke/nimble", "bespoke/nimble-latest",
+                "strands-decider-2B-hobson-v19"):
+        got = kb2.match_model(mid)
+        assert got is not None, mid
+        assert got[1] == "cn" and "Alibaba" in got[2], (mid, got)
+
+
+def test_wave4_laya_checkpoints_inherit_encoder_blocs():
+    kb2 = load_kb()
+    cases = [
+        ("laya/english", "ModernBERT"),
+        ("laya/typed-decisions", "ModernBERT"),
+        ("laya/multilingual", "mmBERT"),
+    ]
+    for mid, base in cases:
+        got = kb2.match_model(mid)
+        assert got is not None, mid
+        assert got[1] == "us" and base in got[2], (mid, got)
+
+
+def test_wave4_clef_pattern_covers_all_forms():
+    # one hub-qualified pattern; drift suffix walk covers the @cf/ litellm forms
+    kb2 = load_kb()
+    for mid in ("cloudflare/clef", "cloudflare/clef-flash"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "us" and got[2] == "Cloudflare", mid
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    gap = kb_drift.model_coverage_gap(
+        [("cloudflare/@cf/cloudflare/clef", "cloudflare"),
+         ("cloudflare/@cf/cloudflare/clef-flash", "cloudflare")], kb2)
+    assert gap == []
+
+
+def test_wave4_no_bare_nimble_and_near_misses():
+    # Nimbleway collision guard (design D5) + stem discipline
+    kb2 = load_kb()
+    for mid in ("nimble", "nimble-search-1", "clefable-2b", "laya-1b"):
+        assert kb2.match_model(mid) is None, mid

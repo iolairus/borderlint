@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-02",
+  "updated": "2026-10-05",
   "note": "Advisory only. This map surfaces model-weight provenance — the bloc of the legal regime under which the model's developer operates — matched from model identifiers found statically in code. It does NOT adjudicate whether any export-control regime legally applies; the policy decides. Provenance is distinct from residency (where the endpoint sits) and sovereignty (who can compel disclosure from the serving provider). Fine-tunes and distillations inherit the base family's bloc. Patterns are case-insensitive prefixes anchored at the start of the identifier; longest pattern wins.",
   "sources_note": "Upstream catalogs from which provider prefixes here were derived. Re-check on kb refresh — new open-weights model families appearing on these pages indicate patterns to add. The kb-drift workflow does NOT scrape these automatically; a human diff on a refresh cadence is expected.",
   "sources": {
@@ -352,7 +352,15 @@
     "openrouter/fireworks/ember": {"org": "Moonshot AI (Fireworks Ember post-train)", "bloc": "cn"},
     "apodex/": {"org": "Apodex", "bloc": "us"},
     "apodex-": {"org": "Apodex", "bloc": "us"},
-    "openrouter/apodex/": {"org": "Apodex", "bloc": "us"}
+    "openrouter/apodex/": {"org": "Apodex", "bloc": "us"},
+    "bespoke/nimble": {"org": "Alibaba (Bespoke Nimble LoRA)", "bloc": "cn"},
+    "bespoke-nimble": {"org": "Alibaba (Bespoke Nimble LoRA)", "bloc": "cn"},
+    "bespokelabs/bespoke-nimble": {"org": "Alibaba (Bespoke Nimble LoRA)", "bloc": "cn"},
+    "strands-decider": {"org": "Alibaba (AWS Strands Decider tune)", "bloc": "cn"},
+    "laya/english": {"org": "Answer.AI/LightOn ModernBERT (Laya tune)", "bloc": "us"},
+    "laya/typed-decisions": {"org": "Answer.AI/LightOn ModernBERT (Laya tune)", "bloc": "us"},
+    "laya/multilingual": {"org": "JHU mmBERT (Laya tune)", "bloc": "us"},
+    "cloudflare/clef": {"org": "Cloudflare", "bloc": "us"}
   },
   "passthrough_orgs_note": "Quantizer / community-conversion hubs (GGUF, MLX) and Bedrock cross-region inference-profile region prefixes (us., eu., apac., ...). The prefix carries no provenance — the model family in the repo name does — so the org prefix is stripped and the remainder matched against the family patterns. Developer orgs (tiiuae/, upstage/, aisingapore/, …) are pattern entries, never passthroughs: those orgs ARE the provenance signal.",
   "passthrough_orgs": [
