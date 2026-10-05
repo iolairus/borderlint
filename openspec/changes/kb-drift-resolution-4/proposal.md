@@ -48,7 +48,7 @@ cannot converge.
 ## Impact
 
 - `borderlint/data/providers.json` (+3 entries), `sovereignty.json` (+3 `local` mappings),
-  `provenance.json` (+~9 patterns), tests.
+  `provenance.json` (+8 patterns), tests.
 - No drift-suppression changes: every item resolves via entries or patterns; nothing is
   residue this wave.
 - Issue #39's actionable sections drop from 3 providers + 7 families to zero.
