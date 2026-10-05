@@ -7,9 +7,12 @@ TBD - created by archiving change mvp-residency-scanner. Update Purpose after ar
 The system SHALL ship a bundled knowledge base that maps AI providers — Western, Chinese, and
 other blocs (for example OpenAI, Anthropic, Google, Mistral, Cohere, Tencent Hunyuan, Alibaba
 DashScope, DeepSeek, Xiaomi MiMo, SCX.ai, AiHubMix, AWS Transcribe, TypeSafe AI, Prism
-Inference, Sail Research) — to their SDK names, endpoint hosts, and a jurisdiction. A provider
-whose upstream API hostname is not documented MAY carry no endpoint hosts; the entry still
-records the provider's jurisdiction and sovereignty and MUST NOT carry a guessed hostname.
+Inference, Sail Research, Bespoke Labs, Laya, Strands Decider) — to their SDK names, endpoint
+hosts, and a jurisdiction. A provider whose upstream API hostname is not documented MAY carry
+no endpoint hosts; the entry still records the provider's jurisdiction and sovereignty and
+MUST NOT carry a guessed hostname. A provider that is a self-hosted runtime — reachable only
+at a deployer-supplied address, with no vendor-operated endpoint — SHALL carry jurisdiction
+and sovereignty `local`.
 
 #### Scenario: Western and Chinese providers both resolve
 - **WHEN** a detection identifies `openai` and another identifies `deepseek`
@@ -47,6 +50,12 @@ records the provider's jurisdiction and sovereignty and MUST NOT carry a guessed
 - **WHEN** detections match `api.prisminference.com` and `api.sailresearch.com`
 - **THEN** they resolve to providers `prism` and `sail` respectively, each with
   jurisdiction `us` and sovereignty bloc `us`
+
+#### Scenario: Self-hosted decision runtimes resolve to local
+- **WHEN** the bundled knowledge base entries for `bespoke`, `laya`, and `strands_decider`
+  are loaded
+- **THEN** each carries jurisdiction `local` and sovereignty `local` with an empty endpoint
+  list and a note naming the vendor and the self-hosted, deployer-supplied-address mechanics
 
 ### Requirement: Jurisdiction codes and special tokens
 The system SHALL express jurisdictions as lowercase ccTLD/ISO-3166 country codes, plus the special
