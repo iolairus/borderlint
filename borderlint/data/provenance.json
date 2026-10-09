@@ -363,7 +363,7 @@
     "laya/multilingual": {"org": "JHU mmBERT (Laya tune)", "bloc": "us"},
     "cloudflare/clef": {"org": "Cloudflare", "bloc": "us"}
   },
-  "passthrough_orgs_note": "Quantizer / community-conversion hubs (GGUF, MLX) and Bedrock cross-region inference-profile region prefixes (us., eu., apac., ...). The prefix carries no provenance — the model family in the repo name does — so the org prefix is stripped and the remainder matched against the family patterns. Developer orgs (tiiuae/, upstage/, aisingapore/, …) are pattern entries, never passthroughs: those orgs ARE the provenance signal.",
+  "passthrough_orgs_note": "Quantizer / community-conversion hubs (GGUF, MLX), Bedrock cross-region inference-profile region prefixes (us., eu., apac., ...), and local-runtime launcher namespaces (ollama/, vllm/, lmstudio/). The prefix carries no provenance — the model family in the repo name does — so the org prefix is stripped and the remainder matched against the family patterns. Launcher entries are named runtimes whose namespace says where the weights were pulled from, not who developed them; they carry a trailing slash so `lmstudio/` never strips `lmstudio-community/`. Arbitrary registry and mirror hosts are not listed here — they are recognised structurally by containing a dot (see KB.model_candidates). Developer orgs (tiiuae/, upstage/, aisingapore/, …) are pattern entries, never passthroughs: those orgs ARE the provenance signal.",
   "passthrough_orgs": [
     "aihubmix/",
     "prism/",
@@ -384,7 +384,10 @@
     "lmstudio-community/",
     "ggml-org/",
     "quantfactory/",
-    "nousresearch/"
+    "nousresearch/",
+    "ollama/",
+    "vllm/",
+    "lmstudio/"
   ],
   "provider_defaults_note": "Providers that serve only their own models resolve to the org's bloc when no model reference is bound (two-tier resolution, tier 2). Multi-model hosts (aws_bedrock, vertex_ai, groq, together_ai, ...) and aggregators deliberately have no default.",
   "provider_defaults": {

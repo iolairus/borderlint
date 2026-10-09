@@ -152,7 +152,11 @@ while residency and sovereignty stay `unknown`.
 packaging carries no provenance. `.gguf` file paths match by basename
 (`models/qwen2.5-7b-q4_k_m.gguf` → `cn`), and bare local-runtime tags (`llama3.2`, `phi4`,
 `gemma2:9b`, `qwq:32b`) are covered by pinned family prefixes; tool names that merely resemble a
-family (`llama_index`, `llama-cpp-python`) never match. Combined with Ollama's `local`
+family (`llama_index`, `llama-cpp-python`) never match. Namespaces that say *where weights were pulled
+from* rather than *who developed them* are stripped the same way — curated launcher names (`ollama/`,
+`vllm/`, `lmstudio/`) and host-like registry segments (`docker.io/library/…`, `mirror.internal/…`,
+`huggingface.co/TheBloke/…`) — while a leading segment that is neither stays load-bearing, so
+`src/deepseek/client.py` resolves nothing rather than resolving to a bloc. Combined with Ollama's `local`
 residency/sovereignty, self-hosted flows carry an honest weights origin: `local`/`local`/`cn`
 for a local Qwen, `local`/`local`/`us` for a local Llama.
 
