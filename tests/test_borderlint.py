@@ -1660,6 +1660,120 @@ def test_provenance_local_models():
     assert d.model == "llama3.2"
 
 
+def test_provenance_namespace_resolution():
+    # Curated local-runtime launcher namespaces resolve by the model name they wrap
+    assert kb.match_model("ollama/deepseek-r1")[1] == "cn"
+    assert kb.match_model("vllm/deepseek-r1")[1] == "cn"
+    assert kb.match_model("lmstudio/qwen2.5-7b-instruct")[1] == "cn"
+    # Host-like leading segments (registry / mirror) are recognised structurally, not curated
+    assert kb.match_model("mirror.internal/deepseek-r1")[1] == "cn"
+    assert kb.match_model("ghcr.io/acme/deepseek-r1-distill")[1] == "cn"
+    # A redistributor sitting under a host still reaches its family (host, then org, stripped)
+    assert kb.match_model("huggingface.co/TheBloke/deepseek-coder-33B-AWQ")[1] == "cn"
+    # Once a host segment is dropped the literal is an image reference: try the final segment
+    assert kb.match_model("docker.io/library/llama3:8b")[1] == "us"
+    assert kb.match_model("registry.ollama.ai/library/qwen2.5")[1] == "cn"
+    # The developer org survives every stripping path
+    assert kb.match_model("ollama/deepseek-r1")[2] == "DeepSeek"
+    assert kb.match_model("docker.io/library/llama3:8b")[2] == "Meta"
+    # A leading segment that is neither host-like nor a curated launcher is NOT disregarded —
+    # these are the false-positive guards that keep anchored matching honest
+    assert kb.match_model("src/deepseek/client.py") is None
+    assert kb.match_model("myorg/mystery-model") is None
+    assert kb.match_model("solarwinds-agent") is None
+    assert kb.match_model("dir/qwen2.5.zip") is None  # unlisted extension: no basename treatment
+    assert kb.match_model("ollama/llama-cpp-python") is None  # stoplist applies to candidates too
+    # The evidence kept on the finding is always the original literal, not a stripped form
+    d = [x for x in _scan_file('import openai\nm = "ollama/deepseek-r1"\n') if x.model][0]
+    assert d.model == "ollama/deepseek-r1" and d.provenance == "cn"
+
+
+def test_provenance_final_segment_boundary():
+    # Boundary of the final-segment fallback (design R1), pinned in both directions.
+    # Near misses: a host was dropped, but what remains is not a model family.
+    for near_miss in ("docker.io/library/sonarqube", "registry.corp/ml/internal-router",
+                      "gcr.io/my-project/deploy-tool", "quay.io/prometheus/node-exporter",
+                      "registry.internal/build-kit", "ghcr.io/acme/secrets-scanner"):
+        assert kb.match_model(near_miss) is None, near_miss
+    # Accepted over-attribution: an internal name whose final segment starts with a family prefix does
+    # acquire that provenance. Asserted so the trade-off cannot drift silently with the next refactor.
+    assert kb.match_model("registry.corp/ml/mistral-serving")[1:] == ("eu", "Mistral AI")
+    assert kb.match_model("docker.io/library/whisper-transcribe")[1:] == ("us", "OpenAI")
+    assert kb.match_model("internal.registry/ml/falcon-sandbox")[1:] == ("ae", "TII")
+
+
+def test_provenance_region_prefix_under_registry_host():
+    # Composition with the wave-5 drift change: `in.` is a passthrough region prefix, and a registry
+    # host above it must not stop the walk from reaching the family. This only works because
+    # passthrough stripping is re-applied at every candidate step, not once up front.
+    assert kb.match_model("mirror.internal/in.moonshotai.kimi-k3")[1:] == ("cn", "Moonshot AI")
+    assert kb.match_model("registry.corp/in.deepseek-r1")[1:] == ("cn", "DeepSeek")
+    # ...and the two rules composed must not invent provenance for a non-family remainder
+    assert kb.match_model("mirror.internal/in.something-else") is None
+    # wave-5 guarantees hold under the final-segment fallback too
+    assert kb.match_model("in.inhouse-7b") is None
+    assert kb.match_model("whispering-pines") is None
+    assert kb.match_model("azure/whisper")[1:] == ("us", "OpenAI")
+
+
+def test_provenance_scheme_prefixed_url_not_resolved():
+    # Documented limit (design R2): a URL keeps its scheme segment, which is not host-like, so the walk
+    # never starts. The scheme-less host form — what the README documents — does resolve.
+    assert kb.match_model("https://huggingface.co/TheBloke/deepseek-coder-33B-AWQ") is None
+    assert kb.match_model("http://mirror.internal/deepseek-r1") is None
+    assert kb.match_model("huggingface.co/TheBloke/deepseek-coder-33B-AWQ")[1] == "cn"
+
+
+def test_provenance_namespace_denied():
+    # Registry / mirror / runtime namespaces must not dodge a deny_models family ban
+    import json as _json, os, tempfile
+    from borderlint.policy import load_policy
+    k = load_kb()
+    p = os.path.join(tempfile.mkdtemp(), "pol.json")
+    with open(p, "w", encoding="utf-8") as fh:
+        _json.dump({"classifications": {"customer-pii": ["hk", "us", "cn"]},
+                    "provenance": {"classifications": {"customer-pii": ["us", "eu", "uk"]},
+                                   "deny_models": ["deepseek"]}}, fh)
+    pol = load_policy(p)
+    for dodge in ("ollama/deepseek-r1", "vllm/deepseek-r1", "mirror.internal/deepseek-r1",
+                  "huggingface.co/TheBloke/deepseek-coder-33B-AWQ",
+                  "docker.io/library/deepseek-r1:latest"):
+        ds = _scan_file(f'import openai\nm = "{dodge}"\n')
+        fs = evaluate(ds, pol, "customer-pii", k)
+        assert any("model_denied" in f.reasons for f in fs), dodge
+        # provenance resolves to the developer's bloc, not the serving provider's
+        bound = [f for f in fs if getattr(f.detection, "model", None) == dodge]
+        assert bound and bound[0].detection.provenance == "cn", dodge
+        assert any(f.severity == "fail" for f in fs), dodge
+
+
+def test_provenance_deny_overreach_is_fail_closed_and_scopable():
+    # design R1: an internal tool image under a denied family is denied too (fail-closed, evidence kept),
+    # and the operator scopes it by narrowing the deny entry rather than by weakening the matcher.
+    import json as _json, os, tempfile
+    from borderlint.policy import load_policy
+    k = load_kb()
+    d = tempfile.mkdtemp()
+
+    def pol(denies):
+        p = os.path.join(d, f"pol-{len(denies)}.json")
+        with open(p, "w", encoding="utf-8") as fh:
+            _json.dump({"classifications": {"customer-pii": ["hk", "us", "cn"]},
+                        "provenance": {"classifications": {"customer-pii": ["us", "eu", "uk"]},
+                                       "deny_models": denies}}, fh)
+        return load_policy(p)
+
+    src = 'import openai\nm = "ghcr.io/acme/deepseek-config-migrator"\n'
+    fs = evaluate(_scan_file(src), pol(["deepseek"]), "customer-pii", k)
+    denied = [f for f in fs if "model_denied" in f.reasons]
+    assert denied and denied[0].detection.model == "ghcr.io/acme/deepseek-config-migrator"
+    # A narrower entry exempts the tool without exempting the family itself
+    assert not any("model_denied" in f.reasons
+                   for f in evaluate(_scan_file(src), pol(["deepseek-r1"]), "customer-pii", k))
+    assert any("model_denied" in f.reasons for f in evaluate(
+        _scan_file('import openai\nm = "deepseek-r1"\n'), pol(["deepseek-r1"]), "customer-pii", k))
+
+
 def test_bloc_vocabulary_completion():
     k = load_kb()
     # resolution per new bloc; org-anchored and pinned-stem forms

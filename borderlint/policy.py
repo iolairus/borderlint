@@ -142,9 +142,11 @@ def evaluate(detections, policy: dict, classification: str, kb=None) -> list[Fin
                     reasons.append("sovereignty")  # an allow-list mismatch
         # Model deny-list (opt-in, evidence-based): the hardest statement in the provenance
         # block; matches the flow's bound identifier after the map's own normalization (D2).
+        # Tested against every candidate form the map would try, so a registry, mirror or runtime
+        # namespace around a banned family cannot slip it past the deny.
         if deny_models and d.model:
-            norm = kb.normalize_model(d.model) if kb is not None else d.model.strip().lower()
-            if norm and any(norm.startswith(e) for e in deny_models):
+            forms = kb.model_candidates(d.model) if kb is not None else [d.model.strip().lower()]
+            if any(f.startswith(e) for f in forms for e in deny_models):
                 reasons.append("model_denied")
         # Provenance dimension (opt-in): applies to flows and standalone model references alike.
         if mprov_allow is not None:

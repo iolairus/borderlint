@@ -419,13 +419,55 @@ class KB:
         low = base.lower()
         if low.endswith((".gguf", ".onnx", ".safetensors")):  # model-file path: directories defeat start-anchoring
             low = low.rsplit("/", 1)[-1]
-        for org in self.provenance_passthrough:  # quantizer hubs carry no provenance
-            if low.startswith(org):
-                low = low[len(org):]
-                break
+        low = self._strip_passthrough(low)  # quantizer hubs and launcher namespaces carry no provenance
         if low.startswith(_NOT_MODELS):
             return None
         return low
+
+    def _strip_passthrough(self, low: str) -> str:
+        """Drop one leading passthrough org (quantizer hub / launcher namespace / region profile)."""
+        for org in self.provenance_passthrough:
+            if low.startswith(org):
+                return low[len(org):]
+        return low
+
+    def model_candidates(self, literal: str) -> list[str]:
+        """Ordered normalized forms to try against the family prefixes, most-qualified first.
+
+        (1) the primary form from normalize_model(); (2) each successive form with one leading
+        **host-like** segment dropped — a registry or mirror host says where the weights were pulled
+        from, not who developed them — re-applying passthrough stripping at every step, so a
+        redistributor sitting under a host still reaches its family; (3) once a host segment has been
+        dropped the literal is demonstrably an image reference, so the final segment alone is tried too
+        (`docker.io/library/llama3:8b`). A leading segment that is not host-like — an unknown org, or a
+        plain directory — is never dropped: that is what keeps `src/deepseek/client.py` and
+        `solarwinds-agent` unmatched. Used by both prefix matching and the deny list, so neither can be
+        dodged by a namespace the other has not seen.
+        """
+        primary = self.normalize_model(literal)
+        if primary is None:
+            return []
+        out: list[str] = []
+        seen: set[str] = set()
+
+        def add(form: str) -> None:
+            form = self._strip_passthrough(form)
+            if form and not form.startswith(_NOT_MODELS) and form not in seen:
+                seen.add(form)
+                out.append(form)
+
+        add(primary)
+        # Segment walk runs on the raw literal: normalize_model() already basenames model-file
+        # paths, so the full segment list is gone by the time we get the primary form back.
+        segs = _VERSION_SUFFIX.sub("", literal.strip()).lower().split("/")
+        i, host_dropped = 0, False
+        while i < len(segs) - 1 and "." in segs[i]:
+            i += 1
+            host_dropped = True
+            add("/".join(segs[i:]))
+        if host_dropped and len(segs) > 1:
+            add(segs[-1])
+        return out
 
     def match_model(self, literal: str) -> tuple[str, str, str | None] | None:
         """Match a string literal against the model-ID prefix map → (identifier, bloc, org).
@@ -436,13 +478,13 @@ class KB:
         stripped so the model family in the repo name carries the provenance. A trailing
         version pin is stripped before matching; the returned identifier keeps it. The org is
         the matched pattern's developer organisation (None for user-KB patterns).
+        Registry and runtime namespaces are tried as additional candidates (model_candidates),
+        most-qualified first, so an identifier that already resolves keeps resolving identically.
         """
-        low = self.normalize_model(literal)
-        if low is None:
-            return None
-        for prefix, bloc, org in self._prov_prefixes:
-            if low.startswith(prefix):
-                return literal.strip(), bloc, org
+        for form in self.model_candidates(literal):
+            for prefix, bloc, org in self._prov_prefixes:
+                if form.startswith(prefix):
+                    return literal.strip(), bloc, org
         return None
 
     def default_provenance(self, pid: str) -> str:
