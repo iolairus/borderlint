@@ -1702,6 +1702,20 @@ def test_provenance_final_segment_boundary():
     assert kb.match_model("internal.registry/ml/falcon-sandbox")[1:] == ("ae", "TII")
 
 
+def test_provenance_region_prefix_under_registry_host():
+    # Composition with the wave-5 drift change: `in.` is a passthrough region prefix, and a registry
+    # host above it must not stop the walk from reaching the family. This only works because
+    # passthrough stripping is re-applied at every candidate step, not once up front.
+    assert kb.match_model("mirror.internal/in.moonshotai.kimi-k3")[1:] == ("cn", "Moonshot AI")
+    assert kb.match_model("registry.corp/in.deepseek-r1")[1:] == ("cn", "DeepSeek")
+    # ...and the two rules composed must not invent provenance for a non-family remainder
+    assert kb.match_model("mirror.internal/in.something-else") is None
+    # wave-5 guarantees hold under the final-segment fallback too
+    assert kb.match_model("in.inhouse-7b") is None
+    assert kb.match_model("whispering-pines") is None
+    assert kb.match_model("azure/whisper")[1:] == ("us", "OpenAI")
+
+
 def test_provenance_scheme_prefixed_url_not_resolved():
     # Documented limit (design R2): a URL keeps its scheme segment, which is not host-like, so the walk
     # never starts. The scheme-less host form — what the README documents — does resolve.

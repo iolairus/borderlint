@@ -47,3 +47,14 @@
       the scheme-less host form and name scheme stripping as a follow-up rather than promising it
 - [x] 5.4 Record the final-segment over-attribution trade-off in design.md (Risks R1) with mitigations,
       and mirror both accepted consequences into the spec deltas
+
+## 6. Rebase onto main after the wave-5 drift change (#112)
+
+- [x] 6.1 Resolve the `updated` conflict in `provenance.json` in favour of this change (it lands second,
+      per review), keeping #112's `in.` passthrough and `azure/whisper` pattern intact — 23 passthroughs
+      and 351 patterns present after the merge
+- [x] 6.2 Confirm #112 added a *new* requirement rather than editing "Local model identifiers resolve
+      provenance", so this change's MODIFIED delta does not silently revert it on archive
+- [x] 6.3 Pin the composition of the two changes: a wave-5 region prefix sitting under a registry host
+      still reaches its family, and neither rule composed invents provenance; #112's near-misses
+      (`in.inhouse-7b`, `whispering-pines`) hold under the final-segment fallback
