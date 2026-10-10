@@ -2992,3 +2992,28 @@ def test_wave4_no_bare_nimble_and_near_misses():
     kb2 = load_kb()
     for mid in ("nimble", "nimble-search-1", "clefable-2b", "laya-1b"):
         assert kb2.match_model(mid) is None, mid
+
+
+# --- October 2026 drift resolution, wave 5 --------------------------------------
+
+def test_wave5_india_region_prefix_resolves_via_passthrough():
+    # Bedrock India-Geo inference profile: the region prefix carries no provenance (design D1)
+    kb2 = load_kb()
+    got = kb2.match_model("in.moonshotai.kimi-k3")
+    assert got is not None
+    assert got[1] == "cn" and got[2] == "Moonshot AI"
+
+
+def test_wave5_azure_whisper_resolves():
+    # same OpenAI model as azure_ai/whisper, under the azure namespace (design D2)
+    kb2 = load_kb()
+    got = kb2.match_model("azure/whisper")
+    assert got is not None
+    assert got[1] == "us" and got[2] == "OpenAI"
+
+
+def test_wave5_no_bare_whisper_and_near_misses():
+    # bare whisper stem stays forbidden; a stripped region prefix matches nothing by itself
+    kb2 = load_kb()
+    for mid in ("whispering-pines", "in.inhouse-7b"):
+        assert kb2.match_model(mid) is None, mid
