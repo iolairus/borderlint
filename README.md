@@ -131,9 +131,9 @@ Fine-tunes inherit the base family's bloc. A `deny_models` list of anchored mode
 bans a family regardless of host or bloc — `"deny_models": ["deepseek"]` fails a Bedrock flow
 serving DeepSeek-R1 even where `cn` weights are otherwise allowed; denies match after the same
 normalization as the map — GGUF paths, redistributor repos, `@`-version pins, and **registry or
-runtime namespaces** (`ollama/deepseek-r1`, `vllm/…`, a private `mirror.internal/…`, even a
-`huggingface.co/TheBloke/…` URL pasted from a browser) can't dodge them — sit in the default failure
-set like the provider deny, and cannot be waived inline. One honest limit: a family that is simply
+runtime namespaces** (`ollama/deepseek-r1`, `vllm/…`, a private `mirror.internal/…`, a scheme-less
+`huggingface.co/TheBloke/…` host path) can't dodge them — sit in the default failure set like the
+provider deny, and cannot be waived inline. One honest limit: a family that is simply
 absent from the provenance map resolves through the provider's first-party default and so cannot be
 denied — an empty `deny_models` match on a model you expected to block means the *family* needs
 curating, not the policy. See [CAPABILITIES.md §3.2](CAPABILITIES.md).
@@ -324,7 +324,10 @@ rendered to PNG:
   Namespaces that say *where weights were pulled from* rather than *who made them* are stripped before
   matching — curated launcher names (`ollama/`, `vllm/`, `lmstudio/`) and host-like registry segments
   (`docker.io/library/…`, `mirror.internal/…`) — while an unknown org prefix is never stripped, so a
-  path like `src/deepseek/client.py` stays unmatched instead of resolving to a bloc.
+  path like `src/deepseek/client.py` stays unmatched instead of resolving to a bloc. Write a URL without
+  its scheme (`huggingface.co/TheBloke/model-x`): with `https://` the first segment is not host-like, so
+  the walk never starts and the reference resolves nothing. Stripping a leading scheme is a known
+  follow-up, not current behaviour.
   Opt-in `provenance` policy block, same
   shape as sovereignty, plus a `deny_models` family ban with provider-deny semantics; findings
   name the developer organisation when the map knows it.

@@ -15,8 +15,14 @@ own SHALL likewise be disregarded, namely a **host-like** segment (one containin
 or mirror host) and a curated local-runtime launcher name (`ollama/`, `vllm/`, `lmstudio/`), because
 such a segment names where the weights were pulled from, not who developed them. Candidate forms SHALL
 be tried most-qualified first, so an identifier that already resolves continues to resolve unchanged.
-An arbitrary leading segment that is neither host-like nor a curated launcher name SHALL NOT be
-disregarded. Tool-name prefixes that merely resemble a model family SHALL NOT match.
+Once at least one host-like segment has been disregarded the reference is demonstrably an image or
+registry path, and the final segment alone SHALL also be tried. An arbitrary leading segment that is
+neither host-like nor a curated launcher name SHALL NOT be disregarded. Tool-name prefixes that merely
+resemble a model family SHALL NOT match.
+
+Two consequences of that fallback are accepted and recorded in the change's design (Risks, R1/R2) rather
+than hidden: an internal reference whose final segment merely *begins* with a family prefix acquires that
+family's provenance, and a URL that carries its scheme resolves nothing at all.
 
 #### Scenario: An MLX community identifier resolves by its model name
 - **WHEN** a flow carries the model reference `mlx-community/Qwen2.5-7B-Instruct-4bit`
@@ -65,3 +71,19 @@ disregarded. Tool-name prefixes that merely resemble a model family SHALL NOT ma
 #### Scenario: An unqualified path segment is not disregarded
 - **WHEN** a scanned file contains the string literal `src/deepseek/client.py`
 - **THEN** no model reference is detected, because `src` is neither host-like nor a curated launcher name
+
+#### Scenario: A near-miss internal image name stays unmatched
+- **WHEN** flows carry the model references `docker.io/library/sonarqube`,
+  `registry.corp/ml/internal-router` and `gcr.io/my-project/deploy-tool`
+- **THEN** none of them resolves to a bloc, pinning the boundary of the final-segment fallback: dropping
+  the host must still leave a segment that starts with a known family prefix
+
+#### Scenario: An internal name beginning with a family prefix acquires that provenance (accepted)
+- **WHEN** a flow carries the model reference `registry.corp/ml/mistral-serving`
+- **THEN** it resolves to `eu` with organisation Mistral AI, and the finding's evidence is the original
+  literal rather than the stripped form, so the attribution is auditable (design R1)
+
+#### Scenario: A URL carrying its scheme resolves nothing (documented limit)
+- **WHEN** a scanned file contains the string literal `https://huggingface.co/TheBloke/deepseek-coder-33B-AWQ`
+- **THEN** no model reference is detected, because `https:` is not host-like so no segment is ever
+  disregarded; the scheme-less `huggingface.co/…` form is the one that resolves (design R2)

@@ -1688,6 +1688,28 @@ def test_provenance_namespace_resolution():
     assert d.model == "ollama/deepseek-r1" and d.provenance == "cn"
 
 
+def test_provenance_final_segment_boundary():
+    # Boundary of the final-segment fallback (design R1), pinned in both directions.
+    # Near misses: a host was dropped, but what remains is not a model family.
+    for near_miss in ("docker.io/library/sonarqube", "registry.corp/ml/internal-router",
+                      "gcr.io/my-project/deploy-tool", "quay.io/prometheus/node-exporter",
+                      "registry.internal/build-kit", "ghcr.io/acme/secrets-scanner"):
+        assert kb.match_model(near_miss) is None, near_miss
+    # Accepted over-attribution: an internal name whose final segment starts with a family prefix does
+    # acquire that provenance. Asserted so the trade-off cannot drift silently with the next refactor.
+    assert kb.match_model("registry.corp/ml/mistral-serving")[1:] == ("eu", "Mistral AI")
+    assert kb.match_model("docker.io/library/whisper-transcribe")[1:] == ("us", "OpenAI")
+    assert kb.match_model("internal.registry/ml/falcon-sandbox")[1:] == ("ae", "TII")
+
+
+def test_provenance_scheme_prefixed_url_not_resolved():
+    # Documented limit (design R2): a URL keeps its scheme segment, which is not host-like, so the walk
+    # never starts. The scheme-less host form — what the README documents — does resolve.
+    assert kb.match_model("https://huggingface.co/TheBloke/deepseek-coder-33B-AWQ") is None
+    assert kb.match_model("http://mirror.internal/deepseek-r1") is None
+    assert kb.match_model("huggingface.co/TheBloke/deepseek-coder-33B-AWQ")[1] == "cn"
+
+
 def test_provenance_namespace_denied():
     # Registry / mirror / runtime namespaces must not dodge a deny_models family ban
     import json as _json, os, tempfile
@@ -1709,6 +1731,33 @@ def test_provenance_namespace_denied():
         bound = [f for f in fs if getattr(f.detection, "model", None) == dodge]
         assert bound and bound[0].detection.provenance == "cn", dodge
         assert any(f.severity == "fail" for f in fs), dodge
+
+
+def test_provenance_deny_overreach_is_fail_closed_and_scopable():
+    # design R1: an internal tool image under a denied family is denied too (fail-closed, evidence kept),
+    # and the operator scopes it by narrowing the deny entry rather than by weakening the matcher.
+    import json as _json, os, tempfile
+    from borderlint.policy import load_policy
+    k = load_kb()
+    d = tempfile.mkdtemp()
+
+    def pol(denies):
+        p = os.path.join(d, f"pol-{len(denies)}.json")
+        with open(p, "w", encoding="utf-8") as fh:
+            _json.dump({"classifications": {"customer-pii": ["hk", "us", "cn"]},
+                        "provenance": {"classifications": {"customer-pii": ["us", "eu", "uk"]},
+                                       "deny_models": denies}}, fh)
+        return load_policy(p)
+
+    src = 'import openai\nm = "ghcr.io/acme/deepseek-config-migrator"\n'
+    fs = evaluate(_scan_file(src), pol(["deepseek"]), "customer-pii", k)
+    denied = [f for f in fs if "model_denied" in f.reasons]
+    assert denied and denied[0].detection.model == "ghcr.io/acme/deepseek-config-migrator"
+    # A narrower entry exempts the tool without exempting the family itself
+    assert not any("model_denied" in f.reasons
+                   for f in evaluate(_scan_file(src), pol(["deepseek-r1"]), "customer-pii", k))
+    assert any("model_denied" in f.reasons for f in evaluate(
+        _scan_file('import openai\nm = "deepseek-r1"\n'), pol(["deepseek-r1"]), "customer-pii", k))
 
 
 def test_bloc_vocabulary_completion():

@@ -14,7 +14,10 @@ candidate form the provenance map would try for that identifier, including forms
 or curated local-runtime namespace segment disregarded, so a denied family cannot be dodged by
 pulling it through a registry, a mirror, or a runtime launcher. The deny SHALL apply to provider
 flows with a bound model identifier and to standalone model-reference findings alike. A finding with
-no model identifier SHALL NOT match any deny entry.
+no model identifier SHALL NOT match any deny entry. Because the candidate set is deliberately wider than
+the map's primary form, an internal image name whose final segment begins with a denied family prefix is
+denied too; that over-reach is fail-closed, is recorded in the design (Risks, R1), and is scoped by
+narrowing the `deny_models` entry rather than by weakening the matcher.
 
 #### Scenario: A denied family fails regardless of the serving host
 - **WHEN** `deny_models` contains `deepseek` and a Bedrock flow binds the model reference `deepseek.r1-v1:0`
@@ -40,3 +43,9 @@ no model identifier SHALL NOT match any deny entry.
 - **WHEN** `deny_models` contains `deepseek` and a flow binds `mirror.internal/deepseek-r1`, or binds
   `huggingface.co/TheBloke/deepseek-coder-33B-AWQ`
 - **THEN** each finding fails with a `model_denied` reason
+
+#### Scenario: An internal tool name under a denied family is denied, fail-closed
+- **WHEN** `deny_models` contains `deepseek` and a flow binds the internal image
+  `ghcr.io/acme/deepseek-config-migrator`
+- **THEN** the finding fails with a `model_denied` reason whose evidence is the full original literal,
+  and scoping the entry to `deepseek-r1` exempts it without exempting the family
