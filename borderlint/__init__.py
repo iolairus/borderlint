@@ -1,3 +1,3 @@
 """borderlint — map and govern where your AI data and traffic flow."""
 
-__version__ = "1.15.7"
+__version__ = "1.15.8"

@@ -149,7 +149,7 @@ APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
 Same command in any pipeline. GitHub Actions (composite action):
 
 ```yaml
-- uses: iolairus/borderlint@v1.15.7
+- uses: iolairus/borderlint@v1.15.8
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -160,7 +160,7 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v1.15.7
+  rev: v1.15.8
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
