@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-21",
+  "updated": "2026-10-10",
   "note": "Advisory only. Hand-curated statements about providers' publicly documented data practices (training on customer API data, retention windows, subprocessor lists, enterprise-tier deltas) as of each fact's retrieval date. Never legal advice; never auto-filled from upstream feeds; never influences verdicts. Each entry carries its own 'reviewed' date; undocumented facts are recorded as null (explicitly unknown), never guessed.",
   "schema": {
     "entry": {
@@ -382,6 +382,281 @@
           "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/resources/zero-data-retention",
           "locator": "Zero-data-retention page (last updated 2026-08-21): abuse-monitoring prompt logging with exception path; Grounding with Search (3-day derived queries) and Maps (30-day prompts/outputs) storage cannot be disabled; opt-in request-response logging and Live-API session resumption (24h); in-memory caching of inputs/outputs/derived data, project-level isolation, 24h TTL, 'does not violate zero data retention', disableable at project level",
           "retrieved": "2026-08-23"
+        }
+      }
+    },
+    "fireworks_ai": {
+      "training_default": "no",
+      "retention": "Zero data retention by default for inference on open models: prompt and generation data exist only in volatile memory for the duration of the request, absent explicit opt-in (e.g. FireOptimizer logging). Exception: the Response API with store=True (its default) retains stored conversation data for 30 days, then auto-deletes; store=False or the DELETE endpoint is immediate. Non-content metadata (token counts) is logged.",
+      "subprocessors": {
+        "url": "https://trust.fireworks.ai/subprocessors",
+        "locator": "Named in the Fireworks DPA §6.2 as the canonical list of Authorised Sub-processors, with 30 days' change notice via Trust Center subscription (www.fireworks.ai/dpa)",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "Enterprise admins can enforce the zero-retention policy org-wide (rejecting requests that would persist or log content); the standard DPA (with SCCs/UK/Swiss addenda) is incorporated into the Terms for all customers (ToS §2.4), not enterprise-only.",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://fireworks.ai/terms-of-service",
+          "locator": "Terms of Service (last updated 2026-07-01) §3.6 'Zero Data Retention': 'We will not use your Content to train our own models or to improve the Service'",
+          "retrieved": "2026-10-10"
+        },
+        "retention": {
+          "url": "https://docs.fireworks.ai/guides/security_compliance/data_handling",
+          "locator": "'Zero data retention': prompt/generation data 'exist only in volatile memory for the duration of the request' without opt-in; 'Response API data retention': with store=True 'all stored conversation data is automatically deleted after 30 days'",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://docs.fireworks.ai/guides/security_compliance/data_handling",
+          "locator": "'Enterprise account admins can additionally turn on the Zero Data Retention policy to reject requests and jobs that would persist or log customer content'",
+          "retrieved": "2026-10-10"
+        }
+      }
+    },
+    "together_ai": {
+      "training_default": "no",
+      "retention": "Stored by default with no fixed window: prompts and responses persist in user history until the user deletes them ('By default, Together stores the prompts you send and the responses models return, and may use them for product improvements'). Self-serve Zero Data Retention in Privacy & Security settings disables storage of prompts/responses ('not persisted to non-volatile storage'); request metadata (token counts, model IDs, timestamps) is still retained for billing.",
+      "subprocessors": {
+        "url": "https://trust.together.ai/",
+        "locator": "Together Trust Center (Vanta-hosted) Subprocessors section, updated 2026-05-26; the Privacy Policy §2.3 refers only to generic 'Service Providers, Third-Party Vendors'",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "Enterprise adds deployment options rather than different defaults: private networking and VPC/dedicated deployments including EU regions (serverless endpoints offer no region selection). ZDR and the training opt-in are available to all organisations via settings, not enterprise-gated; custom addenda are contemplated by ToS §14.02 but not public.",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://docs.together.ai/docs/privacy-and-security",
+          "locator": "'Training opt-in': 'Data sharing for training other models is opt-in and not enabled by default'; Privacy Policy §1: 'We do not use any data collected from you to train our models without your explicit opt-in and consent'",
+          "retrieved": "2026-10-10"
+        },
+        "retention": {
+          "url": "https://docs.together.ai/docs/privacy-and-security",
+          "locator": "'What Together stores': 'By default, Together stores the prompts you send and the responses models return, and may use them for product improvements… you can delete it at any time'; no day-count retention window is published",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://docs.together.ai/docs/privacy-and-security",
+          "locator": "'Enterprise data residency and private networking': 'Together supports private networking and VPC-based deployments, including in EU regions… Serverless endpoints do not offer region selection'",
+          "retrieved": "2026-10-10"
+        }
+      }
+    },
+    "groq": {
+      "training_default": "no",
+      "retention": "No retention of inference request data by default. Reliability/abuse-monitoring logs retained up to 30 days unless legally required longer; Batch API input/output files retained 30 days unless deleted earlier; fine-tuning datasets/weights retained until the customer deletes them. All customers may enable Zero Data Retention in Data Controls (disables batch/fine-tuning). Retained data sits in GCP buckets in the United States.",
+      "subprocessors": {
+        "url": "https://trust.groq.com/subprocessors",
+        "locator": "Groq Trust Center subprocessor list (18 entries incl. Google Cloud Platform, Stripe, Cloudflare, Stytch, PostHog, Wiz); the Customer DPA at console.groq.com/docs/legal/customer-data-processing-addendum governs personal-data processing",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "The published baseline (no training, self-serve ZDR) applies to all tiers; customers under offline/enterprise variants of the Services Agreement are governed by their own paper (Services Agreement preamble), whose contents are not public. A public DPA and a Business Associate Addendum (HIPAA workloads) exist as incorporated URL terms; neither covers Beta Services.",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://console.groq.com/docs/legal/services-agreement",
+          "locator": "Services Agreement (last modified 2026-06-22) §4.2 'Inputs and Outputs': 'Groq is not permitted to use Inputs or Outputs for training or fine-tuning any AI Model Services or other models, unless explicitly granted permission or instructed by Customer'",
+          "retrieved": "2026-10-10"
+        },
+        "retention": {
+          "url": "https://console.groq.com/docs/your-data",
+          "locator": "'Your Data in GroqCloud': 'By default, Groq does not retain customer data for inference requests'; system reliability/abuse logs 'retained for up to 30 days'; 'All customers may enable Zero Data Retention (ZDR) in Data Controls settings'",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://console.groq.com/docs/legal/services-agreement",
+          "locator": "Preamble: 'If you signed an offline variant of this Agreement for use of the Cloud Services, the terms below do not apply to you, and your offline terms govern'",
+          "retrieved": "2026-10-10"
+        }
+      }
+    },
+    "cohere": {
+      "training_default": "opt-out",
+      "retention": "Logged prompts and generations are automatically deleted after 30 days, unless needed for legal/contractual compliance or flagged for terms violation; training-consented data may be retained separately. Zero data retention (no logging of prompts/generations) is available only by enterprise approval. For private deployments and third-party cloud AI/ML platforms, Cohere receives no customer inputs/outputs.",
+      "subprocessors": {
+        "url": "https://trustcenter.cohere.com/",
+        "locator": "Enterprise Data Commitments FAQ: 'You can view a list of sub-processors by visiting Cohere's Trust Center' (Secureframe-hosted; lists Google Cloud, Fullstory, LaunchDarkly, New Relic, Retool, Sentry, Segment, Sendgrid, Vercel)",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "Enterprise terms change every answer: the training opt-out toggle applies to paying accounts (credit card on file); trial/free API keys fall under the Terms of Use §4(1), which grants Cohere the right to use Customer Data to improve its offerings with no documented opt-out. ZDR requires enterprise approval ('we only allow ZDR for enterprise customers who can make additional commitments'); DPA on request via privacy@cohere.com.",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://cohere.com/enterprise-data-commitments",
+          "locator": "'Opt Out from Data Use in Training': 'You can opt out from your prompts and generations being used to train Cohere models in your dashboard settings at any time' — opt-out framing implies paying accounts are opted in by default; trial users are governed by Terms of Use §4(1)",
+          "retrieved": "2026-10-10"
+        },
+        "retention": {
+          "url": "https://cohere.com/enterprise-data-commitments",
+          "locator": "'Data Handling and Retention': 'We automatically delete logged prompts and generations after 30 days, unless we need it to comply with a legal requirement or customer contract, or unless your usage is flagged as potentially violating our terms'",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://cohere.com/enterprise-data-commitments",
+          "locator": "ZDR section: 'we only allow ZDR for enterprise customers who can make additional commitments about their usage of the Cohere Services… Contact support@cohere.com to make a ZDR request'",
+          "retrieved": "2026-10-10"
+        }
+      }
+    },
+    "mistral": {
+      "training_default": "opt-out",
+      "retention": "Inputs and outputs kept for the time needed to generate the output, then 30 rolling days for abuse monitoring unless zero data retention is active. Exceptions: Agents API inputs/outputs kept until account termination; Fine-Tuning API data kept until deleted or account termination. ZDR is available only on pay-as-you-go, stateless API calls, on request and at Mistral's discretion.",
+      "subprocessors": {
+        "url": "https://trust.mistral.ai/subprocessors",
+        "locator": "DPA §7.1 (mistral.ai/terms, effective 2025-05-27): 'Mistral AI will maintain an up-to-date list of its Subprocessors on Mistral AI's website, including in the Trust Center'; §7.2 gives a 10-day objection window for new subprocessors",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "Tier split: the paid La Plateforme API is excluded from training by default ('we do not use your Input and Output to train our artificial intelligence models when you use… the paid version of our APIs' — Privacy Policy §3); the opt-out default above covers the free-tier Studio mode. Enterprise customers are opted out of training by default with an admin-level opt-in toggle. ZDR is pay-as-you-go only, stateless endpoints, by approval.",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://mistral.ai/terms",
+          "locator": "Terms of Service §3 'How we use Your Data': 'We do not use Your Data to train our artificial intelligence models except (a) when you use the Mistral AI Products under a free subscription, Le Chat Pro or Le Chat Student and you have not opted-out of training…'",
+          "retrieved": "2026-10-10"
+        },
+        "retention": {
+          "url": "https://mistral.ai/terms",
+          "locator": "Privacy Policy §5: 'we keep your Input and Output for the period necessary to generate the Output and then for thirty (30) rolling days to monitor abuse (unless zero data retention is activates [sic])'",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://help.mistral.ai/en/articles/347617-do-you-use-my-user-data-to-train-your-artificial-intelligence-models",
+          "locator": "Help center (updated 2026-09-01): 'Enterprise customers are opted out of training by default. The opt-in toggle is managed at the admin level'; pay-as-you-go: 'Customers retain full control over this processing and have the right to opt out at any time'",
+          "retrieved": "2026-10-10"
+        }
+      }
+    },
+    "perplexity": {
+      "training_default": "no",
+      "retention": "Zero retention is the documented API default: 'Perplexity maintains a strict Zero Data Retention Policy for the Chat Completions API' — prompt/response content is not retained; only billing metadata (token counts, model, timestamps, API key ID) is kept. No abuse-monitoring retention window for API content is published. The consumer app (Free/Pro/Max) is different — training on app data is on by default with an opt-out toggle — and is out of scope for this API entry.",
+      "subprocessors": {
+        "url": "https://trust.perplexity.ai/subprocessors",
+        "locator": "Perplexity DPA §6 'Use of Subcontractors' grants general authorization for 'the subcontractors set out at https://trust.perplexity.ai/subprocessors'",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "The no-training/zero-retention posture is the API default for all tiers, so Enterprise changes little for API use: it adds the formal DPA (30-day deletion of personal data after termination, subprocessor change notice), SOC 2 Type II and CAIQlite via the Trust Center, and procurement via AWS Marketplace or sales. Compute is hosted on AWS in North America (docs FAQ).",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://docs.perplexity.ai/docs/resources/privacy-security",
+          "locator": "'Zero Data Retention Policy': 'We do not retain data sent through the Chat Completions API, and we do not use customer data to train our models or for any purpose beyond processing the immediate request'; DPA: 'Personal Data will not be used for training of Perplexity's large language models'",
+          "retrieved": "2026-10-10"
+        },
+        "retention": {
+          "url": "https://docs.perplexity.ai/docs/resources/privacy-security",
+          "locator": "'Perplexity maintains a strict Zero Data Retention Policy for the Chat Completions API'; docs FAQ: 'By default, the API has zero day retention of user prompt data, which is never used for AI training'",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://www.perplexity.ai/hub/legal/dpa",
+          "locator": "Data Processing Addendum (last updated 2026-08-13): §10 deletion of Personal Data within 30 days of service termination; SOC 2 Type II and CAIQlite listed on the Trust Center",
+          "retrieved": "2026-10-10"
+        }
+      }
+    },
+    "deepinfra": {
+      "training_default": "no",
+      "retention": "Contractual zero data retention: customer data submitted to or generated by the services is not retained, stored, or logged 'beyond the period strictly necessary to process and return the applicable request' (ToS §7(b)). Exceptions: data retained at the customer's written request for support is deleted within 30 days of resolution; image-generation outputs are stored 'for a short period'; bulk-inference payloads may be stored encrypted on disk for an unspecified short period; non-content metadata (request ID, cost, sampling parameters) is logged.",
+      "subprocessors": {
+        "url": "https://docs.deepinfra.com/account/subprocessors",
+        "locator": "Published list (last updated 2024-09-06): Stripe (payments), Amazon Web Services and Google Cloud Platform (infrastructure)",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "No tier changes the defaults — no-training and zero retention already apply at the base tier; an executed DPA 'supplements, and does not narrow' the ZDR commitment and controls over the Privacy Policy for all customer data (ToS §5(a)). Enterprise options are dedicated/private deployments ('data stays on dedicated infrastructure') and DeepCluster dedicated GPU clusters. Partner-model caveat: requests routed to Google or Anthropic models follow those companies' training policies, not DeepInfra's.",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://deepinfra.com/terms",
+          "locator": "Terms of Service (last modified 2026-08-17) §7(b): 'Provider will not sell Customer Data, and will not use Customer Data to train, fine-tune, or otherwise improve any model, except as necessary to provide the Services'",
+          "retrieved": "2026-10-10"
+        },
+        "retention": {
+          "url": "https://deepinfra.com/terms",
+          "locator": "§7(b): 'Provider will not retain, store, or log any Customer Data… beyond the period strictly necessary to process and return the applicable request, after which such Customer Data is deleted… (\"Zero Data Retention\")', with the support-request (30-day), legal, and fraud/security exceptions",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://docs.deepinfra.com/account/data-privacy",
+          "locator": "'No training': 'We do not use data you submit to our APIs for training models, except when using Google or Anthropic models, where the receiving company's training policy applies'",
+          "retrieved": "2026-10-10"
+        }
+      }
+    },
+    "openrouter": {
+      "training_default": "no",
+      "retention": "OpenRouter itself has a zero-retention policy: prompts are not retained unless the user opts into prompt logging (DPA §2.4(a): inputs/outputs deleted 'promptly following generation of the relevant Output'); request metadata (timestamps, model, token counts) is kept for billing. Downstream model providers' retention varies per endpoint; users can enforce ZDR-only routing globally, per guardrail, or per request (provider.zdr).",
+      "subprocessors": {
+        "url": "https://trust.openrouter.ai/",
+        "locator": "Enterprise Access Agreement Schedule 3 names the Trust Center as the current list of authorized sub-processors; downstream AI model providers are excluded from the 30-day subprocessor notice (DPA §5.2) and catalogued separately at openrouter.ai/models",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "Downstream dependence is the whole story: some routed model providers may train on inputs/outputs unless the user opts out of provider-side training in account settings or enforces ZDR-only routing; where a provider's policy is unknown, OpenRouter conservatively flags it as retaining+training. Enterprise makes the posture contractual: DPA-incorporated ZDR, an EU-Only Processing Addendum (EU payloads processed only in the EU/EEA, routed only to EU providers, never used for training), and in-region routing via eu.openrouter.ai / us.openrouter.ai on Business/Enterprise plans.",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://openrouter.ai/privacy",
+          "locator": "'Enterprise and API Users': 'OpenRouter does not use your Inputs or Outputs for model training'; same policy, 'Model Provider Data Practices': 'Some Model Providers may use your Inputs and Outputs for model training or improvement'",
+          "retrieved": "2026-10-10"
+        },
+        "retention": {
+          "url": "https://openrouter.ai/docs/guides/features/zdr",
+          "locator": "'OpenRouter's Retention Policy': 'OpenRouter itself has a ZDR policy; your prompts are not retained unless you specifically opt in to prompt logging'",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://openrouter.ai/assets/data-processing-agreement.pdf",
+          "locator": "DPA (last updated 2026-08-26) Exhibit A 'EU-Only Processing Addendum': EU API payloads processed 'only in the European Union or EEA', routed only to EU Model Providers, and never used 'to train, fine-tune, improve, or develop models'",
+          "retrieved": "2026-10-10"
+        }
+      }
+    },
+    "cerebras": {
+      "training_default": "no",
+      "retention": "Inputs and outputs are not retained: 'We do not retain inputs and outputs associated with our training, inference and chatbot Services' (Privacy Policy §6). Logs are deleted 'when they are no longer necessary to provide services to you' — no bounded day-count window is documented for logs, and no explicit abuse-monitoring retention exception is published. Zero retention is the default, not an opt-in.",
+      "subprocessors": {
+        "url": "https://trust.cerebras.ai/?itemUid=e3fae2ca-94a9-416b-b577-5c90e382df57",
+        "locator": "DPA (Rev. June 2025) Annex I: 'List of subprocessors shall be provided in the following webpage on the Cerebras Trust Center', with update notifications via the Trust Center",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "Enterprise agreements add the contractual DPA (processor-role commitments, 72-hour breach notice, audit rights, SCCs) without changing the privacy posture — the no-retention/no-training commitments already apply to all API users. Individual/self-serve users rely on the Terms plus Privacy Policy alone (Terms preamble); Order Forms take precedence over the base Terms (§10(f)).",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://d7umqicpi7263.cloudfront.net/eula/4rCqa7snChhObjYFAYH325D2kcqkCRpGXBZYsSMc3mg",
+          "locator": "Inference Terms and Conditions §3(c): the license to User Content is scoped to 'provide the Services and comply with applicable law', and §3(d) excludes User Content from data usable to 'improve our existing and develop new products and services' — no training right is taken",
+          "retrieved": "2026-10-10"
+        },
+        "retention": {
+          "url": "https://www.cerebras.ai/privacy-policy",
+          "locator": "Privacy Policy (effective 2024-08-27) §6: 'We do not retain inputs and outputs associated with our training, inference and chatbot Services. We delete logs… when they are no longer necessary to provide services to you'",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://www.cerebras.ai/dpa",
+          "locator": "DPA (Rev. June 2025) §3.2.2: Cerebras 'will not: (i) Sell or Share Customer Personal Data; (ii) retain, use, disclose, or otherwise Process such Customer Personal Data for any purpose other than as necessary to provide Services'",
+          "retrieved": "2026-10-10"
+        }
+      }
+    },
+    "sambanova": {
+      "training_default": "no",
+      "retention": null,
+      "subprocessors": {
+        "url": "https://trust.sambanova.ai/",
+        "locator": "SambaNova Trust Center (Vanta-hosted) Subprocessors section (search-indexed entries include AWS, GitHub, Google Cloud Platform); ToS §3.3 separately authorizes affiliated and unaffiliated subprocessors and names Stripe as payment processor",
+        "retrieved": "2026-10-10"
+      },
+      "enterprise_tier": "The hosted SambaCloud API has no published enterprise data-practice tier, public DPA, or per-tier data-use table; ToS §11.5 lets enterprise Orders override the standard terms. The 'Sovereign AI Inference' offering advertises zero data retention and no-training for SambaStack on-premises/air-gapped deployments — that guarantee is scoped to customer-owned infrastructure and does not transfer to the hosted API.",
+      "reviewed": "2026-10-10",
+      "citations": {
+        "training_default": {
+          "url": "https://sambanova.ai/cloud-end-user-license-agreement",
+          "locator": "SambaCloud Terms of Service §2.1 'Customer Content': a license 'solely to the extent necessary to provide the Service to you or as may be required by law, and for no other purposes' — a purpose-limited grant (no explicit no-training sentence); §5.2 improvement use explicitly excludes Customer Content",
+          "retrieved": "2026-10-10"
+        },
+        "enterprise_tier": {
+          "url": "https://sambanova.ai/solutions/sovereign-ai",
+          "locator": "Sovereign AI Inference page, 'Deployment controls': 'Zero data retention; prompts and completions are not stored or used for training' — scoped to on-premises/air-gapped SambaStack deployments",
+          "retrieved": "2026-10-10"
         }
       }
     }

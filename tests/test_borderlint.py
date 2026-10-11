@@ -2343,8 +2343,8 @@ def test_kb_site_generator(tmp_path):
     assert '<a href="https://developers.openai.com/api/docs/guides/your-data">source</a>' in a
     assert "(retrieved 2026-08-21)" in a
     # uncurated provider states absence explicitly
-    assert "not curated for Mistral AI yet" in (
-        (tmp_path / "providers" / "mistral.html").read_text())
+    assert "not curated for Baseten yet" in (
+        (tmp_path / "providers" / "baseten.html").read_text())
     # site tooling lives outside the shipped package
     assert not os.path.exists(os.path.join(root, "borderlint", "kb_site.py"))
 
@@ -2572,6 +2572,42 @@ def test_data_practices_faang_entries_curated():
                 assert all(cite.get(k) for k in ("url", "locator", "retrieved")), (pid, fact)
 
 
+def test_data_practices_inference_host_entries_curated():
+    from borderlint import kb as kbmod
+    dp = _dp()
+    # training defaults: eight no, two tier-dependent opt-out (design D2)
+    for pid in ("fireworks_ai", "together_ai", "groq", "perplexity", "deepinfra",
+                "openrouter", "cerebras", "sambanova"):
+        assert dp[pid]["training_default"] == "no", pid
+    assert dp["cohere"]["training_default"] == "opt-out"
+    assert dp["mistral"]["training_default"] == "opt-out"
+    # distinctive postures pinned
+    assert "30 days" in dp["fireworks_ai"]["retention"]  # Response API store=true exception
+    assert "product improvements" in dp["together_ai"]["retention"]
+    assert "30 days" in dp["cohere"]["retention"]
+    assert "opted out of training by default" in dp["mistral"]["enterprise_tier"]
+    assert "Google or Anthropic" in dp["deepinfra"]["enterprise_tier"]  # partner-model caveat
+    assert "downstream" in dp["openrouter"]["enterprise_tier"].lower()  # routing dependence (D3)
+    assert dp["sambanova"]["retention"] is None  # genuinely undocumented for the hosted API
+    assert "no other purposes" in dp["sambanova"]["citations"]["training_default"]["locator"]
+    assert "no other" in dp["cerebras"]["citations"]["training_default"]["locator"] or \
+        "improve our existing" in dp["cerebras"]["citations"]["training_default"]["locator"]
+    # all ten: every non-null fact cited, no unavailability claims, keys in providers.json
+    import json as _json
+    with open("borderlint/data/providers.json", encoding="utf-8") as fh:
+        ids = {p["id"] for p in _json.load(fh)["providers"]}
+    for pid in ("cerebras", "cohere", "deepinfra", "fireworks_ai", "groq", "mistral",
+                "openrouter", "perplexity", "sambanova", "together_ai"):
+        entry = dp[pid]
+        assert pid in ids
+        assert kbmod._iso_date(entry["reviewed"])
+        for fact in ("training_default", "retention", "enterprise_tier"):
+            if entry.get(fact) is not None:
+                cite = entry["citations"][fact]
+                assert all(cite.get(k) for k in ("url", "locator", "retrieved")), (pid, fact)
+                assert "unreachable" not in cite["locator"].lower(), (pid, fact)
+
+
 def test_data_practices_loader_rejects_bad_entries():
     from borderlint import kb as kbm
     bad = [
@@ -2609,12 +2645,12 @@ def test_data_practices_never_change_verdicts():
 
 
 def test_data_practices_uncurated_provider_does_not_fail_scan():
-    # mistral has no curated entry: detection still works and absence is visible
+    # baseten has no curated entry: detection still works and absence is visible
     from borderlint.detect import scan as scan_file
     kb2 = load_kb()
-    ds = scan_file(_src('u = "https://api.mistral.ai/v1"\n'), kb2)
-    assert any(d.provider_id == "mistral" for d in ds)
-    assert "mistral" not in kb2.data_practices
+    ds = scan_file(_src('u = "https://baseten.co/v1"\n'), kb2)
+    assert any(d.provider_id == "baseten" for d in ds)
+    assert "baseten" not in kb2.data_practices
     # deepseek is curated now — opt-out training posture, PRC residency (see
     # test_data_practices_cn_entries_curated for the full fact assertions)
 
@@ -2845,9 +2881,9 @@ def test_evidence_data_practices_register_uncurated_visible():
     from borderlint.report import evidence
     from borderlint.policy import Finding
     k = load_kb()
-    d1 = _resolve_sovereignty(_scan_py("b.py", 'u = "https://api.mistral.ai/v1"\n', k), k)[0]
+    d1 = _resolve_sovereignty(_scan_py("b.py", 'u = "https://baseten.co/v1"\n', k), k)[0]
     pack = evidence([Finding(d1, "fail", [])], k, _pol(["hk"]))
-    assert "**Mistral AI** — not curated" in pack
+    assert "**Baseten** — not curated" in pack
 
 
 def test_evidence_register_absent_without_findings():
