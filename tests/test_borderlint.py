@@ -3167,3 +3167,67 @@ def test_wave5_no_bare_whisper_and_near_misses():
     kb2 = load_kb()
     for mid in ("whispering-pines", "in.inhouse-7b"):
         assert kb2.match_model(mid) is None, mid
+
+
+# --- October 2026 drift resolution, wave 6 --------------------------------------
+
+def test_wave6_new_providers_resolve():
+    # microsoft_365_copilot via the shared Graph host; scaledown via its .xyz API host
+    kb2 = load_kb()
+    m = kb2.match_endpoint("graph.microsoft.com")
+    assert m is not None and m[0] == "microsoft_365_copilot" and m[2] == "us"
+    m = kb2.match_endpoint("api.scaledown.xyz")
+    assert m is not None and m[0] == "scaledown" and m[2] == "us"
+    assert kb2.default_sovereignty("microsoft_365_copilot") == "us"
+    assert kb2.default_sovereignty("scaledown") == "us"
+    # scenario-claimed note contents (designs D1, D2)
+    m365 = kb2.by_id["microsoft_365_copilot"]
+    assert "shared Microsoft Graph surface" in m365["note"] and "preview" in m365["note"]
+    sd = kb2.by_id["scaledown"]
+    assert ".ai domain" in sd["note"] and "US-only processing" in sd["note"]
+
+
+def test_wave6_mai_code_resolves_both_forms():
+    # Microsoft AI's in-house coding family: qualified Copilot form + bare stem (design D4)
+    kb2 = load_kb()
+    for mid in ("github_copilot/mai-code-1.1-flash", "mai-code-1-flash"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "us" and got[2] == "Microsoft AI", mid
+
+
+def test_wave6_scaledown_namespace_resolves():
+    # one org-namespace pattern covers all five endpoint names (design D3)
+    kb2 = load_kb()
+    for ep in ("classify", "compress", "decisions", "extract", "summarize"):
+        got = kb2.match_model(f"scaledown/{ep}")
+        assert got is not None and got[1] == "us" and got[2] == "ScaleDown", ep
+
+
+def test_wave6_copilot_chat_qualified_only():
+    # Microsoft chooses the served model; qualified form only, no bare chat stem (design D6)
+    kb2 = load_kb()
+    got = kb2.match_model("microsoft_365_copilot/chat")
+    assert got is not None and got[1] == "us" and got[2] == "Microsoft"
+
+
+def test_wave6_microsoft_decision_inherits_qwen_bloc():
+    # Microsoft-published but post-trained on Qwen3.5-9B: fine-tunes inherit base (design D5)
+    kb2 = load_kb()
+    for mid in ("azure_ai/Microsoft-Decision-1", "Microsoft-Decision-1"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "cn", mid
+        assert got[2] == "Alibaba (Microsoft Decision-1 post-training)", mid
+
+
+def test_wave6_generic_stems_do_not_overmatch():
+    # no bare chat/classify/summarize stems (designs D3, D6)
+    kb2 = load_kb()
+    for mid in ("chat-with-pdfs", "classification-9b", "summarize-pro-2"):
+        assert kb2.match_model(mid) is None, mid
+
+
+def test_wave6_tier2_defaults():
+    # scaledown serves only its own SLMs; Copilot routes across vendors -> no default
+    kb2 = load_kb()
+    assert kb2.default_provenance("scaledown") == "us"
+    assert kb2.default_provenance("microsoft_365_copilot") == "unknown"
