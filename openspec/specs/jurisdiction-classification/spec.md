@@ -7,12 +7,15 @@ TBD - created by archiving change mvp-residency-scanner. Update Purpose after ar
 The system SHALL ship a bundled knowledge base that maps AI providers — Western, Chinese, and
 other blocs (for example OpenAI, Anthropic, Google, Mistral, Cohere, Tencent Hunyuan, Alibaba
 DashScope, DeepSeek, Xiaomi MiMo, SCX.ai, AiHubMix, AWS Transcribe, TypeSafe AI, Prism
-Inference, Sail Research, Bespoke Labs, Laya, Strands Decider) — to their SDK names, endpoint
-hosts, and a jurisdiction. A provider whose upstream API hostname is not documented MAY carry
-no endpoint hosts; the entry still records the provider's jurisdiction and sovereignty and
-MUST NOT carry a guessed hostname. A provider that is a self-hosted runtime — reachable only
-at a deployer-supplied address, with no vendor-operated endpoint — SHALL carry jurisdiction
-and sovereignty `local`.
+Inference, Sail Research, Bespoke Labs, Laya, Strands Decider, Microsoft 365 Copilot,
+ScaleDown) — to their SDK names, endpoint hosts, and a jurisdiction. A provider whose upstream
+API hostname is not documented MAY carry no endpoint hosts; the entry still records the
+provider's jurisdiction and sovereignty and MUST NOT carry a guessed hostname. A provider that
+is a self-hosted runtime — reachable only at a deployer-supplied address, with no
+vendor-operated endpoint — SHALL carry jurisdiction and sovereignty `local`. Where the
+documented API host is a shared multi-service surface (for example `graph.microsoft.com`,
+which serves all Microsoft Graph traffic, not only Copilot), the entry SHALL record the
+shared-surface caveat in its note.
 
 #### Scenario: Western and Chinese providers both resolve
 - **WHEN** a detection identifies `openai` and another identifies `deepseek`
@@ -56,6 +59,20 @@ and sovereignty `local`.
   are loaded
 - **THEN** each carries jurisdiction `local` and sovereignty `local` with an empty endpoint
   list and a note naming the vendor and the self-hosted, deployer-supplied-address mechanics
+
+#### Scenario: Microsoft 365 Copilot resolves via the shared Graph host
+- **WHEN** a detection matches `graph.microsoft.com`
+- **THEN** it resolves to provider `microsoft_365_copilot` with jurisdiction `us` and
+  sovereignty bloc `us`, and the entry's note records that the host is the shared Microsoft
+  Graph surface, that the Copilot Chat API is a Graph beta (preview) endpoint, and that
+  Microsoft chooses the served model
+
+#### Scenario: ScaleDown resolves via its documented API host
+- **WHEN** a detection matches `api.scaledown.xyz`
+- **THEN** it resolves to provider `scaledown` with jurisdiction `us` and sovereignty bloc
+  `us`, and the entry's note records that the API host is `.xyz` (distinct from the vendor's
+  `.ai` marketing and docs hosts) and that ScaleDown, Inc. commits to US-only processing in
+  its DPA
 
 ### Requirement: Jurisdiction codes and special tokens
 The system SHALL express jurisdictions as lowercase ccTLD/ISO-3166 country codes, plus the special
