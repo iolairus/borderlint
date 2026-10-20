@@ -116,6 +116,7 @@
     "openrouter/unbiased/pareto-": "versioned releases of the same composite router product (judged 2026-09-21; prefix added 2026-10-02 when pareto-26.10-preview appeared)",
     "azure_ai/model-router": "Azure Foundry model-routing feature, not a model (structural)",
     "azure/model-router": "Azure Foundry model-routing feature, not a model (structural); same product as azure_ai/model-router under the azure namespace (judged 2026-10-08)",
+    "nace/drex-v1.0": "Drex v1.0 base lineage undisclosed in every primary source — accept unknown rather than guess a bloc; versioned v1.5/v2.0 forms carry the Qwen-inherited cn bloc (judged 2026-10-20)",
     "transcribe/starttranscriptionjob": "AWS Transcribe API operation, not a model (structural); provider covered as `aws_transcribe`",
     "bing_grounding/search": "Grounding-with-Bing search tool id, not a model (structural); provider aliased to azure_foundry (judged 2026-09-09)",
     "nimble/search": "search API product name, not a model (structural); provider covered in providers.json as `nimble`",
