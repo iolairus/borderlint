@@ -3231,3 +3231,88 @@ def test_wave6_tier2_defaults():
     kb2 = load_kb()
     assert kb2.default_provenance("scaledown") == "us"
     assert kb2.default_provenance("microsoft_365_copilot") == "unknown"
+
+
+# --- October 2026 drift resolution, wave 7 --------------------------------------
+
+def test_wave7_new_providers_resolve():
+    # four hosted providers, all us; inferenceapis is an aggregator (designs D1, D2)
+    kb2 = load_kb()
+    for host, pid in (("inference.coralbricks.ai", "coralbricks"),
+                      ("api.inferenceapis.com", "inferenceapis"),
+                      ("api.openinfer.ai", "openinfer")):
+        m = kb2.match_endpoint(host)
+        assert m is not None and m[0] == pid and m[2] == "us", host
+    assert kb2.category("inferenceapis") == "aggregator"
+    # both Nace hostnames serve the same decision-model API
+    for host in ("console.nace.ai", "drex.nace.ai"):
+        m = kb2.match_endpoint(host)
+        assert m is not None and m[0] == "nace" and m[2] == "us", host
+    for pid in ("coralbricks", "inferenceapis", "nace", "openinfer"):
+        assert kb2.default_sovereignty(pid) == "us", pid
+
+
+def test_wave7_reranker_sam_and_alibaba_video_resolve():
+    kb2 = load_kb()
+    for mid in ("vertex_ai/semantic-ranker-default", "semantic-ranker-fast-004"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "us" and got[2] == "Google", mid
+    got = kb2.match_model("meta/sam-3.1")
+    assert got is not None and got[1] == "us" and got[2] == "Meta"
+    got = kb2.match_model("happyhorse-1.0-i2v")
+    assert got is not None and got[1] == "cn" and got[2] == "Alibaba"
+    for mid in ("wan2.7-i2v", "wan3.0-video"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "cn" and got[2] == "Alibaba (Wan-AI)", mid
+
+
+def test_wave7_beam_resolves_all_distribution_forms():
+    # bare stem, HF org, and the three observed host namespaces (design D6)
+    kb2 = load_kb()
+    for mid in ("beam-1.0", "reflection/Beam-1.0-501B-A23B", "baseten/reflection/Beam-1.0",
+                "together_ai/reflection/Beam-1.0-501B-A23B", "nebius/reflection/beam"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "us" and got[2] == "Reflection AI", mid
+
+
+def test_wave7_drex_inherits_qwen_bloc_version_by_version():
+    # v1.5 post-trains a Qwen distill, v2.0 a Qwen3.6 backbone: inherit base (design D5)
+    kb2 = load_kb()
+    for mid in ("nace/drex-v1.5", "drex-v1.5", "drex-v2.0", "nace/drex-v2.0",
+                "nace-ai/drex-v2.0", "drex-latest", "nace/drex-latest"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "cn", mid
+        assert got[2] == "Alibaba (Nace Drex post-train)", mid
+
+
+def test_wave7_honest_unknowns_and_near_misses():
+    # v1.0 lineage undisclosed (design D5); no bare sam/wan stems (design D4)
+    kb2 = load_kb()
+    for mid in ("nace/drex-v1.0", "drex-v1.0", "sam-3.1", "wandb/some-org/some-model",
+                "wander-7b", "sambanova-custom"):
+        assert kb2.match_model(mid) is None, mid
+    # no tier-2 defaults for the wave-7 providers (design D3)
+    for pid in ("coralbricks", "inferenceapis", "nace", "openinfer"):
+        assert kb2.default_provenance(pid) == "unknown", pid
+
+
+def test_wave7_drift_suffix_walk_covers_namespaced_forms():
+    # litellm keys carry provider prefixes the runtime never strips; drift coverage
+    # walks suffixes, so bare stems must cover the namespaced upstream ids
+    kb2 = load_kb()
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    ids = [("vertex_ai/semantic-ranker-default", "vertex_ai"),
+           ("dashscope/happyhorse-1.0-i2v", "dashscope"),
+           ("dashscope/wan2.7-i2v", "dashscope"),
+           ("nace/drex-v1.5", "nace"),
+           ("nace/drex-v2.0", "nace"),
+           ("nace/drex-latest", "nace"),
+           ("baseten/reflection/Beam-1.0", "baseten"),
+           ("together_ai/reflection/Beam-1.0-501B-A23B", "together_ai"),
+           ("nebius/reflection/beam", "nebius"),
+           ("meta/sam-3.1", "meta"),
+           ("qwencloud/happyhorse-1.1-t2v", "qwencloud"),
+           ("qwen_ai_platform/wan3.0-video-prime", "qwen_ai_platform")]
+    assert kb_drift.model_coverage_gap(ids, kb2) == []

@@ -8,7 +8,7 @@ The system SHALL ship a bundled knowledge base that maps AI providers — Wester
 other blocs (for example OpenAI, Anthropic, Google, Mistral, Cohere, Tencent Hunyuan, Alibaba
 DashScope, DeepSeek, Xiaomi MiMo, SCX.ai, AiHubMix, AWS Transcribe, TypeSafe AI, Prism
 Inference, Sail Research, Bespoke Labs, Laya, Strands Decider, Microsoft 365 Copilot,
-ScaleDown) — to their SDK names, endpoint hosts, and a jurisdiction. A provider whose upstream
+ScaleDown, CoralBricks, Inference APIs, Nace.AI, OpenInfer) — to their SDK names, endpoint hosts, and a jurisdiction. A provider whose upstream
 API hostname is not documented MAY carry no endpoint hosts; the entry still records the
 provider's jurisdiction and sovereignty and MUST NOT carry a guessed hostname. A provider that
 is a self-hosted runtime — reachable only at a deployer-supplied address, with no
@@ -73,6 +73,19 @@ shared-surface caveat in its note.
   `us`, and the entry's note records that the API host is `.xyz` (distinct from the vendor's
   `.ai` marketing and docs hosts) and that ScaleDown, Inc. commits to US-only processing in
   its DPA
+
+#### Scenario: Wave-7 hosted inference providers resolve to us
+- **WHEN** detections match `inference.coralbricks.ai`, `api.inferenceapis.com`, and
+  `api.openinfer.ai`
+- **THEN** they resolve to providers `coralbricks`, `inferenceapis`, and `openinfer`
+  respectively, each with jurisdiction `us` and sovereignty bloc `us`, and `inferenceapis`
+  carries category `aggregator` (a gateway reselling Together AI and DeepInfra capacity)
+
+#### Scenario: Nace resolves on both documented hostnames
+- **WHEN** detections match `console.nace.ai` and `drex.nace.ai`
+- **THEN** both resolve to provider `nace` with jurisdiction `us` and sovereignty bloc
+  `us`, and the entry's note records that the two hostnames serve the same decision-model
+  API (litellm's default and the vendor-documented alias)
 
 ### Requirement: Jurisdiction codes and special tokens
 The system SHALL express jurisdictions as lowercase ccTLD/ISO-3166 country codes, plus the special
