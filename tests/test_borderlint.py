@@ -3316,3 +3316,85 @@ def test_wave7_drift_suffix_walk_covers_namespaced_forms():
            ("qwencloud/happyhorse-1.1-t2v", "qwencloud"),
            ("qwen_ai_platform/wan3.0-video-prime", "qwen_ai_platform")]
     assert kb_drift.model_coverage_gap(ids, kb2) == []
+
+
+# --- October 2026 drift resolution, wave 8 --------------------------------------
+
+def test_wave8_opencode_go_provider_resolves():
+    # multi-vendor subscription gateway on the shared opencode.ai host (design D1)
+    kb2 = load_kb()
+    m = kb2.match_endpoint("opencode.ai")
+    assert m is not None and m[0] == "opencode_go" and m[2] == "us"
+    assert kb2.category("opencode_go") == "aggregator"
+    assert kb2.default_sovereignty("opencode_go") == "us"
+
+
+def test_wave8_azure_region_namespace_resolves_qualified():
+    # azure grew region segments; only the bare o1/o3 forms needed patterns (design D2)
+    kb2 = load_kb()
+    for mid in ("azure/eu/o1", "azure/eu/o3", "azure/us/o1", "azure/us/o3"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "us" and got[2] == "OpenAI", mid
+
+
+def test_wave8_clairic_and_step5_resolve():
+    kb2 = load_kb()
+    got = kb2.match_model("cloudflare/clairic")
+    assert got is not None and got[1] == "us" and got[2] == "Cloudflare"
+    for mid in ("step-5-preview", "opencode_go/step-5-preview"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "cn" and got[2] == "StepFun", mid
+
+
+def test_wave8_short_stems_stay_guarded():
+    # no bare o1/o3/step/elephant/mammoth stems; dash-anchored patterns unchanged (D2, D4, D5)
+    kb2 = load_kb()
+    assert kb2.match_model("step-up-7b") is None
+    assert kb2.match_model("o3unknown") is None
+    assert kb2.match_model("elephant-9b") is None
+    assert kb2.match_model("mammoth-27b") is None
+    got = kb2.match_model("o1-preview-clone")
+    assert got is not None and got[1] == "us" and got[2] == "OpenAI"
+
+
+def test_wave8_baseten_decision_models_inherit_qwen_bloc():
+    # Base Labs full fine-tunes of Qwen3.5-9B/27B: inherit base (design D5)
+    kb2 = load_kb()
+    for mid in ("baseten/decision-models/baseten-elephant-9b-latest",
+                "baseten/decision-models/baseten-mammoth-27b-latest",
+                "baselabs/elephant-1", "baselabs/mammoth-1"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "cn", mid
+        assert got[2] == "Alibaba (Base Labs post-train)", mid
+
+
+def test_wave8_opencode_go_no_tier2_default():
+    kb2 = load_kb()
+    assert kb2.default_provenance("opencode_go") == "unknown"
+
+
+def test_wave8_drift_suffix_walk_covers_namespaced_forms():
+    # azure/<region> versioned forms, the @cf hub form, and the 30 other opencode_go
+    # catalog ids all cover via the suffix walk against existing family patterns
+    kb2 = load_kb()
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    o_models = ("o1", "o1-2024-12-17", "o1-mini", "o1-mini-2024-09-12", "o1-preview", "o3",
+                "o3-2025-04-16", "o3-deep-research", "o3-mini", "o3-mini-2025-01-31",
+                "o4-mini", "o4-mini-2025-04-16")
+    azure_ids = [f"azure/{r}/{m}" for r in ("eu", "us") for m in o_models]
+    oc_models = ("beam-free", "claude-haiku-5-5", "deepseek-v4-pro", "deepseek-v4.1-flash",
+                 "gemini-4-argon", "glm-5.2", "glm-5.3", "glm-5.3-flash", "gpt-5.6-luna",
+                 "gpt-6-luna", "grok-4.7", "hy3", "hy4-preview", "kimi-k2.7-code", "kimi-k3",
+                 "kimi-k3.1-pro", "longcat-2.0", "longcat-2.5-preview-free", "mimo-v2.5",
+                 "mimo-v2.5-pro", "mimo-v2.6-flash", "mimo-v2.6-pro", "minimax-m3",
+                 "minimax-m3.1-flash", "muse-spark-1.2-contributor", "muse-spark-1.3-contributor",
+                 "qwen3.7-plus", "qwen3.8-flash", "qwen3.8-max", "step-5-preview")
+    ids = ([(m, "azure") for m in azure_ids]
+           + [("cloudflare/clairic", "cloudflare"),
+              ("cloudflare/@cf/cloudflare/clairic", "cloudflare"),
+              ("baseten/decision-models/baseten-elephant-9b-latest", "baseten"),
+              ("baseten/decision-models/baseten-mammoth-27b-latest", "baseten")]
+           + [(f"opencode_go/{m}", "opencode_go") for m in oc_models])
+    assert kb_drift.model_coverage_gap(ids, kb2) == []
