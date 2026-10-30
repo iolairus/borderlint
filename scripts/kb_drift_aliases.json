@@ -48,6 +48,7 @@
   },
   "aliases": {
     "agentcore": "aws_bedrock",
+    "bigmodel": "zhipu",
     "amazon_nova": "aws_bedrock",
     "azure": "azure_openai",
     "azure_ai": "azure_openai",
@@ -107,7 +108,8 @@
     "tensormesh": "researched (Tensormesh, SF) — deliberately not added this pass (reviewed 2026-07-05: nothing actionable in the current list; revisit on new information)",
     "text-completion-inception": "researched (Inception Labs, Palo Alto) — deliberately not added this pass (reviewed 2026-07-05: nothing actionable in the current list; revisit on new information)",
     "tinyfish": "TinyFish — enterprise web-agent automation infra, no model weights (judged 2026-07-05)",
-    "you_com": "litellm routes You.com as web search, not model serving (judged 2026-07-05)"
+    "you_com": "litellm routes You.com as web search, not model serving (judged 2026-07-05)",
+    "abliteration": "model-catalog site / HF org (abliteration.org, Catyonic OÜ, Tallinn) — no inference API, hosts zero models; not a provider (judged 2026-10-30)"
   },
   "residue": {
     "fireworks_ai/accounts/fireworks/routers/": "Fireworks routing endpoints (auto, auto-instant, firerouter) — routing products, not models (structural; judged 2026-10-02)",
@@ -292,6 +294,8 @@
     "watsonx/bigscience/mt0-xxl-13b": "reviewed 2026-07-05: nothing actionable in the current list; revisit on new information",
     "watsonx/sdaia/allam-1-13b-instruct": "reviewed 2026-07-05: nothing actionable in the current list; revisit on new information",
     "writer.palmyra-x4-v1:0": "reviewed 2026-07-05: nothing actionable in the current list; revisit on new information",
-    "writer.palmyra-x5-v1:0": "reviewed 2026-07-05: nothing actionable in the current list; revisit on new information"
+    "writer.palmyra-x5-v1:0": "reviewed 2026-07-05: nothing actionable in the current list; revisit on new information",
+    "abliteration/": "catalog placeholder ids on the abliteration.org namespace (not an inference provider); per-id base lineage undisclosed — accept unknown rather than guess a bloc (judged 2026-10-30)",
+    "kyma/sonar": "gateway id whose upstream model is not identified in any primary source (Kyma's own pages do not enumerate it); accept unknown rather than guess a bloc (judged 2026-10-30)"
   }
 }
