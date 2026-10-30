@@ -3398,3 +3398,130 @@ def test_wave8_drift_suffix_walk_covers_namespaced_forms():
               ("baseten/decision-models/baseten-mammoth-27b-latest", "baseten")]
            + [(f"opencode_go/{m}", "opencode_go") for m in oc_models])
     assert kb_drift.model_coverage_gap(ids, kb2) == []
+
+
+# --- October 2026 drift resolution, wave 9 --------------------------------------
+
+def test_wave9_providers_resolve():
+    # eight new hosted providers with documented endpoints (design D1–D6)
+    kb2 = load_kb()
+    cases = [
+        ("open.bigmodel.cn", "zhipu", "cn", "cn"),  # bigmodel route aliases to zhipu
+        ("vanchin.streamlake.ai", "streamlake", "cn", "cn"),
+        ("wanqing.streamlakeapi.com", "streamlake", "cn", "cn"),
+        ("kymaapi.com", "kyma", "us", "us"),
+        ("api.aiand.com", "aiand", "jp", "jp"),
+        ("api.clfaigateway.dev", "clf_ai_gateway", "vn", "vn"),
+        ("api.zerogpu.ai", "zerogpu", "us", "us"),
+        ("api.refuseless.com", "refuseless", "unknown", "unknown"),
+        ("eu-jev.com", "eu_jev", "eu", "eu"),
+    ]
+    for host, pid, juris, sov in cases:
+        m = kb2.match_endpoint(host)
+        assert m is not None and m[0] == pid and m[2] == juris, host
+        assert kb2.default_sovereignty(pid) == sov, pid
+    assert kb2.category("kyma") == "aggregator"
+    assert kb2.category("clf_ai_gateway") == "aggregator"
+
+
+def test_wave9_soniox_tier2_default():
+    # first-party-only speech provider: whole stt family resolves via the default (D7)
+    kb2 = load_kb()
+    assert kb2.default_provenance("soniox") == "us"
+    assert kb2.match_model("stt-rt-preview") is None  # no bare stt stems claimed
+    assert kb2.match_model("stt-async-v5") is None
+
+
+def test_wave9_eu_jev_pattern_and_default():
+    # brand-stem pattern for model references; tier-2 default for unbound flows (D6)
+    kb2 = load_kb()
+    got = kb2.match_model("eu-jeff-1.0.0")
+    assert got is not None and got[1] == "eu" and got[2] == "Bevelites (eu/jev)"
+    assert kb2.default_provenance("eu_jev") == "eu"
+
+
+def test_wave9_lfm_motif_joey_resolve():
+    kb2 = load_kb()
+    got = kb2.match_model("lfm2.5-7b-chat")
+    assert got is not None and got[1] == "us" and got[2] == "Liquid AI"
+    got = kb2.match_model("motif-3")
+    assert got is not None and got[1] == "kr" and got[2] == "Motif Technologies"
+    got = kb2.match_model("baseten/decision-models/baseten-joey-2b-latest")
+    assert got is not None and got[1] == "cn"
+    assert got[2] == "Alibaba (Base Labs post-train)"
+
+
+def test_wave9_guarded_stems_stay_unknown():
+    # no bare stt/lfm/motif stems; dot- and version-anchors only (D7, D8)
+    kb2 = load_kb()
+    assert kb2.match_model("stt-9-ultra") is None
+    assert kb2.match_model("lfma-7b") is None  # no bare lfm stem; lfm-/lfm2. anchors only
+    assert kb2.match_model("motif-blank-7b") is None
+
+
+def test_wave9_multivendor_providers_no_tier2_default():
+    kb2 = load_kb()
+    for pid in ("streamlake", "kyma", "aiand", "clf_ai_gateway",
+                "zerogpu", "refuseless"):
+        assert kb2.default_provenance(pid) == "unknown", pid
+
+
+def test_wave9_residue_stays_unknown():
+    # abliteration placeholder ids and kyma/sonar: accepted unknown, never guessed (D9)
+    kb2 = load_kb()
+    assert kb2.match_model("abliterated-model") is None
+    assert kb2.match_model("sonar") is None
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    supp = kb_drift.json.load(open("scripts/kb_drift_aliases.json"))
+    uncovered = ["abliteration/abliterated-model", "abliteration/abliterated-model-large",
+                 "abliteration/abliterated-model-large-flash",
+                 "abliteration/abliterated-model-large-v2", "kyma/sonar"]
+    actionable, _ = kb_drift.split_residue(uncovered, supp["residue"])
+    assert actionable == []
+
+
+def test_wave9_drift_suffix_walk_covers_catalogs():
+    # every wave-9 upstream id resolves: soniox via the speech tier-2 default,
+    # the rest via the suffix walk against new and pre-existing family patterns
+    kb2 = load_kb()
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    ids = ([(f"soniox/{m}", "soniox") for m in (
+                "stt-async-v4", "stt-async-v5", "stt-rt-preview", "stt-rt-preview-v2",
+                "stt-rt-v3", "stt-rt-v3-preview", "stt-rt-v4", "stt-rt-v5")]
+           + [(f"eu_jev/{m}", "eu_jev") for m in ("eu-jeff-1.0.0", "eu-jeff-latest")]
+           + [(f"zerogpu/{m}", "zerogpu") for m in (
+                "LFM2.5-1.2B-Instruct", "LFM2.5-1.2B-Thinking", "deepseek-v4.1-flash",
+                "glm-5.3-flash", "gpt-4.1-mini", "gpt-5.4-nano", "gpt-5.6-luna",
+                "gpt-6-luna", "gpt-oss-120b", "llama-3.1-8b-instruct-fast",
+                "llama-3.2-3b-instruct-fast", "qwen3-30b-a3b-fp8", "qwen3.6-35b-a3b")]
+           + [("baseten/decision-models/baseten-joey-2b-latest", "baseten")]
+           + [(f"aiand/{m}", "aiand") for m in (
+                "deepseek-ai/deepseek-v4-flash", "deepseek-ai/deepseek-v4-pro",
+                "deepseek-ai/deepseek-v4.1-flash", "google/gemma-4-31b-it",
+                "moonshotai/kimi-k2.7-code", "moonshotai/kimi-k3",
+                "motif-technologies/motif-3", "openai/gpt-oss-120b", "qwen/qwen3.6-27b",
+                "qwen/qwen3.8-27b", "zai-org/glm-5.2", "zai-org/glm-5.3",
+                "zai-org/glm-5.3-flash")]
+           + [(f"refuseless/{m}", "refuseless") for m in (
+                "deepseek-v4.1-flash-abliterated", "deepseek-v4.1-flash-fast",
+                "glm-5.3-abliterated", "glm-5.3-flash-abliterated", "minimax-m3.1-flash")]
+           + [(f"bigmodel/{m}", "bigmodel") for m in ("glm-5.3", "glm-5.3-flash",
+                                                       "glm-5.3-flashx")]
+           + [(f"clf_ai_gateway/{m}", "clf_ai_gateway") for m in (
+                "deepseek-v4-flash", "deepseek-v4-pro", "deepseek-v4.1-flash",
+                "glm-4.7-flash", "glm-5.2", "glm-5.3", "glm-5.3-flash", "kimi-k2.6",
+                "kimi-k2.7-code", "qwen3.8-27b")]
+           + [(f"streamlake/{m}", "streamlake") for m in (
+                "DeepSeek-V3", "DeepSeek-V4-Pro-0813", "GLM-5.3", "GLM-5.3-Flash",
+                "Kimi-K2-Instruct-0905", "deepseek-r1", "deepseek-v3.1",
+                "deepseek-v4-flash", "deepseek-v4-flash-0731", "deepseek-v4-pro",
+                "deepseek-v4.1-flash-1017", "deepseek-v4.1-flash-260910", "glm-5",
+                "glm-5.1", "glm-5.2", "kimi-k2.6", "kimi-k2.7-code", "mimo-v2.6-flash",
+                "mimo-v2.6-pro", "minimax-m2.5", "minimax-m3", "qwen3.5-397b-a17b",
+                "qwen3.6-27b", "qwen3.6-35b-a3b", "qwen3.8-2.4t-a95b", "qwen3.8-27b")]
+           + [("kyma/sonar-pro", "kyma")])  # suffix walk → pre-existing Perplexity pattern
+    assert kb_drift.model_coverage_gap(ids, kb2) == []

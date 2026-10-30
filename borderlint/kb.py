@@ -142,7 +142,7 @@ def _valid_jurisdiction(token: str) -> bool:
 # Sovereignty blocs: which government can compel disclosure of a flow's data, derived from the
 # provider's home legal regime (not the endpoint region). Distinct from residency.
 _SOVEREIGNTY_BLOCS = frozenset(
-    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "ch", "local", "unknown"})
+    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "ch", "vn", "local", "unknown"})
 
 
 def _valid_sovereignty(token: str) -> bool:
