@@ -296,6 +296,7 @@
     "writer.palmyra-x4-v1:0": "reviewed 2026-07-05: nothing actionable in the current list; revisit on new information",
     "writer.palmyra-x5-v1:0": "reviewed 2026-07-05: nothing actionable in the current list; revisit on new information",
     "abliteration/": "catalog placeholder ids on the abliteration.org namespace (not an inference provider); per-id base lineage undisclosed — accept unknown rather than guess a bloc (judged 2026-10-30)",
-    "kyma/sonar": "gateway id whose upstream model is not identified in any primary source (Kyma's own pages do not enumerate it); accept unknown rather than guess a bloc (judged 2026-10-30)"
+    "kyma/sonar": "gateway id whose upstream model is not identified in any primary source (Kyma's own pages do not enumerate it); accept unknown rather than guess a bloc (judged 2026-10-30)",
+    "together_ai/elorian-labs/glimpse-1.0": "Elorian AI (Palo Alto) post-trained Glimpse-1.0 from an unnamed open-weights base — lineage undisclosed in every located source; accept unknown rather than guess a bloc (judged 2026-11-10)"
   }
 }

@@ -3525,3 +3525,128 @@ def test_wave9_drift_suffix_walk_covers_catalogs():
                 "qwen3.6-27b", "qwen3.6-35b-a3b", "qwen3.8-2.4t-a95b", "qwen3.8-27b")]
            + [("kyma/sonar-pro", "kyma")])  # suffix walk → pre-existing Perplexity pattern
     assert kb_drift.model_coverage_gap(ids, kb2) == []
+
+
+# --- November 2026 drift resolution, wave 10 -------------------------------------
+
+def test_wave10_providers_resolve():
+    # empiriolabs aggregator (us), hostinger_router aggregator (eu), wally (us)
+    kb2 = load_kb()
+    cases = [
+        ("api.empiriolabs.ai", "empiriolabs", "us", "us"),
+        ("router.hostinger.com", "hostinger_router", "eu", "eu"),
+        ("inference.runanywhere.ai", "wally", "us", "us"),
+    ]
+    for host, pid, juris, sov in cases:
+        m = kb2.match_endpoint(host)
+        assert m is not None and m[0] == pid and m[2] == juris, host
+        assert kb2.default_sovereignty(pid) == sov, pid
+    assert kb2.category("empiriolabs") == "aggregator"
+    assert kb2.category("hostinger_router") == "aggregator"
+
+
+def test_wave10_reseller_perplexity_resolves_qualified():
+    kb2 = load_kb()
+    for mid in ("empiriolabs/perplexity-sonar-pro",
+                "empiriolabs/perplexity-advanced-deep-research"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "us" and got[2] == "Perplexity", mid
+
+
+def test_wave10_dash_anchors_beside_dot_anchors():
+    # reseller dash-normalized forms resolve; pre-existing dot anchors unchanged (D4)
+    kb2 = load_kb()
+    for mid in ("seed-2-0-pro", "seed-2-1-turbo"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "cn" and got[2] == "ByteDance", mid
+    for mid in ("step-3-5-flash", "step-3-5-flash-2603", "step-3-7-flash"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "cn" and got[2] == "StepFun", mid
+    got = kb2.match_model("seed-2.0-pro")
+    assert got is not None and got[1] == "cn" and got[2] == "ByteDance"
+
+
+def test_wave10_cn_families_and_fugu_resolve():
+    kb2 = load_kb()
+    got = kb2.match_model("stepaudio-2-5-chat")
+    assert got is not None and got[1] == "cn" and got[2] == "StepFun"
+    got = kb2.match_model("tongyi-embedding-vision-flash")
+    assert got is not None and got[1] == "cn" and got[2] == "Alibaba"
+    got = kb2.match_model("skylark-embedding-vision")
+    assert got is not None and got[1] == "cn" and got[2] == "ByteDance"
+    for mid in ("fugu-max", "fugu-ultra-v2-0"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "jp" and got[2] == "Sakana AI", mid
+
+
+def test_wave10_inherit_base_labels():
+    kb2 = load_kb()
+    got = kb2.match_model("aplomb-1")
+    assert got is not None and got[1] == "cn"
+    assert got[2] == "Alibaba (EmpirioLabs post-train)"
+    for mid in ("jina-reranker-m0", "jina-reranker-v3.5"):
+        got = kb2.match_model(mid)
+        assert got is not None and got[1] == "cn", mid
+        assert got[2] == "Alibaba (Jina AI post-train)", mid
+    # the jina-bert-based line stays under the unchanged eu default (D6)
+    assert kb2.default_provenance("jina_ai") == "eu"
+
+
+def test_wave10_us_labs_resolve():
+    kb2 = load_kb()
+    got = kb2.match_model("grok4.6")
+    assert got is not None and got[1] == "us" and got[2] == "xAI"
+    got = kb2.match_model("ripple-65b-preview")
+    assert got is not None and got[1] == "us" and got[2] == "Ricursive Intelligence"
+    got = kb2.match_model("rnj-1-instruct")
+    assert got is not None and got[1] == "us" and got[2] == "Essential AI"
+
+
+def test_wave10_guarded_stems_stay_unknown():
+    # no bare seed/step/skylark/ripple/perplexity- stems (D4, D5)
+    kb2 = load_kb()
+    for mid in ("seed-9", "step-up-7b", "skylark-7b", "ripple-effect-3b",
+                "perplexity-clone"):
+        assert kb2.match_model(mid) is None, mid
+
+
+def test_wave10_multivendor_providers_no_tier2_default():
+    kb2 = load_kb()
+    for pid in ("empiriolabs", "hostinger_router", "wally"):
+        assert kb2.default_provenance(pid) == "unknown", pid
+
+
+def test_wave10_glimpse_stays_residue():
+    # Elorian's base is undisclosed: accept unknown, never guess (D8)
+    kb2 = load_kb()
+    assert kb2.match_model("glimpse-1.0") is None
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    supp = kb_drift.json.load(open("scripts/kb_drift_aliases.json"))
+    actionable, _ = kb_drift.split_residue(
+        ["together_ai/elorian-labs/glimpse-1.0"], supp["residue"])
+    assert actionable == []
+
+
+def test_wave10_drift_suffix_walk_covers_catalogs():
+    # the full empiriolabs catalog and the remaining wave-10 ids all cover
+    kb2 = load_kb()
+    import sys
+    sys.path.insert(0, "scripts")
+    import kb_drift
+    em = ("aplomb-1", "fugu-max", "fugu-ultra-v1-0", "fugu-ultra-v1-1",
+          "fugu-ultra-v2-0", "perplexity-advanced-deep-research",
+          "perplexity-deep-research", "perplexity-pro-search", "perplexity-sonar",
+          "perplexity-sonar-pro", "perplexity-sonar-reasoning-pro", "seed-2-0-code",
+          "seed-2-0-lite", "seed-2-0-mini", "seed-2-0-pro", "seed-2-1-turbo",
+          "skylark-embedding-vision", "step-3-5-flash", "step-3-5-flash-2603",
+          "step-3-7-flash", "stepaudio-2-5-chat", "stepaudio-3-chat",
+          "tongyi-embedding-vision-flash", "tongyi-embedding-vision-plus")
+    ids = ([(f"empiriolabs/{m}", "empiriolabs") for m in em]
+           + [("jina-reranker-m0", "jina_ai"), ("jina-reranker-v3.5", "jina_ai"),
+              ("gmi/xai/grok4.6", "gmi"),
+              ("gmi/gmicloud/Ripple-65B-Preview", "gmi"),
+              ("together_ai/ricursive-ai/Ripple-65B-Preview", "together_ai"),
+              ("together_ai/essentialai/rnj-1-instruct", "together_ai")])
+    assert kb_drift.model_coverage_gap(ids, kb2) == []
