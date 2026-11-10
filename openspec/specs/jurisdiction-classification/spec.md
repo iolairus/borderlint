@@ -9,7 +9,8 @@ other blocs (for example OpenAI, Anthropic, Google, Mistral, Cohere, Tencent Hun
 DashScope, DeepSeek, Xiaomi MiMo, SCX.ai, AiHubMix, AWS Transcribe, TypeSafe AI, Prism
 Inference, Sail Research, Bespoke Labs, Laya, Strands Decider, Microsoft 365 Copilot,
 ScaleDown, CoralBricks, Inference APIs, Nace.AI, OpenInfer, OpenCode Go, StreamLake,
-Kyma API, ai&, CLF AI Gateway, ZeroGPU, Refuseless, eu/jev) — to their SDK names,
+Kyma API, ai&, CLF AI Gateway, ZeroGPU, Refuseless, eu/jev, EmpirioLabs,
+Hostinger AI Router, Wally) — to their SDK names,
 endpoint hosts, and a jurisdiction. A provider whose upstream API hostname is not documented
 MAY carry no endpoint hosts; the entry still records the provider's jurisdiction and
 sovereignty and MUST NOT carry a guessed hostname. A provider that is a self-hosted runtime —
@@ -157,6 +158,30 @@ Copilot), the entry SHALL record the shared-surface caveat in its note.
   `eu`, and the entry's note records that Bevelites GmbH (Munich, German governing law)
   serves only its own decision model with application, database, and model execution
   hosted in Germany
+
+#### Scenario: EmpirioLabs resolves to us as an author-disclosed aggregator
+- **WHEN** a detection matches `api.empiriolabs.ai`
+- **THEN** it resolves to provider `empiriolabs` with jurisdiction `us`, sovereignty
+  bloc `us`, and category `aggregator`, and the entry's note records that EmpirioLabs.ai
+  LLC (New Mexico LLC, Seattle) connects users to third-party models from multiple
+  sources with the upstream author disclosed on each catalog page, and that only
+  `aplomb-1` is first-party
+
+#### Scenario: Hostinger AI Router resolves to eu
+- **WHEN** a detection matches `router.hostinger.com`
+- **THEN** it resolves to provider `hostinger_router` with jurisdiction `eu`,
+  sovereignty bloc `eu`, and category `aggregator`, and the entry's note records that
+  the contracting entities are Hostinger International Ltd (Cyprus) and Hostinger
+  Global S.à r.l (Luxembourg governing law) with the group HQ in Kaunas, and that the
+  gateway resells OpenAI/Anthropic/Google/xAI models whose upstream inference locations
+  are not disclosed
+
+#### Scenario: Wally resolves to us hosting cn-origin weights
+- **WHEN** a detection matches `inference.runanywhere.ai`
+- **THEN** it resolves to provider `wally` with jurisdiction `us` and sovereignty bloc
+  `us`, and the entry's note records that RunAnywhere, Inc. (Delaware C-corp, Redwood
+  City) serves a fixed catalog of open-weight models (DeepSeek, GLM — cn-origin
+  weights) on its own hosted infrastructure with zero data retention by default
 
 ### Requirement: Jurisdiction codes and special tokens
 The system SHALL express jurisdictions as lowercase ccTLD/ISO-3166 country codes, plus the special
