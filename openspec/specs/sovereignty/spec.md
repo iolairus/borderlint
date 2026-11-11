@@ -24,12 +24,13 @@ endpoint region alone.
 
 ### Requirement: Sovereignty bloc vocabulary
 The system SHALL express sovereignty using the blocs `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`,
-`ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `local`, and `unknown`. The `eu` bloc represents the EU/EEA
+`ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `vn`, `local`, and `unknown`. The `eu` bloc represents the EU/EEA
 as a single compelled-disclosure unit. The `local` bloc represents self-hosted inference with no
 external sovereign. The `unknown` bloc represents a sovereignty that cannot be statically
 determined. The system SHALL NOT emit any sovereignty bloc outside this vocabulary. Every bloc
 in the vocabulary SHALL have a source note in the bundled sovereignty map and a human-readable
-display name in report output.
+display name in report output. Policy allow-lists SHALL accept every bloc in the vocabulary:
+the policy module's validation vocabulary and the knowledge base's vocabulary SHALL be identical.
 
 #### Scenario: A US-headquartered provider resolves to us sovereignty
 - **WHEN** a flow is detected to OpenAI, Anthropic, Google Gemini, or AWS Bedrock
@@ -46,6 +47,16 @@ display name in report output.
 #### Scenario: A new bloc is accepted in a sovereignty policy allow-list
 - **WHEN** a policy's sovereignty block lists `jp` for a classification
 - **THEN** the policy loads and flows with sovereignty `jp` pass the sovereignty check
+
+#### Scenario: The vn bloc is accepted in a sovereignty policy allow-list
+- **WHEN** a policy's sovereignty block lists `vn` for a classification
+- **THEN** the policy loads and flows with sovereignty `vn` pass the sovereignty check
+
+#### Scenario: Every vocabulary bloc is accepted by policy validation
+- **WHEN** a policy's sovereignty or provenance block lists any bloc in the knowledge
+  base's vocabulary for a classification
+- **THEN** the policy loads — the policy module's validation vocabulary is identical
+  to the knowledge base's, so a bloc the scanner can emit is always accepted
 
 #### Scenario: Every vocabulary bloc carries a source note
 - **WHEN** the bundled sovereignty map is loaded

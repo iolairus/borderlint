@@ -3650,3 +3650,73 @@ def test_wave10_drift_suffix_walk_covers_catalogs():
               ("together_ai/ricursive-ai/Ripple-65B-Preview", "together_ai"),
               ("together_ai/essentialai/rnj-1-instruct", "together_ai")])
     assert kb_drift.model_coverage_gap(ids, kb2) == []
+
+
+# --- policy-loading-fixes (audit follow-ups) --------------------------------------
+
+def test_bloc_vocabulary_parity():
+    # policy.py duplicates the KB vocabularies to avoid a circular import; the pair
+    # must never drift (wave-9's vn bloc reached the KB but not policy validation)
+    from borderlint.policy import _SOVEREIGNTY_BLOCS as ps, _PROVENANCE_BLOCS as pp
+    from borderlint.kb import _SOVEREIGNTY_BLOCS as ks, _PROVENANCE_BLOCS as kp
+    assert ps == ks
+    assert pp == kp
+
+
+def test_vn_sovereignty_policy_accepted(tmp_path):
+    from borderlint.policy import evaluate, load_policy
+    polf = tmp_path / "pol.json"
+    import json as _json
+    polf.write_text(_json.dumps({"classifications": {"x": ["hk"]},
+                                 "sovereignty": {"classifications": {"x": ["vn"]}}}))
+    pol = load_policy(str(polf))
+    d = Detection("clf_ai_gateway", "endpoint_reference", "api.clfaigateway.dev",
+                  "x.py", 1, "hk", sovereignty="vn")
+    f = evaluate([d], pol, "x", kb)
+    assert f[0].severity == "ok"
+
+
+def test_bad_policy_files_exit_cleanly(tmp_path, capsys):
+    from borderlint import cli
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not json")
+    invalid = tmp_path / "invalid.json"
+    import json as _json
+    invalid.write_text(_json.dumps({"classifications": {"x": ["hk"]},
+                                    "sovereignty": {"classifications": {"x": ["zz"]}}}))
+    null_root = tmp_path / "null.json"
+    null_root.write_text("null")
+    list_root = tmp_path / "list.json"
+    list_root.write_text("[]")
+    cases = [(tmp_path / "missing.json", "No such file"),
+             (bad, "error:"),
+             (invalid, "invalid sovereignty bloc 'zz'"),
+             (null_root, "JSON object"),
+             (list_root, "JSON object")]
+    for pol, expected in cases:
+        rc = cli.main(["scan", str(tmp_path), "-p", str(pol), "-c", "x"])
+        err = capsys.readouterr().err
+        assert rc == 2, pol
+        assert "Traceback" not in err, pol
+        lines = [ln for ln in err.strip().splitlines() if ln]
+        assert len(lines) == 1 and lines[0].startswith("error:"), (pol, err)
+        assert expected in err, (pol, err)
+
+
+def test_envelope_git_hardened(monkeypatch):
+    # the evidence envelope's git call uses the same neutralised posture as _git_tag
+    import subprocess
+    from types import SimpleNamespace
+    from borderlint import cli
+    calls = []
+
+    def fake_run(cmd, **kw):
+        calls.append((cmd, kw))
+        return SimpleNamespace(stdout="abc123\n", returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    cli._envelope(SimpleNamespace(path=".", policy=None, classification=None), kb)
+    cmd, kw = calls[0]
+    assert "-c" in cmd and "core.fsmonitor=false" in cmd
+    assert "core.hooksPath=/dev/null" in cmd
+    assert kw["env"]["GIT_OPTIONAL_LOCKS"] == "0"

@@ -56,6 +56,11 @@ _API_PATH = re.compile(
 _STR_LITERAL = re.compile(r"""['"]([^'"\n]{3,100})['"]""")
 
 
+def _line_no(src: str, pos: int) -> int:
+    """1-based line number of a match offset in a scanned source file."""
+    return src.count("\n", 0, pos) + 1
+
+
 @dataclass(frozen=True)
 class Detection:
     provider_id: str
@@ -110,7 +115,7 @@ def _scan_js(path: str, src: str, kb) -> list[Detection]:
     for m in _JS_IMPORT.finditer(src):
         pid = kb.match_npm(m.group(1))
         if pid:
-            line = src.count("\n", 0, m.start()) + 1
+            line = _line_no(src, m.start())
             out.append(Detection(pid, "sdk_import", m.group(1), path, line, kb.default_jurisdiction(pid)))
     return out
 
@@ -123,7 +128,7 @@ def _scan_jvm(path: str, src: str, kb) -> list[Detection]:
     for m in _JVM_IMPORT.finditer(src):
         pid = kb.match_jvm(m.group(1))
         if pid:
-            line = src.count("\n", 0, m.start()) + 1
+            line = _line_no(src, m.start())
             out.append(Detection(pid, "sdk_import", m.group(1), path, line, kb.default_jurisdiction(pid)))
     return out
 
@@ -139,7 +144,7 @@ def _scan_cs(path: str, src: str, kb) -> list[Detection]:
     for m in _CS_USING.finditer(src):
         pid = kb.match_dotnet(m.group(1))
         if pid:
-            line = src.count("\n", 0, m.start()) + 1
+            line = _line_no(src, m.start())
             out.append(Detection(pid, "sdk_import", m.group(1), path, line, kb.default_jurisdiction(pid)))
     return out
 
@@ -174,7 +179,7 @@ def _scan_config_endpoints(path: str, src: str, kb) -> list[Detection]:
         host_shaped = re.search(r"[A-Za-z0-9]\.[A-Za-z0-9]", host) or "://" in raw
         if not is_loop and not host_shaped:
             continue  # not host-shaped: bare enums, "." / "./src" (e.g. tsconfig baseUrl), skip
-        line = src.count("\n", 0, m.start()) + 1
+        line = _line_no(src, m.start())
         if is_loop:
             out.append(Detection("local", "config_endpoint", host, path, line, "local"))
         else:
@@ -280,7 +285,7 @@ def _scan_api_calls(path: str, src: str, kb) -> list[Detection]:
     """OpenAI-compatible calls by request-path signature; host resolved only if static in the literal."""
     out: list[Detection] = []
     for m in _API_PATH.finditer(src):
-        line = src.count("\n", 0, m.start()) + 1
+        line = _line_no(src, m.start())
         host = _host_of(m.group("host")) if m.group("host") else None
         if host:
             low = host.lower()
@@ -332,7 +337,7 @@ def _scan_model_refs(src: str, kb) -> list[tuple[int, str, str, str | None]]:
     for m in _STR_LITERAL.finditer(src):
         hit = kb.match_model(m.group(1))
         if hit:
-            out.append((src.count("\n", 0, m.start()) + 1, hit[0], hit[1], hit[2]))
+            out.append((_line_no(src, m.start()), hit[0], hit[1], hit[2]))
     return out
 
 
