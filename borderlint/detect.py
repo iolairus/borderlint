@@ -64,7 +64,7 @@ def _line_no(src: str, pos: int) -> int:
 @dataclass(frozen=True)
 class Detection:
     provider_id: str
-    kind: str  # "sdk_import" | "endpoint_reference" | "config_endpoint" | "api_call" | "model_reference"
+    kind: str  # detection contract passed through to reports, including "agent_tool_endpoint"
     evidence: str
     file: str
     line: int
@@ -76,7 +76,7 @@ class Detection:
     model_org: str | None = None  # the matched pattern's developer organisation, when known
 
 
-def _scan_py(path: str, src: str, kb) -> list[Detection]:
+def _scan_py(path: str, src: str, kb, claims=()) -> list[Detection]:
     out: list[Detection] = []
     try:
         with warnings.catch_warnings():  # ponytail: hush the scanned file's own warnings, not ours
@@ -84,6 +84,15 @@ def _scan_py(path: str, src: str, kb) -> list[Detection]:
             tree = ast.parse(src)
     except SyntaxError:
         return out  # resilient: skip unparseable files
+    lines = src.split("\n")
+    offsets = [0]
+    for line in lines:
+        offsets.append(offsets[-1] + len(line) + 1)
+
+    def position(lineno, byte_col):
+        line = lines[lineno - 1]
+        return offsets[lineno - 1] + len(line.encode("utf-8")[:byte_col].decode("utf-8"))
+
     for n in ast.walk(tree):
         if isinstance(n, ast.Import):
             for a in n.names:
@@ -97,16 +106,27 @@ def _scan_py(path: str, src: str, kb) -> list[Detection]:
         elif isinstance(n, ast.Constant) and isinstance(n.value, str):
             m = kb.match_endpoint(n.value)
             if m:
+                start = position(n.lineno, n.col_offset)
+                end = position(n.end_lineno, n.end_col_offset)
+                if any(start < claim_end and end > claim_start for claim_start, claim_end in claims):
+                    continue
                 out.append(Detection(m[0], "endpoint_reference", m[1], path, n.lineno, m[2]))
     return out
 
 
-def _scan_text(path: str, src: str, kb) -> list[Detection]:
+def _scan_text(path: str, src: str, kb, claims=()) -> list[Detection]:
     out: list[Detection] = []
-    for i, line in enumerate(src.splitlines(), 1):
+    offset = 0
+    for i, raw_line in enumerate(src.splitlines(keepends=True), 1):
+        line = raw_line.rstrip("\r\n")
+        for start, end in claims:
+            lo, hi = max(start - offset, 0), min(end - offset, len(line))
+            if 0 <= lo < hi:
+                line = line[:lo] + " " * (hi - lo) + line[hi:]
         m = kb.match_endpoint(line)
         if m:
             out.append(Detection(m[0], "endpoint_reference", m[1], path, i, m[2]))
+        offset += len(raw_line)
     return out
 
 
@@ -159,7 +179,102 @@ def _host_of(value: str) -> str | None:
     return v.split(":", 1)[0] or None
 
 
-def _scan_config_endpoints(path: str, src: str, kb) -> list[Detection]:
+_AGENT_TOOL_KEY = re.compile(
+    r"""(?i)\b([A-Za-z][A-Za-z0-9_]*)['"]?\s*[:=]\s*['"]?\s*(?!\{[A-Za-z])([^\s'"#,}\]]+)""")
+_AGENT_TOOL_KEYS = frozenset(
+    f"{stem}_{suffix}"
+    for stem in ("mcp", "mcp_server", "mcp_gateway", "agent_tool")
+    for suffix in ("url", "endpoint", "base_url", "host")
+)
+
+
+def _comment_spans(src: str, hash_comments: bool) -> list[tuple[int, int]]:
+    out = []
+    i = 0
+    quote = None
+    while i < len(src):
+        c = src[i]
+        if quote:
+            if c in "\r\n" and quote != "`":
+                quote = None
+                i += 1
+                continue
+            if c == "\\":
+                i += 2
+                continue
+            if c == quote:
+                quote = None
+            i += 1
+            continue
+        if c in "'\"`":
+            quote = c
+            i += 1
+            continue
+        if src.startswith("/*", i):
+            end = src.find("*/", i + 2)
+            end = len(src) if end < 0 else end + 2
+            out.append((i, end))
+            i = end
+            continue
+        if (hash_comments and c == "#") or (src.startswith("//", i) and (i == 0 or src[i - 1] != ":")):
+            end = src.find("\n", i)
+            end = len(src) if end < 0 else end
+            out.append((i, end))
+            i = end
+            continue
+        i += 1
+    return out
+
+
+def _scan_agent_tool_endpoints(path: str, src: str, kb,
+                               claims: list[tuple[int, int]] | None = None) -> list[Detection]:
+    out: list[Detection] = []
+    p = Path(path)
+    hash_comments = p.name == ".env" or p.suffix in {".env", ".py", ".sh", ".yaml", ".yml",
+                                                      ".toml", ".ini", ".cfg"}
+    comments = _comment_spans(src, hash_comments)
+    for m in _AGENT_TOOL_KEY.finditer(src):
+        key = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", m.group(1)).lower()
+        if key not in _AGENT_TOOL_KEYS:
+            continue
+        if any(start <= m.start(1) < end for start, end in comments):
+            continue
+        raw = m.group(2)
+        line = _line_no(src, m.start(1))
+        runtime = ("${" in raw or "{{" in raw or raw.startswith("$")
+                   or raw.startswith(("process.env.", "os.environ."))
+                   or (("(" in raw or ")" in raw) and "://" not in raw))
+        if runtime:
+            if claims is not None:
+                claims.append(m.span(2))
+            out.append(Detection("custom_endpoint", "agent_tool_endpoint",
+                                 f"{m.group(1)} -> runtime-resolved", path, line, "unknown"))
+            continue
+        host = _host_of(re.split(r"[?#]", raw, maxsplit=1)[0])
+        if host:
+            try:
+                host = re.split(r"[;`&|<>]", host, maxsplit=1)[0].encode("idna").decode("ascii").lower()
+            except UnicodeError:
+                continue
+        if not host or not re.fullmatch(r"[a-z0-9._-]+|[0-9a-f:]+", host):
+            continue
+        is_loop = host in _LOOPBACK or host.endswith(".localhost")
+        host_shaped = re.search(r"[a-z0-9]\.[a-z0-9]", host) or "://" in raw
+        if not is_loop and not host_shaped:
+            continue
+        if claims is not None:
+            claims.append(m.span(2))
+        evidence = f"{m.group(1)} -> {host}"
+        if is_loop:
+            out.append(Detection("local", "agent_tool_endpoint", evidence, path, line, "local"))
+        elif hit := kb.match_endpoint(host):
+            out.append(Detection(hit[0], "agent_tool_endpoint", evidence, path, line, hit[2]))
+        else:
+            out.append(Detection("custom_endpoint", "agent_tool_endpoint", evidence, path, line, "unknown"))
+    return out
+
+
+def _scan_config_endpoints(path: str, src: str, kb, claims=()) -> list[Detection]:
     """Endpoints declared behind an AI-endpoint key (config, base_url kwarg, or env-style key)."""
     out: list[Detection] = []
     matches = list(_ENDPOINT_KEY.finditer(src))
@@ -168,6 +283,8 @@ def _scan_config_endpoints(path: str, src: str, kb) -> list[Detection]:
         if _env_key_matches(m.group(1)) and m.span(2) not in seen_spans:
             matches.append(m)
     for m in matches:
+        if any(m.start(2) >= start and m.end(2) <= end for start, end in claims):
+            continue
         raw = m.group(2)
         if "(" in raw or ")" in raw:
             continue  # environment getter / code call: runtime-resolved, the .env is the source
@@ -344,18 +461,18 @@ def _scan_model_refs(src: str, kb) -> list[tuple[int, str, str, str | None]]:
 def _attach_models(path: str, src: str, dets: list[Detection], kb) -> list[Detection]:
     """Bind model references to same-file provider detections (D4).
 
-    Refs resolving to exactly one distinct bloc bind to the file's provider detections; otherwise
-    (no provider in file, or ambiguous blocs) each ref stands alone as a `model_reference` finding
-    with residency `unknown` — it is a weights-origin signal, not a network flow.
+    Refs resolving to exactly one distinct bloc bind to the file's eligible provider detections;
+    otherwise (no eligible provider, or ambiguous blocs) each ref stands alone as a
+    `model_reference` finding with residency `unknown`. Agent-tool endpoints never bind models.
     """
     refs = _scan_model_refs(src, kb)
     if not refs:
         return dets
     blocs = {b for _, _, b, _ in refs}
-    if dets and len(blocs) == 1:
+    if any(d.kind != "agent_tool_endpoint" for d in dets) and len(blocs) == 1:
         # ponytail: first ref represents same-bloc siblings; per-ref pairing needs call-site AST
         return [replace(d, provenance=refs[0][2], model=refs[0][1], model_org=refs[0][3])
-                for d in dets]
+                if d.kind != "agent_tool_endpoint" else d for d in dets]
     return dets + [Detection("model_reference", "model_reference", ref, path, line, "unknown",
                              provenance=bloc, model=ref, model_org=org)
                    for line, ref, bloc, org in refs]
@@ -364,7 +481,7 @@ def _attach_models(path: str, src: str, dets: list[Detection], kb) -> list[Detec
 def _resolve_provenance(detections, kb) -> list[Detection]:
     """Tier-2 provenance (D3): unbound flows on first-party-only providers get the org's bloc."""
     return [replace(d, provenance=kb.default_provenance(d.provider_id))
-            if d.provenance == "unknown" and d.kind != "model_reference" else d
+            if d.provenance == "unknown" and d.kind not in ("model_reference", "agent_tool_endpoint") else d
             for d in detections]
 
 
@@ -414,19 +531,22 @@ def scan(root, kb) -> list[Detection]:
                 mcp_dets = _scan_mcp_config(str(p), src, kb)
             except ValueError:
                 mcp_dets = None
-        cfg = [] if mcp_dets is not None else _scan_config_endpoints(str(p), src, kb)  # AI-endpoint keys / base_url kwargs, any file
+        claims = []
+        tools = [] if mcp_dets is not None else _scan_agent_tool_endpoints(str(p), src, kb, claims)
+        cfg = [] if mcp_dets is not None else _scan_config_endpoints(str(p), src, kb, claims)  # AI-endpoint keys / base_url kwargs, any file
         if mcp_dets is not None:
             dets = mcp_dets
         elif is_py:
-            dets = _scan_py(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
+            dets = _scan_py(str(p), src, kb, claims) + _scan_api_calls(str(p), src, kb) + cfg
         elif is_js:  # imports + endpoint literals (text scan) + OpenAI-compatible call paths
-            dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
+            dets = _scan_js(str(p), src, kb) + _scan_text(str(p), src, kb, claims) + _scan_api_calls(str(p), src, kb) + cfg
         elif is_jvm:  # same shape as JS: imports + endpoint literals + call paths
-            dets = _scan_jvm(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
+            dets = _scan_jvm(str(p), src, kb) + _scan_text(str(p), src, kb, claims) + _scan_api_calls(str(p), src, kb) + cfg
         elif is_cs:  # same shape as JVM: using directives + endpoint literals + call paths
-            dets = _scan_cs(str(p), src, kb) + _scan_text(str(p), src, kb) + _scan_api_calls(str(p), src, kb) + cfg
+            dets = _scan_cs(str(p), src, kb) + _scan_text(str(p), src, kb, claims) + _scan_api_calls(str(p), src, kb) + cfg
         else:
-            dets = _scan_text(str(p), src, kb) + cfg
+            dets = _scan_text(str(p), src, kb, claims) + cfg
+        dets += tools
         # one detection per flow per line: drop an api_call already produced by another scanner on its line
         anchored = {(d.provider_id, d.jurisdiction, d.line) for d in dets if d.kind != "api_call"}
         dets = [d for d in dets if d.kind != "api_call" or (d.provider_id, d.jurisdiction, d.line) not in anchored]
