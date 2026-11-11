@@ -297,7 +297,7 @@ def load_kb(path: str | None = None) -> "KB":
                 if not _valid_sovereignty(bloc):
                     raise ValueError(
                         f"invalid sovereignty bloc '{bloc}' for provider '{pid}' "
-                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, ch, local, unknown)")
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, ch, vn, local, unknown)")
                 sov_map[pid] = bloc  # user wins
         # User provenance overrides: a top-level "provenance" map (model-ID prefix → bloc) takes
         # precedence over the bundled patterns — even shorter user prefixes beat longer bundled

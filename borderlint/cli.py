@@ -26,8 +26,12 @@ def _envelope(a, kb) -> dict:
     commit = None
     try:
         root = a.path if os.path.isdir(a.path) else (os.path.dirname(a.path) or ".")
-        r = subprocess.run(["git", "-C", root, "rev-parse", "HEAD"],
-                           capture_output=True, text=True, timeout=2)
+        # Same hardened posture as report.py's _git_tag: the scanned repo is untrusted,
+        # so neutralise its config (fsmonitor/hooksPath) and skip index writes.
+        r = subprocess.run(["git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+                            "-C", root, "rev-parse", "HEAD"],
+                           capture_output=True, text=True, timeout=2,
+                           env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
         commit = r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
     except (OSError, subprocess.SubprocessError):
         commit = None
@@ -90,7 +94,11 @@ def main(argv=None) -> int:
         if not a.classification:
             print("error: --classification is required when --policy is given", file=sys.stderr)
             return 2
-        policy = load_policy(a.policy)
+        try:
+            policy = load_policy(a.policy)
+        except (ValueError, OSError) as e:  # unreadable / malformed / invalid policy file
+            print(f"error: {e}", file=sys.stderr)
+            return 2
         try:
             findings = evaluate(detections, policy, a.classification, kb)
         except KeyError as e:

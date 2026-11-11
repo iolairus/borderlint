@@ -11,7 +11,7 @@ _JURIS_ALIAS = {"uk": "gb"}  # `.uk` is the ccTLD for ISO-3166 `GB`
 # Sovereignty bloc vocabulary (mirrors borderlint.kb._SOVEREIGNTY_BLOCS; duplicated here to
 # avoid a circular import — policy must not depend on kb at module load).
 _SOVEREIGNTY_BLOCS = frozenset(
-    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "ch", "local", "unknown"})
+    {"us", "eu", "cn", "uk", "ru", "in", "il", "ca", "jp", "kr", "sg", "au", "ae", "ch", "vn", "local", "unknown"})
 
 
 def _valid_sovereignty(token: str) -> bool:
@@ -50,6 +50,8 @@ class Finding:
 def load_policy(path: str) -> dict:
     with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
+    if not isinstance(data, dict):
+        raise ValueError("policy file must contain a JSON object at the top level")
     # Shorthand: a bare {classification: [jurisdictions]} map is the classifications block.
     if "classifications" not in data and data and all(isinstance(v, list) for v in data.values()):
         data = {"classifications": data}
@@ -68,7 +70,7 @@ def load_policy(path: str) -> dict:
                 if not _valid_sovereignty(b):
                     raise ValueError(
                         f"invalid sovereignty bloc '{b}' in classification '{cls}' "
-                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, ch, local, unknown)")
+                        "(use one of us, eu, cn, uk, ru, in, il, ca, jp, kr, sg, au, ae, ch, vn, local, unknown)")
     # Provenance block is opt-in. Validate bloc tokens when present, same posture as sovereignty.
     mprov = data.get("provenance")
     if mprov and isinstance(mprov, dict):
