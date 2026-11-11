@@ -679,6 +679,247 @@ def test_mcp_e2e_policy_gate(tmp_path, capsys):
     assert rc == 1 and f["kind"] == "mcp_server" and f["severity"] == "fail" and "residency" in f["reasons"]
 
 
+def test_agent_tool_curated_key_forms():
+    from borderlint.detect import _scan_agent_tool_endpoints
+    for stem in ("mcp", "mcp_server", "mcp_gateway", "agent_tool"):
+        for suffix in ("url", "endpoint", "base_url", "host"):
+            snake = f"{stem}_{suffix}"
+            parts = snake.split("_")
+            camel = parts[0] + "".join(p.title() for p in parts[1:])
+            for key in (snake, snake.upper(), camel):
+                ds = _scan_agent_tool_endpoints(".env", f"{key}=https://mcp.example.com/sse\n", kb)
+                assert len(ds) == 1 and ds[0].kind == "agent_tool_endpoint", key
+
+
+def test_agent_tool_endpoint_resolution():
+    d = _scan_file("MCP_SERVER_URL=https://mcp.example.com/sse\n", ".env")
+    assert len(d) == 1
+    assert (d[0].kind, d[0].provider_id, d[0].jurisdiction) == (
+        "agent_tool_endpoint", "custom_endpoint", "unknown")
+    assert d[0].evidence == "MCP_SERVER_URL -> mcp.example.com"
+
+    d = _scan_file("MCP_SERVER_URL=https://mcp.sentry.dev/mcp\n", ".env")
+    assert len(d) == 1  # the generic known-host detector is suppressed
+    assert (d[0].kind, d[0].provider_id, d[0].jurisdiction, d[0].sovereignty) == (
+        "agent_tool_endpoint", "sentry", "us", "us")
+
+    d = _scan_file("MCP_SERVER_URL=https://mcp.sentry.dev/mcp(foo)\n", ".env")
+    assert len(d) == 1 and d[0].kind == "agent_tool_endpoint"
+    assert d[0].provider_id == "sentry" and d[0].evidence == "MCP_SERVER_URL -> mcp.sentry.dev"
+
+    d = _scan_file("mcp_endpoint: http://localhost:8931/sse\n", ".yaml")
+    assert (d[0].provider_id, d[0].jurisdiction, d[0].sovereignty) == ("local", "local", "local")
+
+    d = _scan_file("MCP_SERVER_URL=${MCP_GATEWAY_URL}/sse\n", ".env")
+    assert (d[0].provider_id, d[0].jurisdiction) == ("custom_endpoint", "unknown")
+    assert d[0].evidence == "MCP_SERVER_URL -> runtime-resolved"
+
+
+def test_agent_tool_unicode_host_uses_idna_evidence():
+    ds = _scan_file("MCP_SERVER_URL=https://mcp.例え.テスト/sse\n", ".env")
+    assert len(ds) == 1 and ds[0].kind == "agent_tool_endpoint"
+    assert ds[0].provider_id == "custom_endpoint" and ds[0].jurisdiction == "unknown"
+    assert ds[0].evidence == "MCP_SERVER_URL -> mcp.xn--r8jz45g.xn--zckzah"
+
+
+def test_agent_tool_runtime_known_host_suppresses_only_its_generic_occurrence():
+    ds = _scan_file("MCP_SERVER_URL=https://mcp.sentry.dev/${PATH}\n", ".env")
+    assert len(ds) == 1 and ds[0].kind == "agent_tool_endpoint"
+    assert ds[0].provider_id == "custom_endpoint" and ds[0].jurisdiction == "unknown"
+    assert ds[0].evidence == "MCP_SERVER_URL -> runtime-resolved"
+
+    src = ("MCP_SERVER_URL=https://mcp.sentry.dev/${PATH}\n"
+           "OTHER_URL=https://api.openai.com/v1\n")
+    ds = _scan_file(src, ".env")
+    assert {(d.kind, d.provider_id) for d in ds} == {
+        ("agent_tool_endpoint", "custom_endpoint"), ("endpoint_reference", "openai")}
+
+
+def test_agent_tool_environment_access_is_runtime_resolved():
+    cases = [
+        ("mcpServerUrl: process.env.MCP_SERVER_URL\n", ".ts", "mcpServerUrl"),
+        ('mcp_server_url = os.getenv("MCP_SERVER_URL")\n', ".py", "mcp_server_url"),
+    ]
+    for src, suffix, key in cases:
+        ds = _scan_file(src, suffix)
+        assert len(ds) == 1 and ds[0].kind == "agent_tool_endpoint", key
+        assert ds[0].provider_id == "custom_endpoint" and ds[0].jurisdiction == "unknown"
+        assert ds[0].evidence == f"{key} -> runtime-resolved"
+
+
+def test_agent_tool_camel_case_in_settings_object():
+    ds = _scan_file('const settings = {agentToolEndpoint: "https://tools.internal.example/mcp"};\n', ".ts")
+    assert len(ds) == 1 and ds[0].kind == "agent_tool_endpoint"
+    assert ds[0].provider_id == "custom_endpoint" and ds[0].jurisdiction == "unknown"
+
+
+def test_agent_tool_evidence_is_sanitized():
+    sources = [
+        "MCP_SERVER_URL=https://user:secret@mcp.example.com/sse?token=query-secret#fragment "
+        "Authorization: header-secret\n",
+        *(f"MCP_SERVER_URL=https://mcp.example.com{sep}AUTHORIZATION=header-secret\n"
+          for sep in (";", "&", "`")),
+    ]
+    for src in sources:
+        ds = _scan_file(src, ".env")
+        assert len(ds) == 1 and ds[0].evidence == "MCP_SERVER_URL -> mcp.example.com"
+        for leaked in ("user", "secret", "/sse", "query", "fragment", "Authorization", "AUTHORIZATION"):
+            assert leaked not in ds[0].evidence
+
+
+def test_agent_tool_negative_declarations():
+    cases = [
+        ('fetch("https://example.com/data")\n', ".ts"),
+        ("url=https://example.com/data\n", ".env"),
+        ("tool_url=https://example.com/mcp\n", ".env"),
+        ("MCP_AUTH_URL=https://auth.example.com/authorize\n", ".env"),
+        ("# MCP_SERVER_URL=https://mcp.example.com/sse\n", ".env"),
+        ('// agentToolEndpoint: "https://mcp.example.com/sse"\n', ".ts"),
+        ("x=1;# MCP_SERVER_URL=https://mcp.example.com/sse\n", ".env"),
+        ('/* comment\nmcpServerUrl: "https://mcp.example.com/sse"\n*/\n', ".ts"),
+        ("MCP_SERVER_URL=not-a-host\n", ".env"),
+        ("MCP_SERVER_URL=./relative/path\n", ".env"),
+    ]
+    for src, suffix in cases:
+        assert not any(d.kind == "agent_tool_endpoint" for d in _scan_file(src, suffix)), src
+
+
+def test_agent_tool_comments_do_not_hide_real_declarations():
+    src = ("x=1; // MCP_SERVER_URL=https://comment.example.com/sse\n"
+           "/* comment\nmcpServerUrl: \"https://comment.example.com/sse\"\n*/\n"
+           "mcpServerUrl: process.env.REAL_MCP_URL\n")
+    ds = _scan_file(src, ".ts")
+    assert len(ds) == 1 and ds[0].kind == "agent_tool_endpoint"
+    assert ds[0].line == 5 and ds[0].evidence == "mcpServerUrl -> runtime-resolved"
+
+    src = ("description: don't stop\n"
+           "# MCP_SERVER_URL=https://comment.example.com/sse\n"
+           "MCP_SERVER_URL=https://mcp.example.com/sse\n")
+    ds = _scan_file(src, ".yaml")
+    assert len(ds) == 1 and ds[0].line == 3
+    assert ds[0].evidence == "MCP_SERVER_URL -> mcp.example.com"
+
+
+def test_agent_tool_hash_is_not_comment_in_js():
+    cases = [
+        'class C { #mcpServerUrl = "https://mcp.example.com/sse"; }\n',
+        'const re = /#/; mcpServerUrl = "https://mcp.example.com/sse";\n',
+    ]
+    for src in cases:
+        ds = _scan_file(src, ".ts")
+        assert len(ds) == 1 and ds[0].kind == "agent_tool_endpoint"
+        assert ds[0].evidence == "mcpServerUrl -> mcp.example.com"
+
+
+def test_agent_tool_duplicate_precedence_is_declaration_scoped():
+    src = ('mcpServerUrl: "https://mcp.sentry.dev/mcp"; '
+           'agentToolEndpoint: "https://tools.internal.example/mcp";\n')
+    ds = _scan_file(src, ".ts")
+    assert len(ds) == 2 and all(d.kind == "agent_tool_endpoint" for d in ds)
+
+    src = ('mcpServerUrl: "https://mcp.sentry.dev/mcp"; '
+           'const other = "https://api.openai.com/v1";\n')
+    ds = _scan_file(src, ".ts")
+    assert {(d.kind, d.provider_id) for d in ds} == {
+        ("agent_tool_endpoint", "sentry"), ("endpoint_reference", "openai")}
+
+    for value in ("https://mcp.sentry.dev/mcp", "https://mcp.sentry.dev/${PATH}"):
+        src = f'mcpServerUrl: "{value}"; const other = "https://mcp.sentry.dev/other";\n'
+        ds = _scan_file(src, ".ts")
+        assert len(ds) == 2 and {d.kind for d in ds} == {"agent_tool_endpoint", "endpoint_reference"}
+        assert next(d for d in ds if d.kind == "endpoint_reference").provider_id == "sentry"
+
+    src = ('"🐍" * 30; mcp_server_url = "https://api.openai.com/mcp"; '
+           'other = "https://api.openai.com/v1"\n')
+    ds = _scan_file(src)
+    assert len(ds) == 2 and {d.kind for d in ds} == {"agent_tool_endpoint", "endpoint_reference"}
+    assert all(d.provider_id == "openai" for d in ds)
+
+    src = '\fmcp_server_url = "https://api.openai.com/mcp"; other = "https://api.deepseek.com/v1"\n'
+    ds = _scan_file(src)
+    assert len(ds) == 2 and {d.kind for d in ds} == {"agent_tool_endpoint", "endpoint_reference"}
+    assert {d.provider_id for d in ds} == {"openai", "deepseek"}
+
+    structural = json.dumps({"MCP_SERVER_URL": "https://mcp.example.com/sse",
+                             "mcpServers": {"srv": {"url": "https://api.deepseek.com/mcp"}}})
+    ds = _mcp_scan(structural)
+    assert len(ds) == 1 and ds[0].kind == "mcp_server"
+
+    ds = _mcp_scan('{"mcpServers": {broken, "MCP_SERVER_URL": "https://mcp.example.com/sse"}}')
+    assert len(ds) == 1 and ds[0].kind == "agent_tool_endpoint"
+
+
+def test_agent_tool_model_reference_binding_excluded():
+    ds = _scan_file('MCP_SERVER_URL = "https://api.openai.com/mcp"\nMODEL = "gpt-4o"\n')
+    tool = next(d for d in ds if d.kind == "agent_tool_endpoint")
+    ref = next(d for d in ds if d.kind == "model_reference")
+    assert tool.provider_id == "openai" and tool.provenance == "unknown" and tool.model is None
+    assert ref.model == "gpt-4o" and ref.provenance == "us"
+
+    ds = _scan_file('import openai\nMCP_SERVER_URL = "https://mcp.sentry.dev/mcp"\nMODEL = "gpt-4o"\n')
+    provider = next(d for d in ds if d.kind == "sdk_import")
+    tool = next(d for d in ds if d.kind == "agent_tool_endpoint")
+    assert provider.model == "gpt-4o" and provider.provenance == "us"
+    assert tool.model is None and tool.provenance == "unknown"
+    assert not any(d.kind == "model_reference" for d in ds)
+
+
+def test_agent_tool_policy_waivers_and_exit_codes(tmp_path, capsys):
+    from borderlint import cli
+    cases = [
+        ("allowed", "MCP_SERVER_URL=https://mcp.sentry.dev/mcp\n", ["us"], "warn", "ok", 0),
+        ("disallowed", "MCP_SERVER_URL=https://mcp.sentry.dev/mcp\n", ["hk"], "warn", "fail", 1),
+        ("unknown-warn", "MCP_SERVER_URL=https://mcp.example.com/sse\n", ["hk"], "warn", "warn", 0),
+        ("unknown-fail", "MCP_SERVER_URL=https://mcp.example.com/sse\n", ["hk"], "fail", "fail", 1),
+        ("local", "mcp_endpoint=http://localhost:8931/sse\n", ["hk"], "fail", "ok", 0),
+        ("waiver", "MCP_SERVER_URL=https://mcp.sentry.dev/mcp # borderlint: allow approved SEC-7\n",
+         ["hk"], "warn", "waived", 0),
+    ]
+    for name, declaration, allow, on_unknown, severity, expected_rc in cases:
+        root = tmp_path / name
+        root.mkdir()
+        (root / ".env").write_text(declaration)
+        polf = root / "policy.json"
+        polf.write_text(json.dumps({"classifications": {"customer-pii": allow}, "on_unknown": on_unknown}))
+        rc = cli.main(["scan", str(root), "-p", str(polf), "-c", "customer-pii", "-f", "json"])
+        findings = json.loads(capsys.readouterr().out)["findings"]
+        assert rc == expected_rc and len(findings) == 1, name
+        assert findings[0]["kind"] == "agent_tool_endpoint" and findings[0]["severity"] == severity, name
+        if name in ("disallowed", "waiver"):
+            assert "residency" in findings[0]["reasons"]
+        if name.startswith("unknown"):
+            assert "unknown" in findings[0]["reasons"]
+        if name == "waiver":
+            assert findings[0]["waiver"] == "approved SEC-7"
+
+
+def test_agent_tool_existing_renderers_end_to_end(tmp_path, capsys):
+    from borderlint import cli
+    (tmp_path / ".env").write_text(
+        "MCP_SERVER_URL=https://user:secret@mcp.example.com/sse?token=query-secret;"
+        "AUTHORIZATION=header-secret\n")
+    polf = tmp_path / "policy.json"
+    polf.write_text(json.dumps({"classifications": {"customer-pii": ["hk"]}, "on_unknown": "warn"}))
+    for fmt in ("text", "json", "sarif", "sbom", "evidence", "html", "mermaid", "badge"):
+        rc = cli.main(["scan", str(tmp_path), "-p", str(polf), "-c", "customer-pii", "-f", fmt])
+        out = capsys.readouterr().out
+        assert rc == 0, fmt
+        for leaked in ("user:secret", "query-secret", "header-secret", "fragment", "/sse"):
+            assert leaked not in out, (fmt, leaked)
+        if fmt in ("json", "sarif", "sbom", "badge"):
+            json.loads(out)
+        if fmt == "json":
+            finding = json.loads(out)["findings"][0]
+            assert finding["kind"] == "agent_tool_endpoint"
+            assert finding["evidence"] == "MCP_SERVER_URL -> mcp.example.com"
+        elif fmt == "sbom":
+            assert json.loads(out)["components"][0]["sites"][0]["kind"] == "agent_tool_endpoint"
+        elif fmt in ("text", "evidence"):
+            assert "MCP_SERVER_URL -> mcp.example.com" in out
+        elif fmt == "html":
+            assert "MCP_SERVER_URL" in out and "mcp.example.com" in out
+
+
 def test_mcp_map_unknown_provider_id_rejected():
     import pytest
     from borderlint import kb as kbmod

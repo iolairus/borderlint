@@ -182,6 +182,29 @@ unmapped surfaces as an explicit `unknown`, and purely local servers (filesystem
 own database) as `local`. Claude Desktop's config lives outside your repo — scan it directly:
 `borderlint scan ~/Library/Application\ Support/Claude/claude_desktop_config.json`.
 
+**Explicit MCP / agent-tool endpoints**: declarations in other scanned source and config files
+produce `agent_tool_endpoint` findings. The curated key families pair `mcp`, `mcp_server`,
+`mcp_gateway`, or `agent_tool` with `url`, `endpoint`, `base_url`, or `host`, in snake_case,
+environment-style uppercase, or camelCase — for example `MCP_SERVER_URL`, `mcp_endpoint`, and
+`agentToolEndpoint`. Arbitrary URLs, bare `url` / `tool_url`, and authentication lookalikes such
+as `MCP_AUTH_URL` do not qualify. Valid structural MCP configs retain their `mcp_server`
+findings; otherwise explicit detection suppresses only the generic detection for the same
+declaration, avoiding duplicates.
+
+Known hosts resolve through the provider KB (including `--providers` overrides), loopback resolves
+to `local`, and unmapped static hosts or runtime-templated destinations resolve to
+`custom_endpoint` / `unknown` rather than a guessed jurisdiction. Evidence records only
+`<key> -> <host>` or `<key> -> runtime-resolved`: URL credentials, paths, query strings,
+fragments, headers, and complete assignment values are not retained.
+
+These findings describe configured potential destinations, not observed transmissions. Detection
+does not infer tool use from arbitrary URLs or call graphs, perform runtime `tools/list` discovery,
+inspect traffic or payloads, analyze tool permissions, or claim transitive egress. Existing
+residency rules, `on_unknown`, inline waivers, output formats, and exit codes apply unchanged,
+with no new CLI option or policy block. Tool endpoints are not model providers: same-file model
+references and first-party provider defaults do not assign model provenance to
+`agent_tool_endpoint` findings.
+
 **Agent integrations**: `integrations/` ships an installable Claude Code plugin and copy-paste
 rules that make the agent run borderlint *before* adding an AI dependency, endpoint, or model id
 — and surface any new non-`local` flow in the conversation, before it is committed:
