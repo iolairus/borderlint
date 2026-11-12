@@ -155,13 +155,14 @@ def _load_sovereignty_map() -> dict:
     return json.loads(files("borderlint").joinpath("data/sovereignty.json").read_text("utf-8"))
 
 
-_LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1"}
+_LOOPBACK_EVIDENCE = re.compile(
+    r"(?<![a-z0-9_.-])(?:localhost|127\.0\.0\.1|0\.0\.0\.0|::1|"
+    r"[a-z0-9_][a-z0-9_.-]*\.localhost)(?![a-z0-9_.-])", re.I)
 
 
 def _is_loopback_evidence(evidence: str) -> bool:
     """True if the evidence string references a loopback host (self-hosted → local sovereignty)."""
-    low = evidence.lower()
-    return any(h in low for h in _LOOPBACK_HOSTS) or ".localhost" in low
+    return _LOOPBACK_EVIDENCE.search(evidence) is not None
 
 
 # --- Provenance dimension -----------------------------------------------------

@@ -183,7 +183,7 @@ def text(findings, kb, policy=None, explain=False) -> str:
         worst = max((f.severity for f in fs), key=lambda s: _RANK[s])
         mark = {"ok": " OK ", "waived": "WAIV", "warn": "WARN", "fail": "FAIL"}[worst]
         js = ", ".join(juris(x) for x in sorted({f.detection.jurisdiction for f in fs}))
-        tag = " (vector store)" if kb.category(pid) == "vector_store" else ""
+        tag = {"vector_store": " (vector store)", "observability": " (observability)"}.get(kb.category(pid), "")
         sovs = ", ".join(sov(x) for x in sorted({getattr(f.detection, "sovereignty", "unknown") for f in fs}))
         provs = ", ".join(sov(x) for x in sorted({getattr(f.detection, "provenance", "unknown") for f in fs}))
         lines.append(f"[{mark}] {kb.name(pid)}{tag} -> {js} | sovereignty: {sovs} | weights: {provs}")
