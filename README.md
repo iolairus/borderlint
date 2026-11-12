@@ -227,6 +227,64 @@ rules that make the agent run borderlint *before* adding an AI dependency, endpo
 Advisory by design: the pre-commit hook and the SBOM `diff` gate stay on as the enforcing
 backstop, and accepted flows are recorded with the inline waiver rather than hidden.
 
+## AI observability (Langfuse and LangSmith)
+
+A6 covers only **Langfuse and LangSmith**, using a curated SDK inventory rather than broad vendor
+prefixes:
+
+- **Python:** `langfuse` and `langsmith`.
+- **JavaScript/TypeScript:** Langfuse `@langfuse/tracing`, `@langfuse/otel`, `@langfuse/openai`,
+  `@langfuse/langchain`, `@langfuse/vercel-ai-sdk`, plus deprecated `langfuse`, `langfuse-core`,
+  `langfuse-node`, `langfuse-langchain`, and `langfuse-vercel`; LangSmith `langsmith`.
+- **Java/Kotlin:** LangSmith imports under `com.langchain.smith`.
+
+Other packages under `@langfuse/*`, unofficial SDK namespaces, and other observability vendors do
+not match. Documented hosted endpoint references resolve through the provider KB. Exactly six
+explicit destination keys are also recognized, using their raw, **case-sensitive** spellings:
+`LANGFUSE_BASE_URL`, `LANGFUSE_HOST`, `LANGFUSE_BASEURL`, `LANGFUSE_OTEL_HOST`,
+`LANGSMITH_ENDPOINT`, and legacy `LANGCHAIN_ENDPOINT`. These declarations produce
+`observability_endpoint` findings; lowercase, camelCase, and other case variants do not qualify.
+Evidence retains only the key and sanitized host (or a runtime-resolved marker), with
+occurrence-scoped duplicate suppression.
+
+Documented hosted endpoints resolve to the exact country of their primary trace/application-data
+hosting region:
+
+| Hosted endpoint | Residency |
+|---|---|
+| `cloud.langfuse.com` | `ie` (Ireland) |
+| `us.cloud.langfuse.com`, `hipaa.cloud.langfuse.com` | `us` (United States) |
+| `jp.cloud.langfuse.com` | `jp` (Japan) |
+| `api.smith.langchain.com`, `aws.api.smith.langchain.com`, `azure.api.smith.langchain.com` | `us` (United States) |
+| `eu.api.smith.langchain.com`, `europe-west4.p.api.smith.langchain.com` | `nl` (Netherlands) |
+| `apac.api.smith.langchain.com`, `australia-southeast1.p.api.smith.langchain.com` | `au` (Australia) |
+| `us-central1.p.api.smith.langchain.com` | `us` (United States) |
+
+Every documented Langfuse Cloud and LangSmith SaaS host above has advisory sovereignty `us`,
+independently of its physical residency. This is an operator signal, not an adjudication of which
+statute applies; Langfuse's ClickHouse/Langfuse GmbH contracting nuance does not change that curated
+value. Residency does not assert the location of every backup, authentication, billing, support, or
+subprocessed copy.
+
+An SDK import alone never infers a cloud default, destination, or operator: residency, sovereignty,
+and provenance remain `unknown`. An unmapped static custom destination is reported as
+`custom_endpoint` with residency and sovereignty `unknown`; a runtime-resolved destination also
+remains `unknown` on both axes. Loopback retains the existing `local` behavior.
+
+Observability providers are categorized as `observability`: text output annotates them as
+`(observability)`, while JSON and SBOM retain `category: "observability"`. The category does not
+change verdicts. Observability SDK and endpoint findings are not model providers, so same-file model
+references and first-party provider defaults never assign provenance to them; their provenance stays
+`unknown`, and references bind only to an eligible model-provider flow when one is present.
+
+These findings describe potential or configured telemetry, not observed transmission or payload
+contents. Static analysis does not determine whether tracing is enabled, inspect prompts or outputs,
+perform call-graph attribution, or claim transitive egress. API keys, tracing flags, generic
+OpenTelemetry declarations, arbitrary URLs, and undocumented destination keys do not independently
+produce `observability_endpoint` findings. Constructor-only custom destinations without vendor
+context are outside this slice. Existing residency, `on_unknown`, waiver, output, and exit-code
+behavior applies unchanged, with no new CLI option or policy block.
+
 ## Output formats
 
 | Format | What you get |

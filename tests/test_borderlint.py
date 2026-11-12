@@ -3961,3 +3961,392 @@ def test_envelope_git_hardened(monkeypatch):
     assert "-c" in cmd and "core.fsmonitor=false" in cmd
     assert "core.hooksPath=/dev/null" in cmd
     assert kw["env"]["GIT_OPTIONAL_LOCKS"] == "0"
+
+
+# --- AI observability detection (A6) --------------------------------------------
+
+def test_observability_sdk_inventory_and_defaults():
+    langfuse_npm = [
+        "@langfuse/tracing", "@langfuse/otel", "@langfuse/openai", "@langfuse/langchain",
+        "@langfuse/vercel-ai-sdk", "langfuse", "langfuse-core", "langfuse-node",
+        "langfuse-langchain", "langfuse-vercel",
+    ]
+    assert kb.by_id["langfuse"]["sdks"] == ["langfuse"]
+    assert kb.by_id["langfuse"]["npm"] == langfuse_npm
+    assert kb.by_id["langsmith"]["sdks"] == ["langsmith"]
+    assert kb.by_id["langsmith"]["npm"] == ["langsmith"]
+    assert kb.by_id["langsmith"]["jvm"] == ["com.langchain.smith"]
+    assert not kb.by_id["langfuse"].get("dotnet")
+    assert not kb.by_id["langsmith"].get("dotnet")
+
+    for module, pid in (("langfuse", "langfuse"), ("langsmith", "langsmith")):
+        ds = _scan_file(f"import {module}\n")
+        assert len(ds) == 1
+        d = ds[0]
+        assert (d.provider_id, d.kind, d.jurisdiction, d.sovereignty, d.provenance) == (
+            pid, "sdk_import", "unknown", "unknown", "unknown")
+        assert d.model is None and kb.category(pid) == "observability"
+        assert kb.default_provenance(pid) == "unknown"
+
+    for package in langfuse_npm + ["langsmith"]:
+        pid = "langsmith" if package == "langsmith" else "langfuse"
+        ds = _scan_file(f'import {{ trace }} from "{package}";\n', ".ts")
+        assert len(ds) == 1, package
+        assert (ds[0].provider_id, ds[0].kind, ds[0].jurisdiction, ds[0].sovereignty,
+                ds[0].provenance) == (pid, "sdk_import", "unknown", "unknown", "unknown"), package
+
+    ds = _scan_file("import com.langchain.smith.client.LangsmithClient;\n", ".java")
+    assert len(ds) == 1
+    assert (ds[0].provider_id, ds[0].kind, ds[0].jurisdiction, ds[0].sovereignty,
+            ds[0].provenance) == ("langsmith", "sdk_import", "unknown", "unknown", "unknown")
+
+
+def test_observability_rejects_unlisted_langfuse_scope_packages():
+    for package in ("@langfuse/client", "@langfuse/core", "@langfuse/browser",
+                    "@langfuse/future-tracing-package"):
+        assert _scan_file(f'import {{ thing }} from "{package}";\n', ".ts") == [], package
+
+
+def test_observability_all_hosted_hosts_resolve_exact_countries():
+    cases = [
+        ("cloud.langfuse.com", "langfuse", "ie"),
+        ("us.cloud.langfuse.com", "langfuse", "us"),
+        ("hipaa.cloud.langfuse.com", "langfuse", "us"),
+        ("jp.cloud.langfuse.com", "langfuse", "jp"),
+        ("api.smith.langchain.com", "langsmith", "us"),
+        ("eu.api.smith.langchain.com", "langsmith", "nl"),
+        ("apac.api.smith.langchain.com", "langsmith", "au"),
+        ("aws.api.smith.langchain.com", "langsmith", "us"),
+        ("azure.api.smith.langchain.com", "langsmith", "us"),
+        ("us-central1.p.api.smith.langchain.com", "langsmith", "us"),
+        ("europe-west4.p.api.smith.langchain.com", "langsmith", "nl"),
+        ("australia-southeast1.p.api.smith.langchain.com", "langsmith", "au"),
+    ]
+    for pid in ("langfuse", "langsmith"):
+        assert set(kb.by_id[pid]["endpoints"]) == {h for h, p, _j in cases if p == pid}
+    for host, pid, jurisdiction in cases:
+        hit = kb.match_endpoint(host)
+        assert hit == (pid, host, jurisdiction), host  # longest host wins, including private connectivity
+        key = "LANGFUSE_BASE_URL" if pid == "langfuse" else "LANGSMITH_ENDPOINT"
+        ds = _scan_file(f"{key}=https://{host}/traces\n", ".env")
+        assert len(ds) == 1, host  # no generic endpoint duplicate
+        d = ds[0]
+        assert (d.kind, d.provider_id, d.jurisdiction, d.sovereignty, d.provenance) == (
+            "observability_endpoint", pid, jurisdiction, "us", "unknown"), host
+        assert d.evidence == f"{key} -> {host}"
+        assert kb.category(d.provider_id) == "observability"
+
+
+def test_observability_explicit_keys_are_exact_and_case_sensitive():
+    from borderlint.detect import _OBSERVABILITY_KEYS
+    keys = {
+        "LANGFUSE_BASE_URL", "LANGFUSE_HOST", "LANGFUSE_BASEURL", "LANGFUSE_OTEL_HOST",
+        "LANGSMITH_ENDPOINT", "LANGCHAIN_ENDPOINT",
+    }
+    assert _OBSERVABILITY_KEYS == keys
+    for key in keys:
+        ds = _scan_file(f"{key}=https://traces.internal.example/path\n", ".env")
+        assert len(ds) == 1, key
+        assert (ds[0].kind, ds[0].provider_id, ds[0].jurisdiction, ds[0].sovereignty) == (
+            "observability_endpoint", "custom_endpoint", "unknown", "unknown"), key
+        assert ds[0].evidence == f"{key} -> traces.internal.example"
+
+    variants = (
+        "langfuseBaseUrl", "langsmith_endpoint", "LANGFUSE_base_URL", "langfuse_base_url",
+        "LANGSMITH_endpoint", "langchainEndpoint", "LANGCHAIN_endpoint", "LANGFUSE_HOSTNAME",
+    )
+    for key in variants:
+        assert not any(d.kind == "observability_endpoint" for d in _scan_file(
+            f"{key}=https://traces.internal.example/path\n", ".env")), key
+
+
+def test_observability_custom_loopback_runtime_and_idna_destinations():
+    d = _scan_file("LANGFUSE_HOST=https://traces.internal.example/api\n", ".env")[0]
+    assert (d.provider_id, d.jurisdiction, d.sovereignty) == ("custom_endpoint", "unknown", "unknown")
+
+    d = _scan_file("LANGSMITH_ENDPOINT=http://localhost:3000/traces\n", ".env")[0]
+    assert (d.provider_id, d.jurisdiction, d.sovereignty) == ("local", "local", "local")
+
+    runtime_cases = [
+        ("LANGFUSE_HOST=${LANGFUSE_RUNTIME_HOST}\n", ".env"),
+        ("LANGFUSE_HOST={{LANGFUSE_RUNTIME_HOST}}\n", ".env"),
+        ("LANGFUSE_HOST=$LANGFUSE_RUNTIME_HOST\n", ".env"),
+        ("LANGSMITH_ENDPOINT: process.env.LANGSMITH_RUNTIME_HOST\n", ".ts"),
+        ('LANGSMITH_ENDPOINT = os.environ.get("LANGSMITH_RUNTIME_HOST")\n', ".py"),
+    ]
+    for src, suffix in runtime_cases:
+        ds = _scan_file(src, suffix)
+        assert len(ds) == 1, src
+        assert (ds[0].kind, ds[0].provider_id, ds[0].jurisdiction, ds[0].sovereignty) == (
+            "observability_endpoint", "custom_endpoint", "unknown", "unknown"), src
+        assert ds[0].evidence.endswith(" -> runtime-resolved")
+
+    ds = _scan_file("LANGFUSE_HOST=https://traces.例え.テスト/path\n", ".env")
+    assert len(ds) == 1 and ds[0].provider_id == "custom_endpoint"
+    assert ds[0].evidence == "LANGFUSE_HOST -> traces.xn--r8jz45g.xn--zckzah"
+
+
+def test_observability_evidence_is_sanitized():
+    sources = [
+        "LANGSMITH_ENDPOINT=https://user:secret@traces.internal.example/sse?token=query-secret#fragment "
+        "Authorization: header-secret\n",
+        *(f"LANGSMITH_ENDPOINT=https://traces.internal.example{sep}AUTHORIZATION=header-secret\n"
+          for sep in (";", "&", "`")),
+    ]
+    for src in sources:
+        ds = _scan_file(src, ".env")
+        assert len(ds) == 1
+        assert ds[0].evidence == "LANGSMITH_ENDPOINT -> traces.internal.example"
+        for leaked in ("user", "secret", "/sse", "query", "fragment", "Authorization", "AUTHORIZATION"):
+            assert leaked not in ds[0].evidence
+
+
+def test_observability_comments_and_generic_telemetry_negatives():
+    cases = [
+        ("# LANGSMITH_ENDPOINT=https://traces.internal.example/path\n", ".env"),
+        ('// LANGSMITH_ENDPOINT: "https://traces.internal.example/path"\n', ".ts"),
+        ('/* comment\nLANGSMITH_ENDPOINT: "https://traces.internal.example/path"\n*/\n', ".ts"),
+        ("OTEL_EXPORTER_OTLP_ENDPOINT=https://telemetry.internal.example/v1/traces\n", ".env"),
+        ("LANGSMITH_TRACING=true\nLANGSMITH_API_KEY=secret\n", ".env"),
+        ("LANGFUSE_TRACING=true\nLANGFUSE_PUBLIC_KEY=secret\n", ".env"),
+        ("LANGSMITH_URL=https://traces.internal.example/path\n", ".env"),
+        ("TELEMETRY_DESTINATION=https://traces.internal.example/path\n", ".env"),
+        ('fetch("https://traces.internal.example/path")\n', ".ts"),
+        ("LANGSMITH_ENDPOINT=not-a-host\n", ".env"),
+        ("LANGSMITH_ENDPOINT=./relative/path\n", ".env"),
+    ]
+    for src, suffix in cases:
+        assert not any(d.kind == "observability_endpoint" for d in _scan_file(src, suffix)), src
+
+    src = ("# LANGSMITH_ENDPOINT=https://comment.internal.example/path\n"
+           "LANGSMITH_ENDPOINT=https://traces.internal.example/path\n")
+    ds = _scan_file(src, ".yaml")
+    assert len(ds) == 1 and ds[0].line == 2
+    assert ds[0].evidence == "LANGSMITH_ENDPOINT -> traces.internal.example"
+
+
+def test_observability_duplicate_precedence_is_declaration_scoped():
+    src = ('LANGFUSE_BASE_URL: "https://cloud.langfuse.com/api"; '
+           'LANGSMITH_ENDPOINT: "https://traces.internal.example/api";\n')
+    ds = _scan_file(src, ".ts")
+    assert len(ds) == 2 and all(d.kind == "observability_endpoint" for d in ds)
+
+    src = ('LANGSMITH_ENDPOINT: "https://eu.api.smith.langchain.com/traces"; '
+           'const other = "https://api.openai.com/v1";\n')
+    ds = _scan_file(src, ".ts")
+    assert {(d.kind, d.provider_id) for d in ds} == {
+        ("observability_endpoint", "langsmith"), ("endpoint_reference", "openai")}
+
+    for value in ("https://eu.api.smith.langchain.com/traces",
+                  "https://eu.api.smith.langchain.com/${PATH}"):
+        src = (f'LANGSMITH_ENDPOINT: "{value}"; '
+               'const other = "https://eu.api.smith.langchain.com/other";\n')
+        ds = _scan_file(src, ".ts")
+        assert len(ds) == 2
+        assert {d.kind for d in ds} == {"observability_endpoint", "endpoint_reference"}
+        assert next(d for d in ds if d.kind == "endpoint_reference").provider_id == "langsmith"
+
+    src = ('"🐍" * 30; LANGFUSE_HOST = "https://cloud.langfuse.com/api"; '
+           'other = "https://api.openai.com/v1"\n')
+    ds = _scan_file(src)
+    assert len(ds) == 2 and {d.kind for d in ds} == {"observability_endpoint", "endpoint_reference"}
+    assert {d.provider_id for d in ds} == {"langfuse", "openai"}
+
+
+def test_observability_model_binding_and_tier2_defaults_excluded(monkeypatch):
+    for src, kind in (
+        ('import langfuse\nMODEL = "gpt-4o"\n', "sdk_import"),
+        ('LANGSMITH_ENDPOINT = "https://traces.internal.example/api"\nMODEL = "gpt-4o"\n',
+         "observability_endpoint"),
+        ('LANGSMITH_ENDPOINT = "https://eu.api.smith.langchain.com"\nMODEL = "gpt-4o"\n',
+         "observability_endpoint"),
+    ):
+        ds = _scan_file(src)
+        obs = next(d for d in ds if d.kind == kind)
+        ref = next(d for d in ds if d.kind == "model_reference")
+        assert obs.provenance == "unknown" and obs.model is None
+        assert ref.model == "gpt-4o" and ref.provenance == "us"
+
+    ds = _scan_file('import openai\nimport langfuse\n'
+                    'LANGSMITH_ENDPOINT = "https://traces.internal.example/api"\n'
+                    'MODEL = "gpt-4o"\n')
+    provider = next(d for d in ds if d.provider_id == "openai")
+    assert provider.model == "gpt-4o" and provider.provenance == "us"
+    assert not any(d.kind == "model_reference" for d in ds)
+    for d in ds:
+        if d.provider_id == "langfuse" or d.kind == "observability_endpoint":
+            assert d.model is None and d.provenance == "unknown"
+
+    monkeypatch.setitem(kb.provenance_defaults, "langfuse", "us")
+    monkeypatch.setitem(kb.provenance_defaults, "langsmith", "us")
+    for src in ("import langfuse\n", "import langsmith\n",
+                "LANGSMITH_ENDPOINT=https://api.openai.com\n"):
+        ds = _scan_file(src, ".env" if src.startswith("LANGSMITH") else ".py")
+        assert all(d.provenance == "unknown" for d in ds)
+
+
+def test_observability_policy_waivers_and_exit_codes(tmp_path, capsys):
+    from borderlint import cli
+    cases = [
+        ("allowed", "LANGSMITH_ENDPOINT=https://api.smith.langchain.com\n", ["us"], "warn", "ok", 0),
+        ("disallowed", "LANGSMITH_ENDPOINT=https://api.smith.langchain.com\n", ["hk"], "warn", "fail", 1),
+        ("unknown-warn", "LANGSMITH_ENDPOINT=https://traces.internal.example/api\n", ["hk"], "warn", "warn", 0),
+        ("unknown-fail", "LANGSMITH_ENDPOINT=https://traces.internal.example/api\n", ["hk"], "fail", "fail", 1),
+        ("local", "LANGFUSE_HOST=http://localhost:3000\n", ["hk"], "fail", "ok", 0),
+        ("waiver", "LANGSMITH_ENDPOINT=https://api.smith.langchain.com # borderlint: allow approved SEC-7\n",
+         ["hk"], "warn", "waived", 0),
+    ]
+    for name, declaration, allow, on_unknown, severity, expected_rc in cases:
+        root = tmp_path / name
+        root.mkdir()
+        (root / ".env").write_text(declaration)
+        polf = root / "policy.json"
+        polf.write_text(json.dumps({"classifications": {"customer-pii": allow}, "on_unknown": on_unknown}))
+        rc = cli.main(["scan", str(root), "-p", str(polf), "-c", "customer-pii", "-f", "json"])
+        findings = json.loads(capsys.readouterr().out)["findings"]
+        assert rc == expected_rc and len(findings) == 1, name
+        assert findings[0]["kind"] == "observability_endpoint" and findings[0]["severity"] == severity, name
+        if name in ("allowed", "disallowed", "waiver"):
+            assert findings[0]["category"] == "observability"
+        if name in ("disallowed", "waiver"):
+            assert "residency" in findings[0]["reasons"]
+        if name.startswith("unknown"):
+            assert "unknown" in findings[0]["reasons"]
+        if name == "waiver":
+            assert findings[0]["waiver"] == "approved SEC-7"
+
+
+def test_observability_existing_renderers_and_schemas_end_to_end(tmp_path, capsys):
+    from borderlint import cli
+    (tmp_path / ".env").write_text(
+        "LANGSMITH_ENDPOINT=https://user:secret@api.smith.langchain.com/traces?token=query-secret#fragment\n")
+    polf = tmp_path / "policy.json"
+    polf.write_text(json.dumps({"classifications": {"customer-pii": ["us"]}, "on_unknown": "fail"}))
+    for fmt in ("text", "json", "sarif", "sbom", "evidence", "html", "mermaid", "badge"):
+        rc = cli.main(["scan", str(tmp_path), "-p", str(polf), "-c", "customer-pii", "-f", fmt])
+        out = capsys.readouterr().out
+        assert rc == 0, fmt
+        for leaked in ("user:secret", "query-secret", "fragment", "/traces"):
+            assert leaked not in out, (fmt, leaked)
+        if fmt in ("json", "sarif", "sbom", "badge"):
+            json.loads(out)
+        if fmt == "text":
+            assert "LangSmith (observability)" in out
+        elif fmt == "json":
+            finding = json.loads(out)["findings"][0]
+            assert finding["kind"] == "observability_endpoint"
+            assert finding["category"] == "observability"
+            assert finding["evidence"] == "LANGSMITH_ENDPOINT -> api.smith.langchain.com"
+            assert set(finding) == {
+                "provider", "name", "category", "jurisdiction", "sovereignty", "provenance",
+                "model", "model_org", "severity", "reasons", "kind", "evidence", "file",
+                "line", "waiver",
+            }
+        elif fmt == "sarif":
+            doc = json.loads(out)
+            assert doc["version"] == "2.1.0" and len(doc["runs"][0]["results"]) == 1
+        elif fmt == "sbom":
+            doc = json.loads(out)
+            assert set(doc) == {"schema", "borderlint", "kb_updated", "components"}
+            assert doc["schema"] == "borderlint.ai-dataflow-sbom/1"
+            component = doc["components"][0]
+            assert component["category"] == "observability"
+            assert component["sites"][0]["kind"] == "observability_endpoint"
+            assert set(component) == {
+                "provider", "name", "category", "jurisdictions", "sovereignties",
+                "provenances", "sites",
+            }
+        elif fmt in ("evidence", "html"):
+            assert "LangSmith (observability)" in out
+            arrow = "&gt;" if fmt == "html" else ">"
+            assert f"LANGSMITH_ENDPOINT -{arrow} api.smith.langchain.com" in out
+        elif fmt == "mermaid":
+            assert "LangSmith" in out
+        elif fmt == "badge":
+            assert set(json.loads(out)) == {"schemaVersion", "label", "message", "color"}
+
+
+def test_observability_kb_notes_and_drift_exemptions():
+    assert kb.updated == "2026-11-12" and kb.sovereignty_updated == "2026-11-12"
+    lf = kb.by_id["langfuse"]
+    assert "Postgres backups" in lf["note"] and "DPA" in lf["note"]
+    assert "ClickHouse" in lf["sovereignty_override_note"]
+    assert "Langfuse GmbH" in lf["sovereignty_override_note"]
+    ls = kb.by_id["langsmith"]
+    assert "Authentication/authorization" in ls["note"] and "billing" in ls["note"]
+    assert "LangChain Inc." in ls["sovereignty_override_note"]
+    with open("scripts/kb_drift_aliases.json", encoding="utf-8") as fh:
+        shipped = json.load(fh)
+    assert "JVM/.NET" in shipped["sdk_exempt"]["langfuse"]
+    assert ".NET" in shipped["sdk_exempt"]["langsmith"]
+    assert "com.langchain.smith" in shipped["sdk_exempt"]["langsmith"]
+
+
+def test_loopback_sovereignty_requires_host_boundaries_for_a6_and_a7():
+    for key, kind in (("LANGSMITH_ENDPOINT", "observability_endpoint"),
+                      ("MCP_SERVER_URL", "agent_tool_endpoint")):
+        for host in ("localhost.evil.example", "127.0.0.1.evil.example"):
+            ds = _scan_file(f"{key}=https://{host}/traces\n", ".env")
+            assert len(ds) == 1 and ds[0].kind == kind
+            assert (ds[0].provider_id, ds[0].jurisdiction, ds[0].sovereignty) == (
+                "custom_endpoint", "unknown", "unknown"), (key, host)
+
+        for host in ("localhost", "127.0.0.1", "0.0.0.0", "[::1]", "tracing.localhost"):
+            ds = _scan_file(f"{key}=http://{host}:3000/traces\n", ".env")
+            assert len(ds) == 1 and ds[0].kind == kind
+            assert (ds[0].provider_id, ds[0].jurisdiction, ds[0].sovereignty) == (
+                "local", "local", "local"), (key, host)
+
+
+def test_declared_endpoints_nested_compose_environment_a6_and_a7():
+    src = ("services:\n"
+           "  app:\n"
+           "    environment:\n"
+           "      LANGFUSE_BASE_URL: http://langfuse-web:3000\n"
+           "      MCP_SERVER_URL: http://mcp-web:8080/sse\n")
+    ds = _scan_file(src, "docker-compose.yml")
+    assert len(ds) == 2
+    by_kind = {d.kind: d for d in ds}
+    assert by_kind["observability_endpoint"].line == 4
+    assert by_kind["observability_endpoint"].evidence == "LANGFUSE_BASE_URL -> langfuse-web"
+    assert by_kind["agent_tool_endpoint"].line == 5
+    assert by_kind["agent_tool_endpoint"].evidence == "MCP_SERVER_URL -> mcp-web"
+
+
+def test_observability_indexed_environment_assignments_single_and_double_quotes():
+    for quote in ("'", '"'):
+        src = (f"os.environ[{quote}LANGFUSE_BASE_URL{quote}] = "
+               f"{quote}https://user:secret@cloud.langfuse.com/traces?token=query-secret{quote}\n")
+        ds = _scan_file(src)
+        assert len(ds) == 1, quote
+        assert ds[0].kind == "observability_endpoint"
+        assert ds[0].provider_id == "langfuse" and ds[0].jurisdiction == "ie"
+        assert ds[0].evidence == "LANGFUSE_BASE_URL -> cloud.langfuse.com"
+
+    src = 'os.environ["langfuse_base_url"] = "https://traces.internal.example"\n'
+    assert not any(d.kind == "observability_endpoint" for d in _scan_file(src))
+
+
+def test_jvm_import_line_ignores_package_and_blank_lines():
+    src = ("package example.observability\n"
+           "\n"
+           "import com.langchain.smith.client.LangsmithClient\n"
+           "\n"
+           "class App\n")
+    ds = _scan_file(src, ".kt")
+    assert len(ds) == 1
+    assert ds[0].provider_id == "langsmith" and ds[0].kind == "sdk_import"
+    assert ds[0].line == 3
+
+
+def test_observability_indexed_environment_runtime_value_single_and_double_quotes():
+    for quote in ("'", '"'):
+        src = (f"os.environ[{quote}LANGSMITH_ENDPOINT{quote}] = "
+               f"os.environ[{quote}RUNTIME_ENDPOINT{quote}]\n")
+        ds = _scan_file(src)
+        assert len(ds) == 1, quote
+        d = ds[0]
+        assert d.kind == "observability_endpoint"
+        assert (d.provider_id, d.jurisdiction, d.sovereignty) == (
+            "custom_endpoint", "unknown", "unknown")
+        assert d.evidence == "LANGSMITH_ENDPOINT -> runtime-resolved"

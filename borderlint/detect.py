@@ -140,7 +140,7 @@ def _scan_js(path: str, src: str, kb) -> list[Detection]:
     return out
 
 
-_JVM_IMPORT = re.compile(r"^\s*import\s+(?:static\s+)?([\w.]+)", re.M)  # Java `;` and Kotlin bare forms
+_JVM_IMPORT = re.compile(r"^[ \t]*import\s+(?:static\s+)?([\w.]+)", re.M)  # Java `;` and Kotlin bare forms
 
 
 def _scan_jvm(path: str, src: str, kb) -> list[Detection]:
@@ -179,13 +179,17 @@ def _host_of(value: str) -> str | None:
     return v.split(":", 1)[0] or None
 
 
-_AGENT_TOOL_KEY = re.compile(
-    r"""(?i)\b([A-Za-z][A-Za-z0-9_]*)['"]?\s*[:=]\s*['"]?\s*(?!\{[A-Za-z])([^\s'"#,}\]]+)""")
+_DECLARED_KEY = re.compile(
+    r"""(?i)\b([A-Za-z][A-Za-z0-9_]*)['"]?\]?[ \t]*[:=][ \t]*['"]?[ \t]*(?!{[A-Za-z])([^\s'"#,}\]]+)""")
 _AGENT_TOOL_KEYS = frozenset(
     f"{stem}_{suffix}"
     for stem in ("mcp", "mcp_server", "mcp_gateway", "agent_tool")
     for suffix in ("url", "endpoint", "base_url", "host")
 )
+_OBSERVABILITY_KEYS = frozenset({
+    "LANGFUSE_BASE_URL", "LANGFUSE_HOST", "LANGFUSE_BASEURL", "LANGFUSE_OTEL_HOST",
+    "LANGSMITH_ENDPOINT", "LANGCHAIN_ENDPOINT",
+})
 
 
 def _comment_spans(src: str, hash_comments: bool) -> list[tuple[int, int]]:
@@ -226,29 +230,31 @@ def _comment_spans(src: str, hash_comments: bool) -> list[tuple[int, int]]:
     return out
 
 
-def _scan_agent_tool_endpoints(path: str, src: str, kb,
-                               claims: list[tuple[int, int]] | None = None) -> list[Detection]:
+def _scan_declared_endpoints(path: str, src: str, kb, keys, kind: str,
+                             claims: list[tuple[int, int]] | None = None,
+                             normalize_case: bool = True) -> list[Detection]:
     out: list[Detection] = []
     p = Path(path)
     hash_comments = p.name == ".env" or p.suffix in {".env", ".py", ".sh", ".yaml", ".yml",
                                                       ".toml", ".ini", ".cfg"}
     comments = _comment_spans(src, hash_comments)
-    for m in _AGENT_TOOL_KEY.finditer(src):
-        key = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", m.group(1)).lower()
-        if key not in _AGENT_TOOL_KEYS:
+    for m in _DECLARED_KEY.finditer(src):
+        raw_key = m.group(1)
+        key = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", raw_key).lower() if normalize_case else raw_key
+        if key not in keys:
             continue
         if any(start <= m.start(1) < end for start, end in comments):
             continue
         raw = m.group(2)
         line = _line_no(src, m.start(1))
         runtime = ("${" in raw or "{{" in raw or raw.startswith("$")
-                   or raw.startswith(("process.env.", "os.environ."))
+                   or raw.startswith(("process.env.", "os.environ.", "os.environ["))
                    or (("(" in raw or ")" in raw) and "://" not in raw))
         if runtime:
             if claims is not None:
                 claims.append(m.span(2))
-            out.append(Detection("custom_endpoint", "agent_tool_endpoint",
-                                 f"{m.group(1)} -> runtime-resolved", path, line, "unknown"))
+            out.append(Detection("custom_endpoint", kind,
+                                 f"{raw_key} -> runtime-resolved", path, line, "unknown"))
             continue
         host = _host_of(re.split(r"[?#]", raw, maxsplit=1)[0])
         if host:
@@ -264,14 +270,25 @@ def _scan_agent_tool_endpoints(path: str, src: str, kb,
             continue
         if claims is not None:
             claims.append(m.span(2))
-        evidence = f"{m.group(1)} -> {host}"
+        evidence = f"{raw_key} -> {host}"
         if is_loop:
-            out.append(Detection("local", "agent_tool_endpoint", evidence, path, line, "local"))
+            out.append(Detection("local", kind, evidence, path, line, "local"))
         elif hit := kb.match_endpoint(host):
-            out.append(Detection(hit[0], "agent_tool_endpoint", evidence, path, line, hit[2]))
+            out.append(Detection(hit[0], kind, evidence, path, line, hit[2]))
         else:
-            out.append(Detection("custom_endpoint", "agent_tool_endpoint", evidence, path, line, "unknown"))
+            out.append(Detection("custom_endpoint", kind, evidence, path, line, "unknown"))
     return out
+
+
+def _scan_agent_tool_endpoints(path: str, src: str, kb,
+                               claims: list[tuple[int, int]] | None = None) -> list[Detection]:
+    return _scan_declared_endpoints(path, src, kb, _AGENT_TOOL_KEYS, "agent_tool_endpoint", claims)
+
+
+def _scan_observability_endpoints(path: str, src: str, kb,
+                                  claims: list[tuple[int, int]] | None = None) -> list[Detection]:
+    return _scan_declared_endpoints(path, src, kb, _OBSERVABILITY_KEYS, "observability_endpoint",
+                                    claims, normalize_case=False)
 
 
 def _scan_config_endpoints(path: str, src: str, kb, claims=()) -> list[Detection]:
@@ -458,21 +475,28 @@ def _scan_model_refs(src: str, kb) -> list[tuple[int, str, str, str | None]]:
     return out
 
 
+def _model_eligible(d: Detection, kb) -> bool:
+    return (d.kind not in ("agent_tool_endpoint", "observability_endpoint")
+            and kb.category(d.provider_id) != "observability")
+
+
 def _attach_models(path: str, src: str, dets: list[Detection], kb) -> list[Detection]:
     """Bind model references to same-file provider detections (D4).
 
     Refs resolving to exactly one distinct bloc bind to the file's eligible provider detections;
     otherwise (no eligible provider, or ambiguous blocs) each ref stands alone as a
-    `model_reference` finding with residency `unknown`. Agent-tool endpoints never bind models.
+    `model_reference` finding with residency `unknown`. Agent-tool and observability detections
+    never bind models.
     """
     refs = _scan_model_refs(src, kb)
     if not refs:
         return dets
     blocs = {b for _, _, b, _ in refs}
-    if any(d.kind != "agent_tool_endpoint" for d in dets) and len(blocs) == 1:
+    eligible = [d for d in dets if _model_eligible(d, kb)]
+    if eligible and len(blocs) == 1:
         # ponytail: first ref represents same-bloc siblings; per-ref pairing needs call-site AST
         return [replace(d, provenance=refs[0][2], model=refs[0][1], model_org=refs[0][3])
-                if d.kind != "agent_tool_endpoint" else d for d in dets]
+                if _model_eligible(d, kb) else d for d in dets]
     return dets + [Detection("model_reference", "model_reference", ref, path, line, "unknown",
                              provenance=bloc, model=ref, model_org=org)
                    for line, ref, bloc, org in refs]
@@ -481,7 +505,7 @@ def _attach_models(path: str, src: str, dets: list[Detection], kb) -> list[Detec
 def _resolve_provenance(detections, kb) -> list[Detection]:
     """Tier-2 provenance (D3): unbound flows on first-party-only providers get the org's bloc."""
     return [replace(d, provenance=kb.default_provenance(d.provider_id))
-            if d.provenance == "unknown" and d.kind not in ("model_reference", "agent_tool_endpoint") else d
+            if d.provenance == "unknown" and d.kind != "model_reference" and _model_eligible(d, kb) else d
             for d in detections]
 
 
@@ -533,6 +557,7 @@ def scan(root, kb) -> list[Detection]:
                 mcp_dets = None
         claims = []
         tools = [] if mcp_dets is not None else _scan_agent_tool_endpoints(str(p), src, kb, claims)
+        observability = [] if mcp_dets is not None else _scan_observability_endpoints(str(p), src, kb, claims)
         cfg = [] if mcp_dets is not None else _scan_config_endpoints(str(p), src, kb, claims)  # AI-endpoint keys / base_url kwargs, any file
         if mcp_dets is not None:
             dets = mcp_dets
@@ -546,7 +571,7 @@ def scan(root, kb) -> list[Detection]:
             dets = _scan_cs(str(p), src, kb) + _scan_text(str(p), src, kb, claims) + _scan_api_calls(str(p), src, kb) + cfg
         else:
             dets = _scan_text(str(p), src, kb, claims) + cfg
-        dets += tools
+        dets += tools + observability
         # one detection per flow per line: drop an api_call already produced by another scanner on its line
         anchored = {(d.provider_id, d.jurisdiction, d.line) for d in dets if d.kind != "api_call"}
         dets = [d for d in dets if d.kind != "api_call" or (d.provider_id, d.jurisdiction, d.line) not in anchored]

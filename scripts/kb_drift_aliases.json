@@ -22,6 +22,8 @@
     "hf_transformers_local": "local Python library — no Java/.NET SDK",
     "huggingface": "no official Java SDK; Java usage rides the OpenAI-compatible endpoint",
     "langchain": "Python/JS only; LangChain4j and LangChain.NET are separate community projects",
+    "langfuse": "official tracing SDKs are Python and JS/TS; other languages use OpenTelemetry or the public API, with no dedicated JVM/.NET SDK",
+    "langsmith": "official SDKs are Python, JS/TS, and Java (com.langchain.smith); no official .NET SDK is documented",
     "lemonade": "local Python tool (AMD) — no Java/.NET SDK",
     "litellm": "Python SDK + proxy; no official Java/.NET client SDK",
     "llama_index": "Python/TS-only framework, no official Java/.NET SDK",

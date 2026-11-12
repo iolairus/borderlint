@@ -236,7 +236,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | A3 | Scan **config/text files** (`.env`, `.yaml`, `.toml`, `.json`, `.ini`) for endpoint hosts | ✅ |
 | A4 | Scan **TypeScript / JavaScript** (regex imports; tree‑sitter only if precision demands) | ✅ |
 | A5 | Detect **vector DBs / data sinks** that imply cross‑border storage (Pinecone, etc.) | ✅ |
-| A6 | Detect **observability/telemetry** endpoints that exfiltrate prompts/traces | later |
+| A6 | Detect **Langfuse / LangSmith observability** SDKs and telemetry endpoints (`observability` / `observability_endpoint`): curated SDKs, six explicit case-sensitive keys, and documented hosted mappings; other vendors, generic OpenTelemetry, and arbitrary URL attribution remain out of scope | ✅ (limited scope) |
 | A7 | Detect **MCP servers / agent tool endpoints** by jurisdiction: structured MCP config scanning plus explicit MCP/agent-tool endpoint declarations (`mcp_server` / `agent_tool_endpoint`) | ✅ |
 | A8 | Scan **Java / Kotlin** (regex imports via the `jvm` KB key; endpoint/call-path/waiver parity with JS) | ✅ |
 | A9 | Scan **C#** (regex `using` directives via the `dotnet` KB key; endpoint/call-path/waiver parity with JVM) | ✅ |
