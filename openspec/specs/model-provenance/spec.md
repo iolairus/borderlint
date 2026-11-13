@@ -8,12 +8,13 @@ model references and first-party provider defaults; the map is advisory — it s
 origin and never adjudicates export-control applicability.
 ## Requirements
 ### Requirement: Provenance bloc vocabulary
+
 The system SHALL express model provenance using the blocs `us`, `eu`, `cn`, `uk`, `ru`, `in`,
 `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, and `unknown` — the sovereignty vocabulary without
-`local`, because model weights always have a developer. The `unknown` bloc represents a
-provenance that cannot be statically determined. The system SHALL NOT emit any provenance value
-outside this vocabulary, and SHALL reject a user-supplied provenance mapping that uses a token
-outside it.
+`local`, because model weights always have a developer, and without `vn`, which is not currently a
+provenance bloc. The `unknown` bloc represents a provenance that cannot be statically determined.
+The system SHALL NOT emit any provenance value outside this vocabulary, and SHALL reject a
+user-supplied provenance mapping that uses a token outside it.
 
 #### Scenario: Invalid provenance token in a user mapping is rejected
 - **WHEN** a user-supplied knowledge base maps a model pattern to the bloc `overseas`
@@ -172,6 +173,7 @@ family's provenance, and a URL that carries its scheme resolves nothing at all.
 - **WHEN** a scanned file contains the string literal `https://huggingface.co/TheBloke/deepseek-coder-33B-AWQ`
 - **THEN** no model reference is detected, because `https:` is not host-like so no segment is ever
   disregarded; the scheme-less `huggingface.co/…` form is the one that resolves (design R2)
+
 ### Requirement: User provenance overrides
 The system SHALL accept provenance overrides from a user-supplied knowledge base; user entries
 SHALL take precedence over bundled entries — including over longer bundled prefixes that would
@@ -409,6 +411,7 @@ forms.
 - **THEN** `whispering-pines` does not resolve through any new pattern (no bare `whisper`
   stem exists) and `in.inhouse-7b` strips the region prefix but matches no family pattern;
   both keep provenance `unknown`
+
 ### Requirement: MAI-Code, ScaleDown, Copilot Chat, and Microsoft Decision families resolve provenance
 The bundled provenance map SHALL resolve the following drift-run families, all patterns
 matched case-insensitively, anchored, longest-first per the existing matching rules:
@@ -468,6 +471,7 @@ matched case-insensitively, anchored, longest-first per the existing matching ru
 - **WHEN** an unbound flow on provider `scaledown` carries no model reference
 - **THEN** it resolves provenance `us` via the tier-2 provider default (ScaleDown serves
   only its own models)
+
 ### Requirement: Semantic-ranker, SAM, Alibaba video, Beam, and Drex families resolve provenance
 The bundled provenance map SHALL resolve the following drift-run families, all patterns
 matched case-insensitively, anchored, longest-first per the existing matching rules:
@@ -534,6 +538,7 @@ matched case-insensitively, anchored, longest-first per the existing matching ru
   `openinfer` carry no model reference
 - **THEN** each keeps provenance `unknown` (multi-vendor hosts; Nace's lineage is mixed
   with one undisclosed version)
+
 ### Requirement: Azure region-namespace o-series, Clairic, Step-5, and Baseten decision models resolve provenance
 The bundled provenance map SHALL resolve the following drift-run families, all patterns
 matched case-insensitively, anchored, longest-first per the existing matching rules:
@@ -830,3 +835,4 @@ matched case-insensitively, anchored, longest-first per the existing matching ru
   carry no model reference
 - **THEN** each keeps provenance `unknown` (no tier-2 default on a multi-vendor
   catalog)
+
