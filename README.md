@@ -53,9 +53,10 @@ One flow, three different answers: **AWS Bedrock `ap-east-1` serving DeepSeek-R1
 `hk`, sovereignty `us`, provenance `cn`** — and self-hosted Qwen is `local`/`local`/`cn`. Declare
 a home base (HK, Macao, the GBA, Japan, Korea, Singapore, Australia, the UK, the EU, Malaysia)
 and flagged flows are tagged with the regime in play (PDPO, PIPL, APPI, PIPA, PDPA, the Privacy
-Act, GDPR …) and its cross-border reference. Western and Chinese providers are treated evenly.
+Act) and its cross-border reference. GDPR is a transfer-arrangement reference, never a regime tag.
+Western and Chinese providers are treated evenly.
 
-Browse the full knowledge base — 109 providers with curated data-practice facts for the majors,
+Browse the full knowledge base — 137 providers with curated data-practice facts for the majors,
 model developers, regimes — at [iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/).
 
 ## Use
@@ -108,15 +109,17 @@ exposure:
 }
 ```
 
-**Residency — deny-by-default**: a flow to any code not on the list for the declared class fails —
-so `sg` is allowed but `my` is not, matching a PDPO agreed-locations EULA. `GBA` is shorthand for
-`hk` + `CN-GBA`.
+**Residency — deny-by-default**: a resolved, non-`local` flow to any code not on the list for the
+declared class fails — so `sg` is allowed but `my` is not, matching a PDPO agreed-locations EULA.
+`local` flows are exempt from the jurisdiction allow-list because local inference is not a
+cross-border transfer; `unknown` follows the top-level `on_unknown` setting (`warn` by default, or
+`fail`). Other policy checks still apply. `GBA` is shorthand for `hk` + `CN-GBA`.
 
 **Sovereignty — opt-in, orthogonal to residency.** Residency says *where the bytes rest*;
 **sovereignty** says *which government can compel disclosure* — a US provider (AWS, Azure, GCP,
 OpenAI) is subject to the CLOUD Act regardless of the endpoint region. Add a `sovereignty` block
 to constrain it per class. Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`,
-`kr`, `sg`, `au`, `ae`, `ch`, `local`, `unknown`. Absent the block, behaviour is unchanged
+`kr`, `sg`, `au`, `ae`, `ch`, `vn`, `local`, `unknown`. Absent the block, behaviour is unchanged
 (sovereignty is reported as a column but never gates). `local` sovereignty is exempt (self-hosted
 = no external sovereign). See [CAPABILITIES.md §3.1](CAPABILITIES.md) for the full model.
 
@@ -126,7 +129,7 @@ models (OpenAI, Anthropic, DeepSeek …) resolves to its org's bloc, while multi
 (Bedrock, Vertex) and aggregators stay `unknown`. Aggregator-qualified IDs
 (`deepseek/deepseek-r1` via OpenRouter) resolve provenance even where residency and sovereignty
 are `unknown` — the one axis routers don't obscure. The `provenance` block mirrors the
-sovereignty shape; vocabulary is the same minus `local` (weights always have a developer).
+sovereignty shape; vocabulary is the same minus `vn` and `local` (weights always have a developer).
 Fine-tunes inherit the base family's bloc. A `deny_models` list of anchored model-id prefixes
 bans a family regardless of host or bloc — `"deny_models": ["deepseek"]` fails a Bedrock flow
 serving DeepSeek-R1 even where `cn` weights are otherwise allowed; denies match after the same
@@ -181,7 +184,7 @@ reaching for an SDK, and the MCP servers wired into it.
 **MCP config scanning**: `.mcp.json`, `claude_desktop_config.json`, `.cursor/mcp.json`, and
 `.vscode/mcp.json` are parsed structurally — one finding per configured MCP server (kind
 `mcp_server`). Remote (`url`) servers resolve their host against the provider KB; stdio servers
-resolve their package against a bundled MCP-server map (`data/mcp_servers.json`); anything
+resolve their package against a bundled MCP-server map (`borderlint/data/mcp_servers.json`); anything
 unmapped surfaces as an explicit `unknown`, and purely local servers (filesystem, memory, your
 own database) as `local`. Claude Desktop's config lives outside your repo — scan it directly:
 `borderlint scan ~/Library/Application\ Support/Claude/claude_desktop_config.json`.
@@ -398,7 +401,7 @@ rendered to PNG:
   from the endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` and
   `asia-east2-aiplatform.googleapis.com` → `hk`).
 - **Sovereignty:** a per-flow bloc (`us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`, `kr`,
-  `sg`, `au`, `ae`, `ch`, `local`, `unknown`) derived from the provider's home legal regime — orthogonal to residency. Opt-in
+  `sg`, `au`, `ae`, `ch`, `vn`, `local`, `unknown`) derived from the provider's home legal regime — orthogonal to residency. Opt-in
   policy block; reported in every output format; host-level overrides for ring-fenced
   subsidiaries (e.g. AWS China / Sinnet → `cn`).
 - **Provenance:** whose model weights a flow runs — a third orthogonal bloc resolved from model
@@ -431,8 +434,9 @@ rendered to PNG:
   tier change the answer. Rendered as a register in the `evidence` pack (uncurated providers stay
   visible as "not curated") and as a section on each KB-website provider page; every fact carries a
   source URL, locator note, and retrieval date. Strictly advisory — never gates.
-- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / evidence / HTML / badge, an SBOM **`diff`**
-  gate for new egress, inline **waivers**, exit codes, GitHub Action + Jenkins.
+- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / evidence / HTML / badge / Suricata, an
+  SBOM **`diff`** gate for new egress, inline **waivers**, exit codes, GitHub Action + Jenkins +
+  GitLab CI.
 - **Agentic coding:** an installable **Claude Code plugin** (this repo is its own marketplace —
   `/plugin marketplace add iolairus/borderlint`) and **Cursor** rules that make the agent scan
   *before* adding an AI dependency, endpoint, or model id.
@@ -453,7 +457,8 @@ cross-border references), generated straight from the bundled JSON on every KB c
 A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) checks freshness on every axis:
 providers we don't yet cover (diffed against litellm's registry), **model families the
 provenance map doesn't resolve** (aggregated, so the issue lists families to curate rather than
-thousands of model IDs), sovereignty-map completeness, and each bundled KB's last-reviewed date.
+thousands of model IDs), **SDK-key coverage gaps**, **data-practice curation gaps**,
+sovereignty-map completeness, and each bundled KB's last-reviewed date.
 It maintains a single standing review issue, updated in place. Route aliases and out-of-scope
 names are recorded in `scripts/kb_drift_aliases.json`; jurisdictions and blocs are assigned
 **by hand**, never auto-merged. `borderlint --version` shows the KB's last-reviewed

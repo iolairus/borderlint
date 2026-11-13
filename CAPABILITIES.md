@@ -1,6 +1,6 @@
 # borderlint — Capability Set
 
-> **Status:** shipped — v1.1.0. The full P1 (MVP) and most of P2 are built and tested; the
+> **Status:** shipped. The full P1 (MVP) and most of P2 are built and tested; the
 > capability map below tracks actual state (✅ shipped · next · later), not the original plan.
 
 ## 1. Purpose
@@ -12,11 +12,12 @@ It is a **static, developer‑side** check (not a runtime gateway), it treats **
 Chinese providers evenly**, and it is built for teams operating across the **east‑west
 boundary**, where data residency is a licence to operate rather than a nice‑to‑have.
 
-> **v1 target — Hong Kong & GBA companies.** borderlint v1 is built for organisations whose
+> **v1 focus — Hong Kong & GBA companies.** borderlint v1 is built for organisations whose
 > home base is **Hong Kong or the Greater Bay Area**. It answers: *does our AI data stay within
 > HK / the GBA, or leave it?* It is built to be useful to **HK entities (under the PDPO)** and
 > **GBA / Mainland entities (under PIPL)**, including the **GBA Standard Contract** route between them. Solving residency for arbitrary home jurisdictions (a US or EU
-> company's own rules) is **explicitly out of scope for v1**.
+> company's own rules) is **explicitly out of scope for v1**; supported APAC/EMEA home locations
+> add informational regime and arrangement context.
 
 ## 2. Positioning (what makes it different)
 
@@ -24,7 +25,7 @@ boundary**, where data residency is a licence to operate rather than a nice‑to
 |---|---|
 | Runtime gateways / proxies | Static, runs in CI before anything ships |
 | EU‑centric | East‑west / APAC lens; Mainland China, HK, SG first‑class |
-| Enterprise platforms | Single‑file CLI, MIT, vendor‑neutral, zero‑config first run |
+| Enterprise platforms | Zero‑dependency CLI, MIT, vendor‑neutral, zero‑config first run |
 | Generic AI governance | Narrow and sharp: *data residency & cross‑border flow* |
 
 ## 3. Jurisdiction model — discrete entities, zones & arrangements
@@ -37,8 +38,8 @@ borderlint treats jurisdiction as richer than flat country codes, with three con
 a Shenzhen endpoint is `CN-GBA`; a Beijing endpoint is `CN`.
 
 **Zones** — named groupings that span entities for the purpose of a data arrangement. The
-**GBA** zone = the nine Mainland GBA cities together with Hong Kong (for personal-information
-flow). Macao is **excluded** from the GBA data scheme.
+**GBA** policy alias = the nine Mainland GBA cities together with Hong Kong (for personal-information
+flow). Macao (`mo`) is **excluded from that alias**, but has its own Mainland–Macao contract reference.
 
 **Transfer arrangements** — named legal mechanisms that *may* permit a flow residency alone
 would block. borderlint surfaces these as **reference links** rather than adjudicating them
@@ -51,8 +52,11 @@ would block. borderlint surfaces these as **reference links** rather than adjudi
 > Jiangmen, Zhaoqing. It **lifts the volume restriction** of the general Mainland framework,
 > reduces the transfer assessment from six areas to three, and files in 10 working days.
 > Voluntary; effective 13 Dec 2023, extended to all sectors 1 Nov 2024. Administered by HK's
-> Digital Policy Office and the CAC of Guangdong. **Macao is not in scope.**
+> Digital Policy Office and the CAC of Guangdong. **Macao is not in scope of this variant.**
 > Source: [digitalpolicy.gov.hk — GBA cross-boundary data flow](https://www.digitalpolicy.gov.hk/en/our_work/digital_infrastructure/mainland/gbacbdf/cross-boundary_data_flow/index.html)
+
+The separate **[GBA Standard Contract (Mainland, Macao)](https://www.dsedt.gov.mo/en/web/public/pg_tpd_gbadata_contract)**
+is surfaced for Macao ↔ Mainland GBA flows; it does not add `mo` to the `GBA` policy alias.
 
 In practice this lets a policy express *"personal data may stay within the GBA"* — permitting a
 Shenzhen ↔ Hong Kong flow under the GBA Standard Contract — while still **blocking** a flow to
@@ -74,17 +78,20 @@ express your accepted posture by choosing the entities and zones in your policy 
 `allow: [HK, GBA]`); the arrangement links are there to support that choice, not to make it.
 
 **v1 resolution.** v1 resolves every flow to a **country code** (ccTLD / ISO 3166-1 — e.g. `hk`,
-`cn`, `sg`, `my`, `us`, `gb`, `mo`), plus the special token **CN-GBA** (the nine Mainland GBA
-cities) and the **GBA** zone alias (`hk` + `CN-GBA`). There is **no `overseas` grab-bag**: each
-flow resolves to a specific country, and any code **not on the policy's allow-list fails by
-default**. This lets a HK entity encode its **PDPO agreed-locations** policy exactly — e.g. allow
-`sg` but not `my` for customer PII.
+`cn`, `sg`, `my`, `us`, `gb`, `mo`), the special entity **CN-GBA** (the nine Mainland GBA cities),
+**`local`** for loopback/on-host inference, or **`unknown`** when static evidence is insufficient.
+Policies may also use the **GBA** zone alias (`hk` + `CN-GBA`). There is **no `overseas` grab-bag**.
+`local` is exempt from the residency allow-list because it is not a cross-border transfer; `unknown`
+follows the policy's top-level `on_unknown` setting (`warn` by default, or `fail`). Every other code
+**not on the policy's allow-list fails by default**. This lets a HK entity encode its **PDPO
+agreed-locations** policy exactly — e.g. allow `sg` but not `my` for customer PII.
 
-**Regulatory frame (v1).** borderlint v1 understands three regimes: **PDPO** (Hong Kong),
-**PIPL** (Mainland China / GBA), and the **GBA Standard Contract** arrangement between them. The
-user declares their **home regime** — a HK entity under PDPO, or a GBA / Mainland entity under
-PIPL — and borderlint surfaces the regime and arrangement references relevant to a flagged flow.
-Other regimes (e.g. GDPR) are reference-only and not a v1 focus.
+**Regulatory frame (informational).** HK/GBA remains the focus: **PDPO** (Hong Kong), **PIPL**
+(Mainland China / GBA), the **GBA Standard Contract** variants for Hong Kong and Macao, and **Macao
+PDPA**. The user declares either a legacy **home regime** (`pdpo` / `pipl`) or a supported **home
+location** (`hk`, `mo`, `cn`/`CN-GBA`, or the APAC/EMEA seats above), and borderlint surfaces the mapped
+regime and arrangement references relevant to a flagged flow. These tags and references never change
+the verdict; GDPR remains a reference, never a regime tag.
 
 ### 3.1 Sovereignty — compelled disclosure, orthogonal to residency
 
@@ -99,8 +106,8 @@ jurisdiction" — a posture many HK/GBA and EU entities in fact hold.
 
 **Sovereignty blocs.** borderlint models a small set of blocs, not per-country sovereigns:
 `us`, `eu` (the EU/EEA as a single compelled-disclosure unit), `cn`, `uk` (post-Brexit, distinct
-from EU), `ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `local` (self-hosted — no
-external sovereign), and `unknown`
+from EU), `ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `vn`, `local` (self-hosted —
+no external sovereign), and `unknown`
 (aggregators, custom endpoints, or unmapped providers). Sovereignty is derived from the
 **provider** (its home legal regime), not the endpoint region; region-in-endpoint providers
 (Bedrock, Azure OpenAI, Vertex) inherit the provider's sovereignty regardless of the resolved
@@ -160,7 +167,7 @@ from* rather than *who developed them* are stripped the same way — curated lau
 residency/sovereignty, self-hosted flows carry an honest weights origin: `local`/`local`/`cn`
 for a local Qwen, `local`/`local`/`us` for a local Llama.
 
-**Blocs** reuse the sovereignty vocabulary minus `local` (weights always have a developer):
+**Blocs** use the sovereignty vocabulary except `local` (weights always have a developer) and `vn`:
 `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `unknown`.
 A `deny_models` list of anchored model-id prefixes bans a family regardless of host or bloc,
 with provider-deny semantics (default failure set, unwaivable); findings carry the developer
@@ -196,10 +203,11 @@ classification** to the jurisdictions considered acceptable for that class:
 
 - **Classifications (v1, extensible):** `non-pii`, `employee-pii`, `customer-pii`.
 - **Jurisdiction values (v1):** **ccTLD / ISO-3166 country codes** (lowercase: `hk`, `cn`, `sg`,
-  `my`, `us`, `gb`, `mo`, …) plus the uppercase special tokens **`CN-GBA`** (nine Mainland GBA
-  cities) and **`GBA`** (alias for `hk` + `CN-GBA`). **Deny by default:** any code a flow resolves
-  to that is not on the list for that classification fails — there is no `overseas` catch-all.
-- The user — who knows their home regime (PDPO / PIPL) and obligations — decides each list.
+  `my`, `us`, `gb`, `mo`, …) plus **`CN-GBA`** (nine Mainland GBA cities), **`GBA`** (alias for
+  `hk` + `CN-GBA`), **`local`**, and **`unknown`**. **Deny by default:** an unlisted country or
+  `CN-GBA` fails. `local` is exempt from the residency allow-list; `unknown` follows top-level
+  `on_unknown` (`warn` by default, or `fail`). There is no `overseas` catch-all.
+- The user — who knows their home location/regime and obligations — decides each list.
   borderlint **enforces** the list; it does not decide it.
 - **Deny by default** mirrors a **PDPO agreed-locations** commitment: customer PII may flow to
   `sg` (named in your EULA) but a flow to `my` (not named) fails — without you enumerating every
@@ -214,18 +222,18 @@ outside the acceptable list for that classification:
 borderlint scan ./service --policy residency.json --classification customer-pii
 ```
 
-**Where it runs (v1 execution contexts):**
+**Execution contexts:**
 - A **CI gate on the path to production** — block a merge/deploy that would send that data class
   to a jurisdiction the policy doesn't allow.
-- A **supply-chain / container scan** (JFrog-style SCA) — inspect dependencies and container
-  images for AI endpoints that would route data out of the allowed jurisdictions.
+- **Planned (later): supply-chain / container scan** (JFrog-style SCA) — inspect dependencies and
+  container images for AI endpoints that would route data out of the allowed jurisdictions.
 
 This keeps borderlint pragmatic: it never has to *guess* what data a path handles — the pipeline
 asserts the classification, and borderlint governs the resulting flows.
 
 ## 5. Capability map
 
-Status: **✅** = shipped (v1.1.0) · **next** = planned next · **later** = deferred. The full P1
+Status: **✅** = shipped · **next** = planned next · **later** = deferred. The full P1
 MVP and most of P2 have shipped; the remaining work is re-tiered into next/later below.
 
 ### A. Detection — *find every AI data flow*
@@ -247,9 +255,9 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | B1 | Map provider → **jurisdiction** via bundled knowledge base | ✅ |
 | B2 | Honour **region‑specific endpoints** (e.g. `dashscope-intl` → SG vs `dashscope` → CN) | ✅ |
 | B3 | Mark **region‑in‑endpoint** providers (Azure OpenAI, Bedrock) as *Unknown* with guidance | ✅ |
-| B4 | Resolve **Azure/Bedrock region** from the endpoint host when present | ✅ |
-| B5 | Tag flows with the **v1 regimes** — PDPO (HK), PIPL (Mainland/GBA), GBA scheme — relevant to the declared home base | ✅ |
-| B6 | Resolve flows to **country codes (ccTLD/ISO)** + special tokens **CN-GBA** / **GBA**; **deny-by-default** for codes not on the policy list | ✅ |
+| B4 | Resolve **region-coded cloud endpoint hosts** (AWS/Bedrock, Azure, GCP/Vertex, Aliyun, Huawei) to a jurisdiction when the region is present | ✅ |
+| B5 | Tag flagged flows with currently mapped **informational regimes** — PDPO, PIPL, Macao PDPA, APPI, PIPA, SG/MY PDPA, Privacy Act/APPs, UK GDPR/DPA 2018; GDPR remains an arrangement reference, not a tag | ✅ |
+| B6 | Resolve flows to **country codes (ccTLD/ISO)**, **CN-GBA**, **`local`**, or **`unknown`**; support the **GBA** policy alias; deny unlisted jurisdictions by default, exempt `local` from the residency allow-list, and apply **`on_unknown`** (`warn` \| `fail`) to unknowns | ✅ |
 ### C. Policy & governance — *decide what's allowed*
 | # | Capability | Status |
 |---|---|---|
@@ -262,10 +270,10 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | C7 | Org‑level **shared/base policies** that repos extend | later |
 | C8 | Residency targets may be **discrete entities or zones** (e.g. `allow: [HK, GBA]`) | ✅ |
 | C9 | Surface **relevant arrangement reference links** for a flagged flow as *context* — e.g. **GBA Standard Contract**; reference only, not enforced (applicability depends on the user's home jurisdiction & data scope) | ✅ |
-| C10 | Declare **home base / regime** — HK·PDPO or GBA/Mainland·PIPL — so defaults & surfaced references adapt | ✅ |
+| C10 | Declare **home location** (`hk`, `mo`, `cn`/`CN-GBA`, `jp`, `kr`, `sg`, `au`, `uk`/`gb`, `eu`, `my`) or legacy **home regime** (`pdpo`/`pipl`) so informational regime tags and arrangement references adapt without changing verdicts | ✅ |
 | C11 | **Sovereignty** dimension (§3.1): per-classification allow-lists of compelled-disclosure blocs, opt-in | ✅ |
 | C12 | **Provenance** dimension (§3.2): per-classification allow-lists of model-weights blocs, opt-in | ✅ |
-| C13 | **Evidence pack** (`--format evidence`): fileable transfer inventory with audit envelope, waiver register, and regime-aligned annexes (PDPO, PIPL + GBA SC, Macao PDPA, PDPA-SG); static fields filled from the scan, org-supplied fields as marked blanks | ✅ |
+| C13 | **Evidence pack** (`--format evidence`): fileable transfer inventory with audit envelope, waiver register, advisory data-practices register, and regime-aligned annexes (PDPO, PIPL + GBA SC, Macao PDPA, PDPA-SG); static fields filled from the scan, org-supplied fields as marked blanks | ✅ |
 
 ### D. Reporting & output
 | # | Capability | Status |
@@ -278,6 +286,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | D6 | Diff mode: *what new cross‑border flows did this PR introduce?* | ✅ |
 | D7 | **HTML report** (`--format html`): one self‑contained file for privacy/compliance review — no scripts, nothing fetched | ✅ |
 | D8 | **Shields.io badge** (`--format badge`): JSON payload for CI dashboards and PR descriptions — non-gating export | ✅ |
+| D9 | **Suricata TLS-SNI alert rules** (`--format suricata`) compiled from KB endpoints and an optional policy; deterministic, alert-posture, non-gating export | ✅ |
 
 ### E. Integration
 | # | Capability | Status |
@@ -289,7 +298,7 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | E5 | GitLab CI / generic CI recipes (GitHub Actions, Jenkins, and GitLab recipes shipped) | ✅ |
 | E6 | Per-run **`--classification`** input (the data class on the scanned path) | ✅ |
 | E7 | **Supply-chain / container scan mode** (JFrog-style SCA of dependencies & images) | later |
-| E8 | **Agent integration snippets** (Claude Code rules/skill, Cursor rules): scan before adding AI deps, surface new flows in-conversation | ✅ |
+| E8 | **Agent integrations** (packaged Claude Code plugin/marketplace, Claude Code rules/skill, Cursor rules): scan before adding AI deps, surface new flows in-conversation | ✅ |
 
 ### F. Knowledge base — *the crown jewel*
 | # | Capability | Status |
@@ -300,13 +309,16 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 | F4 | Community contribution workflow (add a provider via PR) | ✅ |
 | F5 | Versioned KB with provenance/date stamps | ✅ |
 | F6 | **Arrangements reference list** — links + one-line summaries of cross-border schemes (GBA Standard Contract; PIPL standard contract; GDPR SCCs / adequacy). Reference only — no enforcement logic | ✅ |
+| F7 | **Advisory provider data practices** — curated training defaults, retention, subprocessors, and enterprise-tier notes with per-fact citations; never affects verdicts | ✅ |
+| F8 | **Generated KB website** — static provider and model-developer pages projected from the bundled KB and automatically published | ✅ |
+| F9 | **Scheduled multi-axis KB freshness reporting** — weekly provider, provenance, sovereignty, SDK, and data-practices coverage plus staleness gaps for human curation | ✅ |
 
-### G. Optional AI enrichment *(uses spare Claude capacity; never required)*
+### G. Optional enrichment *(never required)*
 | # | Capability | Status |
 |---|---|---|
 | G1 | Classify "does this payload likely carry **personal data**?" | later |
-| G2 | Plain‑language **explanation + remediation** hint per violation | next |
-| G3 | Suggest a starter **policy** from a repo's current flows | later |
+| G2 | Plain‑language **explanation + remediation** hint per finding via **`--explain`** (deterministic templates) | ✅ |
+| G3 | Scaffold a starter **policy** from a repo's current flows via **`borderlint init`** | ✅ |
 
 ### H. Companion (separate repo, same family)
 | # | Capability | Status |
@@ -317,11 +329,11 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 - Not a **runtime gateway / proxy** (that space is crowded; we are pre‑ship, static).
 - Not a full **SAST / secret scanner** — single concern: AI data residency & cross‑border flow.
 - Not a **DLP** product; we flag *where* data flows, not inspect payload contents at runtime.
-- Not **legal advice** — regime tags (PIPL/GDPR/PDPO) are context, not a compliance ruling.
+- Not **legal advice** — regime tags and arrangement references are context, not a compliance ruling.
 - Does **not adjudicate which cross-border arrangement applies to you** (depends on your home jurisdiction, data classes, and user base) — it links to arrangements as reference; you choose your accepted entities/zones.
 - Does **not resolve per-city location** within `CN-GBA` — the zone tag suffices for v1.
-- Not a **global** residency solver in v1 — optimized for a **HK/GBA home base**; arbitrary home jurisdictions (a US/EU company's own residency logic) come later.
-- Regimes **beyond PDPO / PIPL / GBA** (e.g. GDPR enforcement logic) are out of v1 — referenced, not implemented.
+- Not a **global** residency solver in v1 — optimized for a **HK/GBA home base**; other supported home locations add informational regime/reference context, not legal adjudication.
+- Regime and arrangement coverage is **informational, not enforcement logic**; GDPR remains a transfer reference rather than a regime tag, and unmapped home locations add no derived context.
 
 ## 7. Primary users
 
@@ -341,6 +353,6 @@ MVP and most of P2 have shipped; the remaining work is re-tiered into next/later
 **The MVP was** A1–A3, B1–B3, C1–C4, D1–D3, E1–E2, F1–F3 — a genuinely useful, shippable
 tool: a residency‑aware AI data‑flow scanner with an east‑west KB. The east-west **jurisdiction model** (B6) — discrete HK / CN / **CN-GBA** / MO entities and the **GBA** zone with zone-aware residency (C8) — shipped in the MVP; the named **GBA Standard Contract** arrangement (C9) shipped as a follow-on.
 
-In short, **v1 solves it for a HK/GBA company**: detect AI flows, classify each flow to a country code (ccTLD) plus the CN-GBA / GBA tokens, and check them against an HK/GBA-centric residency policy tied to your declared regime (PDPO for HK, PIPL for GBA/Mainland) — not a global residency solver.
+In short, **v1 solves it for a HK/GBA company**: detect AI flows, resolve each to a country code (ccTLD), CN-GBA, `local`, or `unknown`, and check them against an HK/GBA-centric residency policy with the GBA alias and your declared home location or regime (PDPO for HK, PIPL for GBA/Mainland) — not a global residency solver.
 
 The v1 **interface** is concrete: a JSON policy mapping each data classification (`non-pii` / `employee-pii` / `customer-pii`) to acceptable jurisdictions, plus a per-run `--classification`, executed as a CI gate on the path to production (with a supply-chain/container scan mode later).
