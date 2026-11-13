@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: iolairus/borderlint@v1.19.0
+      - uses: iolairus/borderlint@v1.19.1
         with:
           path: .
           policy: residency.json
