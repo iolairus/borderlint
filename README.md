@@ -156,6 +156,10 @@ Same command in any pipeline. GitHub Actions (composite action):
 Jenkins / anything else: `pip install borderlint && borderlint scan . --policy residency.json
 --classification customer-pii` — a non-zero exit fails the stage. Full examples in `examples/ci/`.
 
+GitLab CI: copy `examples/ci/gitlab-ci.yml` into `.gitlab-ci.yml` and replace `residency.json` and
+`customer-pii` with your policy path and data class. The job runs on merge requests and pushes to
+the default branch, and a non-zero scan exit fails the job.
+
 pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`):
 
 ```yaml

@@ -1495,6 +1495,19 @@ def test_precommit_hook_definition():
     assert "pass_filenames: false" in txt
 
 
+def test_gitlab_ci_recipe():
+    import os
+    txt = open(os.path.join(os.path.dirname(__file__), "..", "examples", "ci", "gitlab-ci.yml"),
+               encoding="utf-8").read()
+    assert "image: python:3.12-slim" in txt
+    assert "python -m pip install --no-cache-dir borderlint" in txt
+    assert "borderlint scan . --policy residency.json --classification customer-pii" in txt
+    assert "'$CI_PIPELINE_SOURCE == \"merge_request_event\"'" in txt
+    assert "'$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'" in txt
+    assert "allow_failure" not in txt
+    assert "|| true" not in txt
+
+
 def test_vector_store_detection():
     # A managed vector DBaaS import is detected as a data sink: category vector_store, jurisdiction unknown.
     d = {x.provider_id: x for x in dets('import pinecone\nimport qdrant_client\n')}
