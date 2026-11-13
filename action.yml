@@ -14,7 +14,7 @@ inputs:
     description: Data class on the scanned path (required with policy)
     default: ""
   format:
-    description: "text | json | mermaid"
+    description: "text | json | mermaid | sarif | sbom | evidence | html | badge | suricata"
     default: text
 runs:
   using: composite
