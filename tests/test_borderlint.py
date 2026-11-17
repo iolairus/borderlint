@@ -3529,21 +3529,23 @@ def test_wave7_beam_resolves_all_distribution_forms():
         assert got is not None and got[1] == "us" and got[2] == "Reflection AI", mid
 
 
-def test_wave7_drex_inherits_qwen_bloc_version_by_version():
-    # v1.5 post-trains a Qwen distill, v2.0 a Qwen3.6 backbone: inherit base (design D5)
+def test_wave7_drex_active_and_immutable_checkpoints_inherit_qwen_bloc():
+    # active v2.0 and immutable HF checkpoints inherit their Qwen bases (wave-11 design D5)
     kb2 = load_kb()
-    for mid in ("nace/drex-v1.5", "drex-v1.5", "drex-v2.0", "nace/drex-v2.0",
-                "nace-ai/drex-v2.0", "drex-latest", "nace/drex-latest"):
+    for mid in ("drex-v2.0", "nace/drex-v2.0", "nace-ai/drex-v2.0",
+                "nace-ai/drex-v1.5", "nace-ai/drex-max-v1"):
         got = kb2.match_model(mid)
         assert got is not None and got[1] == "cn", mid
         assert got[2] == "Alibaba (Nace Drex post-train)", mid
 
 
 def test_wave7_honest_unknowns_and_near_misses():
-    # v1.0 lineage undisclosed (design D5); no bare sam/wan stems (design D4)
+    # retired/moving API routes and v1.0 have undisclosed lineage; no bare sam/wan stems
     kb2 = load_kb()
-    for mid in ("nace/drex-v1.0", "drex-v1.0", "sam-3.1", "wandb/some-org/some-model",
-                "wander-7b", "sambanova-custom"):
+    for mid in ("nace/drex-v1.0", "drex-v1.0", "drex-v1.5", "nace/drex-v1.5",
+                "drex-latest", "nace/drex-latest", "drex-max", "nace/drex-max",
+                "drex-max-v1.1", "nace/drex-max-v1.1", "sam-3.1",
+                "wandb/some-org/some-model", "wander-7b", "sambanova-custom"):
         assert kb2.match_model(mid) is None, mid
     # no tier-2 defaults for the wave-7 providers (design D3)
     for pid in ("coralbricks", "inferenceapis", "nace", "openinfer"):
@@ -3560,9 +3562,7 @@ def test_wave7_drift_suffix_walk_covers_namespaced_forms():
     ids = [("vertex_ai/semantic-ranker-default", "vertex_ai"),
            ("dashscope/happyhorse-1.0-i2v", "dashscope"),
            ("dashscope/wan2.7-i2v", "dashscope"),
-           ("nace/drex-v1.5", "nace"),
            ("nace/drex-v2.0", "nace"),
-           ("nace/drex-latest", "nace"),
            ("baseten/reflection/Beam-1.0", "baseten"),
            ("together_ai/reflection/Beam-1.0-501B-A23B", "together_ai"),
            ("nebius/reflection/beam", "nebius"),
@@ -3904,6 +3904,250 @@ def test_wave10_drift_suffix_walk_covers_catalogs():
               ("together_ai/ricursive-ai/Ripple-65B-Preview", "together_ai"),
               ("together_ai/essentialai/rnj-1-instruct", "together_ai")])
     assert kb_drift.model_coverage_gap(ids, kb2) == []
+
+
+# --- November 2026 drift resolution, wave 11 -------------------------------------
+
+_WAVE11_MODEL_GROUPS = (
+    ("replicate/alibaba/", ("wan-3", "wan-3-prime"), "cn", "Alibaba (Wan-AI)"),
+    ("replicate/wan-video/", (
+        "wan-2.2-s2v", "wan-2.5-i2v", "wan-2.5-i2v-fast", "wan-2.5-t2v",
+        "wan-2.5-t2v-fast", "wan-2.6-i2v", "wan-2.6-t2v", "wan-2.7-i2v",
+        "wan-2.7-image", "wan-2.7-image-pro", "wan-2.7-r2v", "wan-2.7-t2v",
+        "wan-2.7-videoedit"), "cn", "Alibaba (Wan-AI)"),
+    ("replicate/wavespeedai/", (
+        "wan-2.1-i2v-480p", "wan-2.1-i2v-720p", "wan-2.1-t2v-480p",
+        "wan-2.1-t2v-720p"), "cn", "Alibaba (Wan-AI)"),
+    ("replicate/bria/", ("fibo", "fibo-edit", "image-3.2", "expand-image", "remove-background"),
+     "il", "Bria AI"),
+    ("replicate/elevenlabs/", ("flash-v2.5", "turbo-v2.5", "v2-multilingual", "v3"),
+     "us", "ElevenLabs"),
+    ("replicate/heygen/", ("avatar-iv", "avatar-v"), "us", "HeyGen"),
+    ("replicate/ideogram-ai/", (
+        "ideogram-v2", "ideogram-v2-turbo", "ideogram-v2a", "ideogram-v2a-turbo",
+        "ideogram-v3-balanced", "ideogram-v3-quality", "ideogram-v3-turbo",
+        "ideogram-v4-balanced", "ideogram-v4-quality"), "ca", "Ideogram AI"),
+    ("replicate/inworld/", ("realtime-tts-1.5-max", "realtime-tts-1.5-mini", "realtime-tts-2"),
+     "us", "Inworld AI"),
+    ("replicate/kwaivgi/", ("kling-v2.1-master", "kling-v2.5-turbo-pro"), "cn", "Kuaishou"),
+    ("replicate/lightricks/", (
+        "ltx-2-distilled", "ltx-2-fast", "ltx-2-pro", "ltx-2.3-fast", "ltx-2.3-pro",
+        "ltx-2.5-fast"), "il", "Lightricks"),
+    ("replicate/luma/", ("photon", "photon-flash"), "us", "Luma AI"),
+    ("replicate/nightmareai/", ("real-esrgan",), "cn",
+     "Tencent ARC Lab / Chinese Academy of Sciences"),
+    ("replicate/perceptron-ai-inc/", ("isaac-0.1",), "cn",
+     "Alibaba (Perceptron AI post-train; Google SigLIP2 vision)"),
+    ("openrouter/perceptron/", ("isaac-0.1",), "cn",
+     "Alibaba (Perceptron AI post-train; Google SigLIP2 vision)"),
+    ("replicate/playht/", ("play-dialog",), "us", "PlayAI (formerly PlayHT)"),
+    ("replicate/prunaai/", ("flux-fast", "flux-kontext-fast"), "eu",
+     "Black Forest Labs (Pruna AI optimized)"),
+    ("replicate/prunaai/", ("hidream-l1-fast",), "cn", "HiDream.ai (Pruna AI optimized)"),
+    ("replicate/prunaai/", ("p-video-animate", "p-video-avatar", "p-video-replace"), "il",
+     "Lightricks (LTX-2; Pruna AI endpoint)"),
+    ("replicate/prunaai/", ("wan-2.2-image",), "cn", "Alibaba (Wan-AI; Pruna AI optimized)"),
+    ("replicate/quiverai/", (
+        "arrow-1.1", "arrow-1.1-max", "arrow-1.1-max-vectorize", "arrow-1.1-vectorize"),
+     "ca", "QuiverAI"),
+    ("replicate/recraft-ai/", (
+        "recraft-20b", "recraft-20b-svg", "recraft-v3", "recraft-v3-svg", "recraft-v4",
+        "recraft-v4-pro", "recraft-v4-pro-svg", "recraft-v4-styles-pro",
+        "recraft-v4-styles-pro-svg", "recraft-v4-svg", "recraft-v4.1", "recraft-v4.1-pro",
+        "recraft-v4.1-pro-svg", "recraft-v4.1-svg", "recraft-v4.1-utility",
+        "recraft-v4.1-utility-pro"), "us", "Recraft"),
+    ("replicate/resemble-ai/", ("chatterbox", "chatterbox-pro", "chatterbox-turbo"),
+     "us", "Resemble AI"),
+    ("replicate/sync/", ("lipsync-2", "lipsync-2-pro", "react-1"), "us", "Sync Labs"),
+    ("vercel_ai_gateway/typesafe-ai/", ("jev",), "us", "TypeSafe AI"),
+)
+
+_WAVE11_RESIDUE_GROUPS = (
+    ("webiq/", ("search",)),
+    ("nace/", ("drex-max", "drex-max-v1.1")),
+    ("replicate/bria/", (
+        "eraser", "generate-background", "genfill", "increase-resolution", "product-cutout",
+        "product-packshot", "product-shadow", "video-erase-object", "video-increase-resolution",
+        "video-remove-background")),
+    ("replicate/datalab-to/", ("ocr",)),
+    ("replicate/decart/", ("lucy-edit-2",)),
+    ("replicate/easel/", ("ai-avatars",)),
+    ("replicate/elevenlabs/", ("dubbing",)),
+    ("replicate/flux-kontext-apps/", (
+        "cartoonify", "change-haircut", "depth-of-field", "face-to-many-kontext", "filters",
+        "iconic-locations", "impossible-scenarios", "multi-image-kontext-max",
+        "multi-image-kontext-pro", "multi-image-list", "portrait-series", "professional-headshot",
+        "restore-image", "restyle-video-frame", "text-removal")),
+    ("replicate/heygen/", ("lipsync-precision", "lipsync-speed", "video-agent")),
+    ("replicate/ideogram-ai/", ("layerize",)),
+    ("replicate/intelligent-utilities/", ("html-to-image",)),
+    ("replicate/kwaivgi/", ("kling-lip-sync",)),
+    ("replicate/lightricks/", ("audio-to-video", "ltx-2-retake")),
+    ("replicate/luma/", ("reframe-video",)),
+    ("replicate/philz1337x/", ("clarity-pro-upscaler",)),
+    ("replicate/pixverse/", ("lipsync",)),
+    ("replicate/prunaai/", (
+        "p-image", "p-image-edit", "p-image-edit-lora", "p-image-lora",
+        "p-video-2-pro-avatar", "p-video-2-pro-replace")),
+    ("replicate/recraft-ai/", (
+        "recraft-creative-upscale", "recraft-crisp-upscale", "recraft-remove-background",
+        "recraft-vectorize")),
+    ("replicate/retro-diffusion/", ("rd-animation",)),
+    ("replicate/veed/", ("fabric-1.0",)),
+)
+
+
+def test_wave11_webiq_service_and_sdk_families():
+    kb2 = load_kb()
+    assert kb2.match_endpoint("api.microsoft.ai/v3/search/web") == (
+        "webiq", "api.microsoft.ai", "unknown")
+    assert kb2.category("webiq") == "service"
+    assert kb2.default_sovereignty("webiq") == "us"
+    assert kb2.default_provenance("webiq") == "unknown"
+    assert "webiq" not in kb2.provenance_defaults
+    assert kb2.match_sdk("webiq") == "webiq"
+    assert kb2.match_npm("@microsoft/webiq") == "webiq"
+    assert kb2.match_jvm("com.microsoft.webiq") == "webiq"
+    assert kb2.match_dotnet("Microsoft.WebIQ") == "webiq"
+    for src, suffix in (("import webiq\n", ".py"),
+                        ('import { WebIQ } from "@microsoft/webiq";\n', ".ts"),
+                        ("import com.microsoft.webiq.WebIQClient;\n", ".java"),
+                        ("using Microsoft.WebIQ;\n", ".cs")):
+        ds = _scan_file(src, suffix)
+        assert len(ds) == 1 and ds[0].provider_id == "webiq", suffix
+        assert (ds[0].jurisdiction, ds[0].sovereignty, ds[0].provenance) == (
+            "unknown", "us", "unknown"), suffix
+
+
+def test_wave11_all_cached_provenance_ids_match_directly():
+    kb2 = load_kb()
+    ids = [prefix + suffix for prefix, suffixes, _bloc, _org in _WAVE11_MODEL_GROUPS
+           for suffix in suffixes]
+    assert len(ids) == len(set(ids)) == 90
+    for prefix, suffixes, bloc, org in _WAVE11_MODEL_GROUPS:
+        for suffix in suffixes:
+            mid = prefix + suffix
+            assert kb2.match_model(mid) == (mid, bloc, org), mid
+
+
+def test_wave11_replicate_passthrough_equivalence_and_owner_guards():
+    kb2 = load_kb()
+    replicated = [prefix + suffix for prefix, suffixes, _bloc, _org in _WAVE11_MODEL_GROUPS
+                  for suffix in suffixes if prefix.startswith("replicate/")]
+    assert len(replicated) == 88
+    for qualified in replicated:
+        owner = qualified.removeprefix("replicate/")
+        hosted = kb2.match_model(qualified)
+        direct = kb2.match_model(owner)
+        assert hosted is not None and direct is not None, qualified
+        assert hosted[1:] == direct[1:], qualified
+    assert "replicate" not in kb2.provenance_defaults
+    for mid in ("community/recraft-v3", "replicate/community/recraft-v3",
+                "replicate/community/wan-3", "replicate/community/isaac-0.1",
+                "replicate/community/chatterbox", "replicate/community/real-esrgan"):
+        assert kb2.match_model(mid) is None, mid
+
+
+def test_wave11_additional_positive_forms_and_isaac_override():
+    kb2 = load_kb()
+    cases = (
+        ("omni-moderation-csam-2026-11-17", "us", "OpenAI"),
+        ("typesafe-ai/jev-1.14.0", "us", "TypeSafe AI"),
+        ("wan-3", "cn", "Alibaba (Wan-AI)"),
+        ("kling-v2.5-turbo-pro", "cn", "Kuaishou"),
+        ("perceptronai/isaac-0.1", "cn",
+         "Alibaba (Perceptron AI post-train; Google SigLIP2 vision)"),
+        ("perceptron/isaac-0.1", "cn",
+         "Alibaba (Perceptron AI post-train; Google SigLIP2 vision)"),
+        ("isaac-0.1", "cn", "Alibaba (Perceptron AI post-train; Google SigLIP2 vision)"),
+        ("lipsync-2-pro", "us", "Sync Labs"),
+        ("react-1", "us", "Sync Labs"),
+        ("nace-ai/drex-max-v1", "cn", "Alibaba (Nace Drex post-train)"),
+    )
+    for mid, bloc, org in cases:
+        assert kb2.match_model(mid) == (mid, bloc, org), mid
+    other = kb2.match_model("openrouter/perceptron/perceptron-mk1")
+    assert other is not None and other[1:] == ("us", "Perceptron AI")
+
+
+def test_wave11_guarded_stems_tools_and_future_versions_stay_unknown():
+    kb2 = load_kb()
+    for mid in ("omni-moderation-csam", "replicate/community/jev", "wan-9",
+                "replicate/wan-video/wan-9", "replicate/wavespeedai/wan-2.2-i2v",
+                "replicate/bria/eraser", "replicate/elevenlabs/dubbing",
+                "replicate/heygen/video-agent", "replicate/ideogram-ai/layerize",
+                "replicate/inworld/realtime-tts", "klingon-9",
+                "replicate/kwaivgi/kling-lip-sync", "replicate/lightricks/ltx-9", "ltx-2-fast",
+                "replicate/luma/photography", "photon", "replicate/community/real-esrgan",
+                "isaac-0.2", "play-dialog", "replicate/prunaai/p-image",
+                "replicate/quiverai/arrow-2", "arrow-1.1", "recraft-v4",
+                "replicate/recraft-ai/recraft-vectorize", "replicate/community/chatterbox",
+                "react-2", "lipsync-3"):
+        assert kb2.match_model(mid) is None, mid
+
+
+def test_wave11_all_cached_residue_ids_have_no_direct_match():
+    kb2 = load_kb()
+    ids = [prefix + suffix for prefix, suffixes in _WAVE11_RESIDUE_GROUPS for suffix in suffixes]
+    assert len(ids) == len(set(ids)) == 55
+    for mid in ids:
+        assert kb2.match_model(mid) is None, mid
+
+
+def test_wave11_drift_coverage_and_exact_residue_leave_nothing_actionable():
+    kb2 = load_kb()
+    kd = _drift()
+    models = [(prefix + suffix, "vercel_ai_gateway" if prefix.startswith("vercel_ai_gateway/")
+              else "openrouter" if prefix.startswith("openrouter/") else "replicate")
+              for prefix, suffixes, _bloc, _org in _WAVE11_MODEL_GROUPS for suffix in suffixes]
+    residue_upstream = [(prefix + suffix, "webiq" if prefix == "webiq/"
+                        else "nace" if prefix == "nace/" else "replicate")
+                        for prefix, suffixes in _WAVE11_RESIDUE_GROUPS for suffix in suffixes]
+    assert len(models) == 90 and len(residue_upstream) == 55
+    with open("scripts/kb_drift_aliases.json", encoding="utf-8") as fh:
+        residue = json.load(fh)["residue"]
+    uncovered = kd.model_coverage_gap(models + residue_upstream, kb2)
+    assert uncovered == sorted(mid for mid, _provider in residue_upstream)
+    actionable, classed = kd.split_residue(uncovered, residue)
+    assert actionable == [] and sum(count for _reason, count in classed) == 55
+
+    future_upstream = [(mid + "-future", provider) for mid, provider in residue_upstream]
+    future_uncovered = kd.model_coverage_gap(future_upstream, kb2)
+    assert future_uncovered == sorted(mid for mid, _provider in future_upstream)
+    future_actionable, _ = kd.split_residue(future_uncovered, residue)
+    assert future_actionable == future_uncovered
+    for mid in ("nace/drex-v1.0", "nace/drex-latest", "nace/drex-v1.5"):
+        assert kb2.match_model(mid) is None
+        assert kd.split_residue([mid], residue)[0] == []
+        assert kd.split_residue([mid + "-future"], residue)[0] == [mid + "-future"]
+
+
+def test_wave11_mcp_added_launchers_and_images_resolve():
+    cases = [
+        ({"command": "uvx", "args": ["mcp-server-sqlite"]}, "local"),
+        ({"command": "docker", "args": ["run", "-i", "--rm", "mcp/sqlite"]}, "local"),
+        *(({"command": binary}, "local") for binary in (
+            "mcp-server-filesystem", "mcp-server-memory", "mcp-server-everything",
+            "mcp-server-sequential-thinking", "mcp-server-postgres")),
+        ({"command": "npx", "args": ["-y", "@brave/brave-search-mcp-server"]}, "brave_search"),
+        ({"command": "brave-search-mcp-server"}, "brave_search"),
+        ({"command": "docker", "args": ["run", "-i", "--rm", "mcp/brave-search"]}, "brave_search"),
+        ({"command": "docker", "args": ["run", "-i", "--rm", "docker.io/mcp/brave-search"]},
+         "brave_search"),
+        ({"command": "notion-mcp-server"}, "notion"),
+        ({"command": "docker", "args": ["run", "-i", "--rm", "mcp/notion"]}, "notion"),
+        ({"command": "sentry"}, "sentry"),
+        ({"command": "sentry-mcp"}, "sentry"),
+    ]
+    for entry, pid in cases:
+        ds = _mcp_scan(_srv(entry))
+        assert len(ds) == 1 and ds[0].kind == "mcp_server", entry
+        assert ds[0].provider_id == pid, entry
+    invalid = "@modelcontextprotocol/server-sqlite"
+    assert invalid not in kb.mcp_servers
+    assert not {"mcp-server-fetch", "mcp-server-git", "mcp-server-time"} & set(kb.mcp_servers)
+    d = _mcp_scan(_srv({"command": "npx", "args": [invalid]}))[0]
+    assert (d.provider_id, d.jurisdiction) == ("custom_endpoint", "unknown")
 
 
 # --- policy-loading-fixes (audit follow-ups) --------------------------------------
@@ -4280,7 +4524,7 @@ def test_observability_existing_renderers_and_schemas_end_to_end(tmp_path, capsy
 
 
 def test_observability_kb_notes_and_drift_exemptions():
-    assert kb.updated == "2026-11-12" and kb.sovereignty_updated == "2026-11-12"
+    assert kb.updated == "2026-11-17" and kb.sovereignty_updated == "2026-11-17"
     lf = kb.by_id["langfuse"]
     assert "Postgres backups" in lf["note"] and "DPA" in lf["note"]
     assert "ClickHouse" in lf["sovereignty_override_note"]
