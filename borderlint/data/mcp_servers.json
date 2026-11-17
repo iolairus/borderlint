@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-13",
+  "updated": "2026-11-17",
   "note": "MCP server package/binary/image identifier -> provider KB id. 'local' means the server performs no third-party egress of its own (filesystem, memory, or first-party infrastructure like your own database). Unmapped identifiers surface as an explicit unknown, never a guess.",
   "servers": {
     "@modelcontextprotocol/server-filesystem": "local",
@@ -7,14 +7,28 @@
     "@modelcontextprotocol/server-everything": "local",
     "@modelcontextprotocol/server-sequential-thinking": "local",
     "@modelcontextprotocol/server-postgres": "local",
-    "@modelcontextprotocol/server-sqlite": "local",
+    "mcp-server-sqlite": "local",
+    "mcp/sqlite": "local",
+    "mcp-server-filesystem": "local",
+    "mcp-server-memory": "local",
+    "mcp-server-everything": "local",
+    "mcp-server-sequential-thinking": "local",
+    "mcp-server-postgres": "local",
     "@modelcontextprotocol/server-github": "github",
     "github-mcp-server": "github",
     "ghcr.io/github/github-mcp-server": "github",
     "@modelcontextprotocol/server-slack": "slack",
     "@modelcontextprotocol/server-gdrive": "google_drive",
     "@modelcontextprotocol/server-brave-search": "brave_search",
+    "@brave/brave-search-mcp-server": "brave_search",
+    "brave-search-mcp-server": "brave_search",
+    "mcp/brave-search": "brave_search",
+    "docker.io/mcp/brave-search": "brave_search",
     "@notionhq/notion-mcp-server": "notion",
-    "@sentry/mcp-server": "sentry"
+    "notion-mcp-server": "notion",
+    "mcp/notion": "notion",
+    "@sentry/mcp-server": "sentry",
+    "sentry": "sentry",
+    "sentry-mcp": "sentry"
   }
 }
