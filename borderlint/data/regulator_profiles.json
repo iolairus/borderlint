@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-21",
+  "updated": "2026-11-23",
   "note": "Advisory only. Hand-curated regulator profiles that pre-seed the init wizard's allow-list walk with conservative defaults derived from each regulator's published guidance as of the retrieval date. Never legal advice; never a determination of filing sufficiency; every seeded jurisdiction remains operator-editable in the walk. Never auto-updated from regulator websites.",
   "schema": {
     "profile": {
@@ -16,31 +16,31 @@
       "seats": ["hk"],
       "regulator": "Hong Kong Monetary Authority (HKMA)",
       "citation": {
-        "url": "https://brdr.hkma.gov.hk/eng/doc-ldg/docId/20191101-1-EN",
-        "retrieved": "2026-08-21"
+        "url": "https://brdr.hkma.gov.hk/eng/doc-ldg/docId/20261015-2-EN",
+        "retrieved": "2026-11-23"
       },
       "defaults": {
-        "non-pii": ["hk", "CN-GBA"],
+        "non-pii": ["hk"],
         "employee-pii": ["hk"],
         "customer-pii": ["hk"]
       },
-      "notes": "Conservative seed from the HKMA's High-level Principles on Artificial Intelligence (01 Nov 2019, current) and the GenA.I. Sandbox programme (2024-2026): A.I. use must remain governed, accountable and consistent with the institution's outsourcing and data-risk controls, so cross-border processing starts onshore only. The home seat (hk) is always seeded; CN-GBA is pre-seeded for non-pii only because the GBA Standard Contract provides a documented cross-border arrangement for non-personal operational data. Add destinations deliberately in the walk, citing your own outsourcing/PIPC assessment.",
-      "reviewed": "2026-08-21"
+      "notes": "Conservative product-policy seed informed by the HKMA's Annex A ART guidance (15 Oct 2026). This is not a regulatory localisation mandate: the guidance does not itself require onshore processing. The home seat (hk) is always seeded for every class; add destinations deliberately in the walk, citing your own outsourcing and data-risk assessment.",
+      "reviewed": "2026-11-23"
     },
     "mas": {
       "seats": ["sg"],
       "regulator": "Monetary Authority of Singapore (MAS)",
       "citation": {
         "url": "https://www.mas.gov.sg/publications/monographs-or-information-paper/2024/artificial-intelligence-model-risk-management",
-        "retrieved": "2026-08-21"
+        "retrieved": "2026-11-23"
       },
       "defaults": {
         "non-pii": ["sg"],
         "employee-pii": ["sg"],
         "customer-pii": ["sg"]
       },
-      "notes": "Conservative seed from the MAS Information Paper on Artificial Intelligence (including Generative AI) Model Risk Management (05 Dec 2024): banks should govern AI across its lifecycle with clear lines of accountability and robust third-party oversight, so customer and employee data starts onshore only. The home seat (sg) is always seeded; extend the allow-list in the walk only where your outsourcing, PDPA and model-risk assessments support it.",
-      "reviewed": "2026-08-21"
+      "notes": "Conservative product-policy seed informed by the MAS Information Paper on Artificial Intelligence (including Generative AI) Model Risk Management (05 Dec 2024), which remains the current citation. The final Guidelines on Artificial Intelligence Risk Management for Financial Institutions were issued on 07 Oct 2026, take effect on 07 Oct 2027, and Sections 5-6 are due on 07 Oct 2028; they complement rather than supersede the paper and do not impose an onshore-only rule. The home seat (sg) is always seeded; extend the allow-list in the walk only where your outsourcing, PDPA and model-risk assessments support it.",
+      "reviewed": "2026-11-23"
     }
   }
 }
