@@ -72,7 +72,7 @@ def _juris_label(j: str) -> str:
 
 
 def _regime_names(jset, regimes) -> list[str]:
-    names = {regimes[j]["regime"] for j in jset if j in regimes}
+    names = {regimes[j]["regime"] for j in jset if j in regimes and regimes[j]["regime"] is not None}
     return sorted(names)
 
 

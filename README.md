@@ -56,7 +56,7 @@ and flagged flows are tagged with the regime in play (PDPO, PIPL, APPI, PIPA, PD
 Act) and its cross-border reference. GDPR is a transfer-arrangement reference, never a regime tag.
 Western and Chinese providers are treated evenly.
 
-Browse the full knowledge base — 138 providers with curated data-practice facts for the majors,
+Browse the full knowledge base — 142 providers with curated data-practice facts for the majors,
 model developers, regimes — at [iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/).
 
 ## Use

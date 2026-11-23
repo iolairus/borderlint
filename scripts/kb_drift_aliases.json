@@ -18,6 +18,8 @@
     "fireworks_ai": "Python/TS-only vendor, no official Java/.NET SDK",
     "friendliai": "Python/JS-only vendor, no official Java/.NET SDK",
     "gigachat": "Python-only official SDK",
+    "gnani": "official docs cover Python, LiveKit, and Pipecat SDKs; no official Java/.NET SDK is documented",
+    "gradium": "official `gradium` SDK is documented; no official Java/.NET SDK is documented",
     "groq": "official SDKs: Python, JS — no Java/.NET",
     "hf_transformers_local": "local Python library — no Java/.NET SDK",
     "huggingface": "no official Java SDK; Java usage rides the OpenAI-compatible endpoint",
@@ -356,6 +358,7 @@
     "replicate/recraft-ai/recraft-remove-background": "Recraft image tool with no model field, not a separate weights family (structural; Recraft tools API docs; judged 2026-11-17)",
     "replicate/recraft-ai/recraft-vectorize": "Recraft image tool with no model field, not a separate weights family (structural; Recraft tools API docs; judged 2026-11-17)",
     "replicate/retro-diffusion/rd-animation": "Real generation model with undisclosed base checkpoint; Stable Diffusion compatibility elsewhere is not lineage evidence (undisclosed lineage; Replicate page and Retro Diffusion guide; judged 2026-11-17)",
-    "replicate/veed/fabric-1.0": "Real explicitly fine-tuned model with undisclosed base family (undisclosed lineage; official Replicate page; judged 2026-11-17)"
+    "replicate/veed/fabric-1.0": "Real explicitly fine-tuned model with undisclosed base family (undisclosed lineage; official Replicate page; judged 2026-11-17)",
+    "together_ai/prunaai/p-image-ideogram": "Pruna/Ideogram collaboration is documented, but no base checkpoint or fine-tune relationship is disclosed; prompt-schema compatibility is not lineage (undisclosed lineage; Pruna endpoint docs and Together model page; judged 2026-11-23)"
   }
 }

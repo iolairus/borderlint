@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-10",
+  "updated": "2026-11-23",
   "note": "Advisory only. Hand-curated statements about providers' publicly documented data practices (training on customer API data, retention windows, subprocessor lists, enterprise-tier deltas) as of each fact's retrieval date. Never legal advice; never auto-filled from upstream feeds; never influences verdicts. Each entry carries its own 'reviewed' date; undocumented facts are recorded as null (explicitly unknown), never guessed.",
   "schema": {
     "entry": {
@@ -14,29 +14,29 @@
   "entries": {
     "openai": {
       "training_default": "no",
-      "retention": "Abuse-monitoring logs retained up to 30 days by default; application state varies by endpoint (Responses API stores 30 days when store=true; some endpoints until deleted). Zero Data Retention or Modified Abuse Monitoring excludes customer content from abuse logs for approved customers.",
+      "retention": "Abuse-monitoring logs are generally retained for up to 30 days, with endpoint-dependent exceptions. Responses API application state is retained for at least 30 days by default and when store=true. Zero Data Retention and Modified Abuse Monitoring do not apply to CSAM-related image/file content or where OpenAI notifies the customer of Private Retention or Safety Retention requirements.",
       "subprocessors": {
-        "url": "https://openai.com/policies/sub-processor-list/",
-        "locator": "Linked from the data controls guide ('OpenAI uses sub-processors to provide its services')",
-        "retrieved": "2026-08-21"
+        "url": "https://openai.com/policies/data-processing-addendum/",
+        "locator": "Data Processing Addendum: the two current subprocessor tables",
+        "retrieved": "2026-11-23"
       },
       "enterprise_tier": "Zero Data Retention and Modified Abuse Monitoring are subject to prior approval by OpenAI and acceptance of additional requirements (contact sales); Enterprise Key Management (BYOK) is available for application state.",
-      "reviewed": "2026-08-21",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
           "url": "https://developers.openai.com/api/docs/guides/your-data",
           "locator": "'As of March 1, 2023, data sent to the OpenAI API is not used to train or improve OpenAI models (unless you explicitly opt in)'; per-endpoint table shows 'Data used for training: No'",
-          "retrieved": "2026-08-21"
+          "retrieved": "2026-11-23"
         },
         "retention": {
           "url": "https://developers.openai.com/api/docs/guides/your-data",
-          "locator": "'Abuse monitoring logs ... retained for up to 30 days' and per-endpoint 'Storage requirements and retention controls' table",
-          "retrieved": "2026-08-21"
+          "locator": "Abuse-monitoring retention is generally up to 30 days but endpoint-dependent; Responses API retains application state for at least 30 days by default/store=true; ZDR and MAM exceptions cover CSAM image/file content and notified Private Retention or Safety Retention",
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
           "url": "https://developers.openai.com/api/docs/guides/your-data",
           "locator": "'Currently, these controls are subject to prior approval by OpenAI and acceptance of additional requirements'; Enterprise Key Management (EKM) section",
-          "retrieved": "2026-08-21"
+          "retrieved": "2026-11-23"
         }
       }
     },
@@ -44,125 +44,134 @@
       "training_default": "no",
       "retention": null,
       "subprocessors": {
-        "url": "https://www.anthropic.com/legal/data-processing-addendum",
-        "locator": "Commercial Terms of Service section C routes data processing through the DPA (which governs subprocessors); no standalone public subprocessor page was reachable at review time",
-        "retrieved": "2026-08-21"
+        "url": "https://www.anthropic.com/subprocessors",
+        "locator": "DPA Schedule 4 identifies this page as Anthropic's current subprocessor list (https://www.anthropic.com/legal/data-processing-addendum)",
+        "retrieved": "2026-11-23"
       },
       "enterprise_tier": null,
-      "reviewed": "2026-08-21",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
           "url": "https://www.anthropic.com/legal/commercial-terms",
           "locator": "Section B (Customer Content): 'Anthropic may not train models on Customer Content from Services.'",
-          "retrieved": "2026-08-21"
+          "retrieved": "2026-11-23"
         }
       }
     },
     "google_gemini": {
       "training_default": "no",
-      "retention": "Paid Services: prompts and responses logged for a limited period solely for detecting/preventing Prohibited Use Policy violations; Grounding with Google Search/Maps stores prompts and outputs for 30 days. Unpaid Services: content may be used to improve Google products (do not submit confidential data).",
+      "retention": "Paid Services: prompts and responses may be logged for safety and legal compliance, and content may be cached transiently at Google facilities. Grounding with Google Search or Google Maps stores prompts and outputs for 30 days. Unpaid Services: content may be used to improve Google products and may be read, annotated, and processed by human reviewers; no numeric general retention window is published.",
       "subprocessors": {
-        "url": "https://cloud.google.com/terms/subprocessors",
-        "locator": "Google Cloud Platform Subprocessors page (last modified August 19, 2026 at review time)",
-        "retrieved": "2026-08-21"
+        "url": "https://business.safety.google/subprocessors/",
+        "locator": "Data Processing and Security Terms §11.2 and the service-scope page identify this list (https://business.safety.google/processorterms/ and https://business.safety.google/services/); absence of Gemini rows is not a zero-subprocessors claim",
+        "retrieved": "2026-11-23"
       },
-      "enterprise_tier": "The paid/unpaid split is the effective tier boundary: unpaid Gemini API quota and free-tier AI Studio use submissions to improve Google products; EEA/Switzerland/UK users get the paid (no-training) rules even on unpaid Services.",
-      "reviewed": "2026-08-21",
+      "enterprise_tier": "Paid Services do not use prompts or responses to improve Google products; Unpaid Services may do so. Users in the EEA, UK, and Switzerland receive the Paid Services data-use terms even on Unpaid Services. Google Workspace is governed by separate Workspace terms rather than this Developer API Paid/Unpaid split.",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
-          "url": "https://ai.google.dev/gemini-api/terms",
+          "url": "https://aistudio.google.com/docs/terms",
           "locator": "Paid Services - How Google Uses Your Data: 'Google doesn't use your prompts ... or responses to improve our products' (Unpaid Services section states the opposite for free usage)",
-          "retrieved": "2026-08-21"
+          "retrieved": "2026-11-23"
         },
         "retention": {
-          "url": "https://ai.google.dev/gemini-api/terms",
-          "locator": "Paid Services: 'Google logs prompts and responses for a limited period of time, solely for detecting and preventing violations of the Prohibited Use Policy'; Grounding sections: 'store prompts ... for thirty (30) days'",
-          "retrieved": "2026-08-21"
+          "url": "https://aistudio.google.com/docs/terms",
+          "locator": "Paid Services safety/legal logging and transient facility caching; Grounding with Google Search and Google Maps 30-day retention; Unpaid Services improvement use and human review, with no numeric general retention window",
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
-          "url": "https://ai.google.dev/gemini-api/terms",
-          "locator": "Unpaid Services - How Google Uses Your Data; 'If you're in the European Economic Area, Switzerland, or the United Kingdom, the terms under Paid Services apply to all Services'",
-          "retrieved": "2026-08-21"
+          "url": "https://aistudio.google.com/docs/terms",
+          "locator": "Paid/Unpaid Services data-use sections; EEA, Switzerland, and UK Paid Services treatment; Google Workspace services are governed by separate terms",
+          "retrieved": "2026-11-23"
         }
       }
     },
     "azure_openai": {
       "training_default": "no",
-      "retention": "Models are stateless: no prompts or completions are stored in the model. Stateful features (Responses API, Assistants Threads, Stored completions, Files/vector stores) persist data in the resource's Azure geography until deleted. Abuse monitoring stores prompt/completion samples only when flagged, in logically separated per-resource stores; modified abuse monitoring turns this off for approved customers.",
+      "retention": "Models are stateless: no prompts or completions are stored in the model. Stateful features (Responses API, Assistants Threads, Stored completions, Files/vector stores) persist data in the resource's Azure geography until deleted. Abuse monitoring stores flagged prompt/completion samples for human review only, in logically separated per-resource stores; modified abuse monitoring turns this off for approved customers.",
       "subprocessors": {
         "url": "https://aka.ms/DPA",
         "locator": "Microsoft Products and Services Data Protection Addendum, linked from the data-privacy article intro",
-        "retrieved": "2026-08-21"
+        "retrieved": "2026-11-23"
       },
-      "enterprise_tier": "Modified abuse monitoring requires application and approval; customers can verify logging is off via the ContentLogging=false capability attribute in the Azure portal/CLI.",
-      "reviewed": "2026-08-21",
+      "enterprise_tier": "Modified abuse monitoring requires application and approval; customers can verify logging is off via the ContentLogging=false capability attribute in the Azure portal/CLI. Approvals for models made available before 2026-11-01 continue; for models made available on or after that date, Modified Abuse Monitoring will become unavailable on a future announced date with at least 30 days' notice.",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
-          "url": "https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy",
+          "url": "https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/openai/data-privacy",
           "locator": "'prompts and completions are NOT used to train any generative AI foundation models without your permission or instruction'; 'The models are stateless: no prompts or completions are stored in the model'",
-          "retrieved": "2026-08-21"
+          "retrieved": "2026-11-23"
         },
         "retention": {
-          "url": "https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy",
-          "locator": "Sections 'Generating completions...' (stateless models), 'Data storage for Models sold by Azure features', and 'Preventing abuse' (flagged-sample storage, logical separation, modified abuse monitoring)",
-          "retrieved": "2026-08-21"
+          "url": "https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/openai/data-privacy",
+          "locator": "Sections 'Generating completions...' (stateless models), 'Data storage for Models sold by Azure features', and 'Preventing abuse' (flagged samples stored for human review only, logical separation, modified abuse monitoring)",
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
-          "url": "https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy",
-          "locator": "'How can a customer verify if data storage for abuse monitoring is off?' (ContentLogging=false); 'managed customers may apply to modify abuse monitoring'",
-          "retrieved": "2026-08-21"
+          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/abuse-monitoring",
+          "locator": "Modified Abuse Monitoring approval and ContentLogging=false verification; models made available before 2026-11-01 retain approvals, while later models lose MAM on a future date to be announced with at least 30 days' notice",
+          "retrieved": "2026-11-23"
         }
       }
     },
     "azure_foundry": {
       "training_default": "no",
-      "retention": "Models are stateless: no prompts or completions are stored in the model. Stateful features (Responses API, Assistants Threads, Stored completions, Files/vector stores) persist data in the resource's Azure geography until deleted; Global and DataZone deployment types may process prompts/responses across regions within their scope. Abuse monitoring stores prompt/completion samples only when flagged, in logically separated per-resource stores; modified abuse monitoring turns this off for approved customers.",
+      "retention": "Models are stateless: no prompts or completions are stored in the model. Stateful features (Responses API, Assistants Threads, Stored completions, Files/vector stores) persist data in the resource's Azure geography until deleted; Global and DataZone deployment types may process prompts/responses across regions within their scope. Abuse monitoring stores flagged prompt/completion samples for human review only, in logically separated per-resource stores; modified abuse monitoring turns this off for approved customers.",
       "subprocessors": {
         "url": "https://aka.ms/DPA",
         "locator": "Microsoft Products and Services Data Protection Addendum, which governs data processing by Models sold by Azure (linked from the data-privacy article intro)",
-        "retrieved": "2026-08-23"
+        "retrieved": "2026-11-23"
       },
-      "enterprise_tier": "Modified abuse monitoring requires application and approval; customers can verify logging is off via the ContentLogging=false capability attribute in the Azure portal/CLI. Catalog scope caveat: Foundry also serves partner/community model catalogs whose own terms may differ — verify per deployed model.",
-      "reviewed": "2026-08-23",
+      "enterprise_tier": "Modified abuse monitoring requires application and approval; customers can verify logging is off via the ContentLogging=false capability attribute in the Azure portal/CLI. Approvals for models made available before 2026-11-01 continue; for models made available on or after that date, Modified Abuse Monitoring will become unavailable on a future announced date with at least 30 days' notice. Catalog scope caveat: Foundry also serves partner/community model catalogs whose own terms may differ — verify per deployed model.",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
-          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/data-privacy",
+          "url": "https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/openai/data-privacy",
           "locator": "'Your prompts (inputs) and completions (outputs), your embeddings, and your training data ... are NOT used to train any generative AI foundation models without your permission or instruction'; 'The models are stateless: no prompts or completions are stored in the model'",
-          "retrieved": "2026-08-23"
+          "retrieved": "2026-11-23"
         },
         "retention": {
-          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/data-privacy",
-          "locator": "Sections 'Generating completions...' (stateless models, geography processing incl. Global/DataZone), 'Data storage for Models sold by Azure features', and 'Preventing abuse' (flagged-sample storage, logical separation, modified abuse monitoring)",
-          "retrieved": "2026-08-23"
+          "url": "https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/openai/data-privacy",
+          "locator": "Sections 'Generating completions...' (stateless models, geography processing incl. Global/DataZone), 'Data storage for Models sold by Azure features', and 'Preventing abuse' (flagged samples stored for human review only, logical separation, modified abuse monitoring)",
+          "retrieved": "2026-11-23"
         },
         "subprocessors": {
-          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/data-privacy",
+          "url": "https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/openai/data-privacy",
           "locator": "Article intro: 'Microsoft Products and Services Data Protection Addendum (https://aka.ms/DPA), which governs data processing by Models sold by Azure'",
-          "retrieved": "2026-08-23"
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
-          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/data-privacy",
-          "locator": "'How can a customer verify if data storage for abuse monitoring is off?' (ContentLogging=false); 'managed customers may apply to modify abuse monitoring'",
-          "retrieved": "2026-08-23"
+          "url": "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/abuse-monitoring",
+          "locator": "Modified Abuse Monitoring approval and ContentLogging=false verification; models made available before 2026-11-01 retain approvals, while later models lose MAM on a future date to be announced with at least 30 days' notice",
+          "retrieved": "2026-11-23"
         }
       }
     },
     "aws_bedrock": {
-      "training_default": null,
-      "retention": "Zero data retention by default (zero operator access + ZDR security model): Bedrock does not store model inputs or outputs. Exceptions retain inputs/outputs up to 30 days for automated abuse detection (e.g. classifier-flagged traffic of certain hosted OpenAI GPT-5.x models; Claude Fable 5 retains up to 30 days). Setting data_retention_mode to 'none' enforces zero retention account/project-wide.",
-      "subprocessors": null,
-      "enterprise_tier": "Some models (Claude Mythos 5, Claude Fable 5) require opting into provider_data_share, which retains and shares inference data with Anthropic for up to 30 days; full ZDR access for models requiring retention is evaluated per-account/per-model via the AWS account team.",
-      "reviewed": "2026-08-21",
+      "training_default": "no",
+      "retention": "Per-Region data_retention_mode='none' provides zero data retention: request and response data is not written to durable storage; new accounts default to 'inherit'. Responses API stores conversation state by default with store=true, while store=false limits storage to request processing. Documented exceptions include automated abuse detection for certain OpenAI models and Claude Fable 5, with inputs and outputs retained for up to 30 days in the destination Region.",
+      "subprocessors": {
+        "url": "https://aws.amazon.com/compliance/sub-processors/",
+        "locator": "AWS-wide subprocessor list; not a Bedrock-specific list",
+        "retrieved": "2026-11-23"
+      },
+      "enterprise_tier": "Models that require data retention use aws_review. Claude Fable 5 requires opt-in to sharing retained inputs and outputs with Anthropic for abuse monitoring; ZDR access for models requiring retention is evaluated per account and model through the AWS account team.",
+      "reviewed": "2026-11-23",
       "citations": {
+        "training_default": {
+          "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/data-retention.html",
+          "locator": "Data-retention overview: Amazon Bedrock does not use prompts or completions to train AWS models",
+          "retrieved": "2026-11-23"
+        },
         "retention": {
           "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/data-retention.html",
-          "locator": "Data retention modes table ('none': 'No request or response data is written to durable storage'); 'What data is retained and for how long' (30-day abuse-detection retention)",
-          "retrieved": "2026-08-21"
+          "locator": "Per-Region data retention modes ('none' ZDR and new-account 'inherit' default); Responses store=true default and store=false limitation; documented OpenAI/Fable abuse exceptions and destination-Region storage",
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
           "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/abuse-detection.html",
-          "locator": "'For Anthropic Claude Fable 5, inputs and outputs will be retained for up to 30 days ... you must opt in to sharing retained traffic with Anthropic'; ZDR access section of the data-retention page",
-          "retrieved": "2026-08-21"
+          "locator": "aws_review for models requiring retention; Claude Fable 5 retained-traffic sharing opt-in; ZDR access for models requiring retention is evaluated per account/model",
+          "retrieved": "2026-11-23"
         }
       }
     },
@@ -171,22 +180,22 @@
       "retention": "Personal data is collected, processed and stored in the People's Republic of China (controller: Hangzhou DeepSeek Artificial Intelligence Co., Ltd.). No fixed retention window is published: data is retained 'for as long as necessary to provide our Services and for the other purposes set out in this Privacy Policy', then destroyed, deleted or anonymised when no longer required. No zero-data-retention tier or enterprise no-train arrangement is documented.",
       "subprocessors": null,
       "enterprise_tier": "No self-serve API opt-out mechanism or enterprise training carve-out is documented; the privacy policy describes a right to opt out of model-training use of your personal data at policy level. The Open Platform Terms of Service defer personal-data handling back to the privacy policy rather than exempting paid API traffic.",
-      "reviewed": "2026-08-22",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
           "url": "https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html",
           "locator": "Privacy Policy (updated 2026-02-10), purposes section: personal data processed 'to improve and develop the Services and to train and improve our technology, such as our machine learning models and algorithms', with a described right to opt out of such use; no API-specific carve-out",
-          "retrieved": "2026-08-22"
+          "retrieved": "2026-11-23"
         },
         "retention": {
           "url": "https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html",
           "locator": "'To provide you with our services, we directly collect, process and store your Personal Data in People's Republic of China'; retention 'for as long as necessary to provide our Services', destroyed/deleted/anonymised when no longer required",
-          "retrieved": "2026-08-22"
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
           "url": "https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html",
           "locator": "Open Platform Terms of Service (effective 2026-04-29): personal-data handling defers to the Privacy Policy; no separate exemption for developer API inputs",
-          "retrieved": "2026-08-22"
+          "retrieved": "2026-11-23"
         }
       }
     },
@@ -194,151 +203,165 @@
       "training_default": "opt-out",
       "retention": "Input/output content is retained while your account is active (privacy policy: 'account, input, and payment information are retained while your account is active'); violation-related information until resolved. Servers located in Singapore; cross-border transfers use appropriate safeguards.",
       "subprocessors": null,
-      "enterprise_tier": "Restrictions on training use of Customer Content are available via enterprise arrangements or separate written agreements with Moonshot AI (ToS section 4); without such an agreement, Customer Content may be used to provide, maintain, develop, support, and improve the Services.",
-      "reviewed": "2026-08-21",
+      "enterprise_tier": "Enterprise arrangements provide a no-training default. Sales-approved Zero Data Retention deletes prompts and responses when the response is returned, subject to legal requirements; safety review may continue. ZDR excludes Batch API, uploaded images and videos, operational data, and third-party models, connectors, and plugins.",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
           "url": "https://platform.kimi.ai/docs/agreement/modeluse.md",
           "locator": "Terms of Service section 4 (Content): 'We may use Content to provide, maintain, develop, support, and improve the Services ... Customer who requires restrictions on the use of Customer Content for training or improving Moonshot AI models may contact Moonshot AI to discuss available enterprise arrangements'",
-          "retrieved": "2026-08-21"
+          "retrieved": "2026-11-23"
         },
         "retention": {
           "url": "https://platform.kimi.ai/docs/agreement/userprivacy.md",
-          "locator": "Privacy Policy section 6 (Retention): 'account, input, and payment information are retained while your account is active'; section 10: 'We store the information we collect in secure servers located in Singapore'",
-          "retrieved": "2026-08-21"
+          "locator": "Privacy Policy User Content definition and section 6 (Retention): 'account, input, and payment information are retained while your account is active'; section 10: 'We store the information we collect in secure servers located in Singapore'",
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
-          "url": "https://platform.kimi.ai/docs/agreement/modeluse.md",
-          "locator": "Terms of Service section 4: enterprise arrangements or separate written agreements restrict training use of Customer Content",
-          "retrieved": "2026-08-21"
+          "url": "https://platform.kimi.ai/docs/guide/zero-data-retention.md",
+          "locator": "Enterprise no-training default and sales-approved ZDR: prompts/responses deleted on response subject to law, safety review continues; Batch, uploaded images/videos, operational data, and third-party models/connectors/plugins are excluded",
+          "retrieved": "2026-11-23"
         }
       }
     },
     "alibaba_dashscope": {
       "training_default": "no",
-      "retention": "Member Content (inputs and outputs) is processed on the customer's behalf; Alibaba Cloud deletes data per customer instructions on deletion/termination, subject to backup/disaster-recovery retention windows and legal-hold requirements (Product Terms 4.48.1(g)(iv)). Processing/storage location follows where Alibaba Cloud maintains Model Studio facilities and may differ from the customer's location.",
+      "retention": "No fixed retention window is published. Stored Member Content may be removed or become inaccessible without a deletion instruction, and the customer is responsible for backing it up. Processing occurs where Alibaba Cloud, its affiliates, or subcontractors maintain Model Studio facilities.",
       "subprocessors": null,
       "enterprise_tier": "Training-use restrictions are the default posture: Alibaba Cloud will not use Member Content to develop or improve Model Studio models unless the customer separately provides consent. Third-party models listed in Model Studio carry their own third-party terms that the customer must review separately.",
-      "reviewed": "2026-08-21",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
           "url": "https://www.alibabacloud.com/help/en/legal/latest/alibaba-cloud-international-website-product-terms-of-service",
           "locator": "Section 4.48.1(e) (Model Studio): 'Alibaba Cloud will not use your Member Content to develop or improve the models on Model Studio, unless you separately provide your consent.'",
-          "retrieved": "2026-08-21"
+          "retrieved": "2026-11-23"
         },
         "retention": {
           "url": "https://www.alibabacloud.com/help/en/legal/latest/alibaba-cloud-international-website-product-terms-of-service",
-          "locator": "Section 4.48.1(g)(iv) (deletion on instruction subject to backup/legal retention) and 4.48.1(g)(viii) (processing location where facilities are maintained)",
-          "retrieved": "2026-08-21"
+          "locator": "Product Terms §§4.48.1(b), 4.48.1(g)(iv), and 4.48.1(g)(viii): customer backup responsibility, stored Member Content may be removed or inaccessible without deletion instruction, and processing where Alibaba Cloud/affiliates/subcontractors maintain Model Studio facilities",
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
           "url": "https://www.alibabacloud.com/help/en/legal/latest/alibaba-cloud-international-website-product-terms-of-service",
           "locator": "Section 4.48.1(e) (no model development/improvement on Member Content without separate consent) and 4.48.2 (third-party model services under separate third-party terms)",
-          "retrieved": "2026-08-21"
+          "retrieved": "2026-11-23"
         }
       }
     },
     "tencent_hunyuan": {
-      "training_default": null,
-      "retention": "TokenHub Privacy Policy Module: Configuration Data and Diagnostic and Usage Data (explicitly including 'output information') are 'generally retain[ed] ... for up to 30 days after your task request' for feature provision and troubleshooting, and may be retained longer (for example as long as you use the Features) for billing. Whether raw input prompts fall inside this scope is not explicit in the document.",
+      "training_default": "no",
+      "retention": "With Zero Data Retention activated in Singapore, Frankfurt, or Silicon Valley, Customer Content and Service Generated Content are not stored. Otherwise those content categories are generally retained for up to 30 days after the task request. Configuration Data and Diagnostic and Usage Data are generally retained for 30 days and may be kept longer for billing.",
       "subprocessors": null,
       "enterprise_tier": null,
-      "reviewed": "2026-08-22",
-      "note": "Scope caveat: the cited retention window governs Tencent-as-controller configuration/diagnostic data; no explicit statement about training on customer inference inputs was found in the TokenHub Privacy Policy Module or Terms of Service at review time.",
+      "reviewed": "2026-11-23",
       "citations": {
+        "training_default": {
+          "url": "https://www.tencentcloud.com/document/product/1300/78950",
+          "locator": "TokenHub terms: Customer Content and Service Generated Content are not used for model training",
+          "retrieved": "2026-11-23"
+        },
         "retention": {
-          "url": "https://www.tencentcloud.com/document/product/1300/78952",
-          "locator": "PRIVACY POLICY MODULE section 6 (DATA RETENTION), last updated 2026-08-13: 'we generally retain information for up to 30 days after your task request ... but may process or retain such data for a longer period (for example as long as you use the Features) for billing purposes'; section 3 includes 'output information' in Diagnostic and Usage Data",
-          "retrieved": "2026-08-22"
+          "url": "https://www.tencentcloud.com/document/product/1300/78953",
+          "locator": "TokenHub retention terms: ZDR in Singapore, Frankfurt, and Silicon Valley; otherwise Customer Content and Service Generated Content generally up to 30 days after the task request; configuration/diagnostic data generally 30 days, with longer billing retention",
+          "retrieved": "2026-11-23"
         }
       }
     },
     "zhipu": {
       "training_default": "no",
-      "retention": "Personal information is stored within China only ('目前我们不会跨境传输或存储您的个人信息' — no cross-border transfer or storage at present), retained for the minimum period necessary for the stated purposes. On deletion, service expiry or termination a buffer period applies (per product docs), after which all data including cached and backup copies is deleted; deletion is irreversible.",
+      "retention": "Domestic BigModel: personal information is stored in China for the minimum necessary period, subject to statutory retention, backup deletion cycles, and product-specific buffer periods. Z.ai: API content is processed in real time without server storage; other Customer Data is generally processed and stored in Singapore until termination, subject to legal retention requirements.",
       "subprocessors": {
         "url": "https://docs.bigmodel.cn/cn/terms/privacy-policy.md",
-        "locator": "Section 三(一) shared third-party SDK/API table: Alipay face-verification and web payment APIs, WeChat Native Pay (Tenpay), Sensors Analytics (behaviour analytics), NetEase Qiyu (customer support), Aliyun SMS/mail push, Baidu Cloud SMS — each with the personal-info fields collected and purpose; covers the platform's account/payment/analytics surface",
-        "retrieved": "2026-08-22"
+        "locator": "Domestic BigModel only, section 三(一) shared third-party SDK/API table: Alipay face-verification and web payment APIs, WeChat Native Pay (Tenpay), Sensors Analytics (behaviour analytics), NetEase Qiyu (customer support), Aliyun SMS/mail push, Baidu Cloud SMS — seven subprocessors covering account/payment/analytics surfaces. No international Z.ai subprocessor list is established publicly.",
+        "retrieved": "2026-11-23"
       },
       "enterprise_tier": null,
-      "reviewed": "2026-08-22",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
           "url": "https://docs.bigmodel.cn/cn/terms/user-agreement.md",
-          "locator": "User Agreement (effective 2025-05-20) section 三.9(1): uploaded data belongs to the user and '除执行您的服务要求外，不会进行任何未获授权的使用及披露' (no unauthorised use or disclosure beyond executing your service requests). Carve-out disclosed: Privacy Policy sections 二.7(4)/四.10 reserve anonymised derivatives for '机器学习或模型算法训练' (machine learning / model algorithm training) without further consent — identifiable content is not used; anonymised data may be.",
-          "retrieved": "2026-08-22"
+          "locator": "Domestic User Agreement (effective 2026-09-04) §三.9 and Privacy Policy §§二.7(4)/四.10: identifiable customer API content retains a no-training default; anonymised data may be used for machine-learning/model training, generated data may be used for optimisation, and a broad licence applies to non-personal content",
+          "retrieved": "2026-11-23"
         },
         "retention": {
-          "url": "https://docs.bigmodel.cn/cn/terms/privacy-policy.md",
-          "locator": "Section 五(一) storage location (China only, no cross-border transfer at present); section 五(二) retention for the minimum necessary period; User Agreement section 三.9(3): buffer-period storage after deletion/expiry, then all copies including caches and backups deleted",
-          "retrieved": "2026-08-22"
+          "url": "https://docs.z.ai/legal-agreement/privacy-policy",
+          "locator": "Z.ai Privacy Policy: API content is processed in real time without server storage and other Customer Data is generally processed/stored in Singapore until termination subject to law; BigModel Privacy Policy §§五(一)-(二) and User Agreement §三.9(3): China storage, minimum-necessary/statutory retention, backup and product buffer limits",
+          "retrieved": "2026-11-23"
         }
       }
     },
     "github_copilot": {
       "training_default": "no",
-      "retention": "Varies by Copilot product/feature: the editor experience transmits prompts only to generate suggestions in real time and deletes them once suggestions are generated (not stored at rest without permission); retention exceptions include CLI/tool prompts, customised private language models, and alternative data-handling configurations. Per-product documentation governs each feature's exact window.",
+      "retention": "Retention is feature-specific: Actions-based cloud chat on GitHub.com retains chat threads for 28 days; cloud-sandbox chat retains data for the lifetime of the account.",
       "subprocessors": null,
-      "enterprise_tier": "Tier/terms split: volume-licensing customers are governed by the GitHub Generative AI Services Terms (section 3: 'GitHub will not use Inputs or Outputs to train generative AI models, unless you have given us documented instructions to do so'); Copilot Business/Enterprise purchased directly from GitHub prior to 2026-03-05 remain under the deprecated Product-Specific Terms; individual users fall under the GitHub Terms of Service AI-features section.",
-      "reviewed": "2026-08-23",
+      "enterprise_tier": "The no-training default applies to volume-licensed commercial users under the GitHub Generative AI Services Terms. Individual Copilot Free, Pro, Pro+, and Max users may have their data used for training unless they opt out.",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
-          "url": "https://github.com/customer-terms/github-generative-ai-services-terms?locale=en-US",
-          "locator": "GitHub Generative AI Services Terms (Version March 2026) section 3 (Use of Data for Model Training): 'GitHub will not use Inputs or Outputs to train generative AI models, unless you have given us documented instructions to do so'",
-          "retrieved": "2026-08-23"
+          "url": "https://github.com/customer-terms/github-generative-ai-services-terms",
+          "locator": "GitHub Generative AI Services Terms §3 (Use of Data for Model Training), scoped to volume-licensed commercial users: 'GitHub will not use Inputs or Outputs to train generative AI models, unless you have given us documented instructions to do so'",
+          "retrieved": "2026-11-23"
         },
         "retention": {
-          "url": "https://github.com/customer-terms/github-copilot-product-specific-terms?locale=en-US",
-          "locator": "Deprecated Copilot Product Specific Terms section 6.A ('Prompts are transmitted only to generate Suggestions in real-time, are deleted once Suggestions are generated, and are not used for any other purpose') and 6.B (retention exceptions); superseded terms retained as the clearest per-feature retention statement — current governing document is the Generative AI Services Terms, whose section 6 defers retention details to product documentation",
-          "retrieved": "2026-08-23"
+          "url": "https://docs.github.com/en/copilot/concepts/copilot-surfaces/copilot-on-github",
+          "locator": "Copilot on GitHub.com feature documentation: Actions-based cloud chat retains threads for 28 days; cloud-sandbox chat retains data for the account lifetime",
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
-          "url": "https://github.com/customer-terms/github-generative-ai-services-terms?locale=en-US",
-          "locator": "Section 1 applicability (volume licensing vs personal customers vs Microsoft purchases); deprecation note on the Product-Specific Terms effective 5 March 2026",
-          "retrieved": "2026-08-23"
+          "url": "https://docs.github.com/en/copilot/how-tos/manage-your-account/manage-policies",
+          "locator": "Individual Copilot Free/Pro/Pro+/Max policy for opting out of data collection for model training; volume-licensed commercial no-training default is stated in Generative AI Services Terms §3",
+          "retrieved": "2026-11-23"
         }
       }
     },
     "meta_llama": {
       "training_default": "no",
-      "retention": "Content and Usage Data retained as needed to provide the Services, for legal compliance, in connection with Meta's rights under the terms, when systems flag data for a potential policy violation, and for security/safety/abuse/policy review. No fixed retention window is published.",
+      "retention": "Content and Usage Data may be retained as needed to provide and improve the Services, for legal compliance, in connection with Meta's rights under the terms, and for security, safety, abuse, and policy review, including when systems flag a potential violation. No fixed retention window is published.",
       "subprocessors": {
-        "url": "https://forwork.meta.com/legal/mfw-subprocessor-list/",
-        "locator": "Meta's published subprocessor list, referenced from Model API Terms of Service section 5.1 (Standard Services processor terms); may be updated by Meta from time to time",
-        "retrieved": "2026-08-23"
+        "url": "https://www.meta.com/legal/meta-for-work/subprocessor-list/",
+        "locator": "Meta for Work subprocessor list incorporated by Model API Terms §5.1 for Standard Services; may be updated by Meta",
+        "retrieved": "2026-11-23"
       },
-      "enterprise_tier": "Tier split: Standard Services — 'Meta will not use Content from Standard Services to train Meta Models' (section 5.1). Discounted Services (discounted model tier) — content MAY be used to train, develop and improve Meta AI models by default, disassociated from your account/key before training use (section 6.1); traffic requiring no-training must use Standard Services.",
-      "reviewed": "2026-08-23",
+      "enterprise_tier": "Standard Services: Meta will not use Content to train Meta Models (§5.1). Contributor Services: Meta may use Content to train, develop, evaluate, and improve Meta models, products, and services, and Contributor requests lack the per-request exclusion available for Standard Services. Coding Harness defaults to Contributor Services; selecting Standard Services applies only prospectively. Authorised Hosted Platforms have a separate relationship and terms.",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
-          "url": "https://ai.developer.meta.com/legal/terms-of-service",
-          "locator": "Model API Terms of Service section 5.1: 'Meta will not use Content from Standard Services to train Meta Models' (updated 2026-08-21)",
-          "retrieved": "2026-08-23"
+          "url": "https://dev.meta.ai/legal/terms-of-service",
+          "locator": "Model API Terms §5.1: 'Meta will not use Content from Standard Services to train Meta Models'",
+          "retrieved": "2026-11-23"
         },
         "retention": {
-          "url": "https://ai.developer.meta.com/legal/terms-of-service",
-          "locator": "Section 4.4 (Retention): five enumerated retention bases; no fixed window published",
-          "retrieved": "2026-08-23"
+          "url": "https://dev.meta.ai/legal/terms-of-service",
+          "locator": "Retention terms cover providing and improving the Services, legal compliance, Meta's rights, and security/safety/abuse/policy review; no fixed window published",
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
-          "url": "https://ai.developer.meta.com/legal/terms-of-service",
-          "locator": "Section 6.1 (Discounted Services): 'You agree that Meta may use your Content to train, develop, evaluate, and improve Meta's artificial intelligence models, products, and services', disassociation steps before training use; section 6.2 directs confidential traffic to Standard Services",
-          "retrieved": "2026-08-23"
+          "url": "https://dev.meta.ai/legal/terms-of-service",
+          "locator": "Standard Services §5.1; Contributor Services training permission and absence of per-request exclusion; Coding Harness Contributor default and prospective Standard selection; separate Authorised Hosted Platform relationship",
+          "retrieved": "2026-11-23"
         }
       }
     },
     "nvidia_nim": {
-      "training_default": null,
-      "retention": "NVIDIA's general privacy policy: customer and enterprise personal data erased after more than five years without engagement; transfers to the US under Standard Contractual Clauses with EU-U.S./Swiss-U.S./UK Data Privacy Framework certification. NIM-API-specific inference-data terms were not retrievable at review time.",
+      "training_default": "yes",
+      "retention": "Hosted trial API content is normally not stored after the session. Without a Subscription, fine-tuning User Content is retained for 30 days and Generated Content for 90 days; security and abuse logs have no fixed published retention window.",
       "subprocessors": null,
-      "enterprise_tier": null,
-      "reviewed": "2026-08-21",
+      "enterprise_tier": "These facts apply to hosted trial APIs under the API Trial Terms. Production Subscription terms are separate; self-hosted NIM deployments are outside this entry's scope.",
+      "reviewed": "2026-11-23",
       "citations": {
+        "training_default": {
+          "url": "https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf",
+          "locator": "Hosted API Trial Terms: NVIDIA may use User Content and Generated Content to develop, improve, and train models and services",
+          "retrieved": "2026-11-23"
+        },
         "retention": {
-          "url": "https://www.nvidia.com/en-us/about-nvidia/privacy-policy/",
-          "locator": "Data Retention section: 'We erase customer and enterprise personal data if there has been no engagement with you for more than five years'; Cross-Border Data Transfer section (SCCs, Data Privacy Framework)",
-          "retrieved": "2026-08-21"
+          "url": "https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf",
+          "locator": "Hosted trial API normally does not store content after the session; without a Subscription, fine-tuning User Content is retained 30 days and Generated Content 90 days; no fixed window for security/abuse logs",
+          "retrieved": "2026-11-23"
+        },
+        "enterprise_tier": {
+          "url": "https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf",
+          "locator": "Scope is the hosted trial API; production Subscriptions have separate terms and self-hosted NIM is outside this hosted-trial scope",
+          "retrieved": "2026-11-23"
         }
       }
     },
@@ -346,42 +369,42 @@
       "training_default": "no",
       "retention": "Personal information retained only as long as necessary for the stated purposes or as required by law; deleted or anonymised once the purpose is fulfilled, on erasure request, or on service termination (subject to legal-hold isolation).",
       "subprocessors": null,
-      "enterprise_tier": "Token Plan subscribers use a dedicated CN base URL (token-plan-cn.xiaomimimo.com) with tp- keys instead of the pay-as-you-go global endpoint; data-storage region selection is available on request, subject to compliance review and additional fees (service agreement 1.1).",
-      "reviewed": "2026-08-21",
+      "enterprise_tier": "International services outside mainland China store data in Europe and Singapore. Customers may request data-storage or processing restrictions, subject to applicable law, compliance review, and additional fees. Individual Token Plan keys use tp-; Team Token Plan keys use ttp-. Team plans add member administration, usage statistics, and billing management.",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
-          "url": "https://mimo.mi.com/docs/terms/privacy-policy",
-          "locator": "Section 3.1 (Collection of personal information from you): 'Xiaomi will not use the content you provide for model training or any other purposes.'",
-          "retrieved": "2026-08-21"
+          "url": "https://privacy.mi.com/XiaomiMiMoPlatformos/en_GB/",
+          "locator": "International privacy policy §3.1 (Collection of personal information from you): 'Xiaomi will not use the content you provide for model training or any other purposes.'",
+          "retrieved": "2026-11-23"
         },
         "retention": {
-          "url": "https://mimo.mi.com/docs/terms/privacy-policy",
-          "locator": "Section 6 (How long will your personal information be stored?): retained for the purposes described, deleted or anonymised after fulfilment/erasure/termination except where law requires isolation",
-          "retrieved": "2026-08-21"
+          "url": "https://privacy.mi.com/XiaomiMiMoPlatformos/en_GB/",
+          "locator": "International privacy policy §6 (How long will your personal information be stored?): retained for the purposes described, deleted or anonymised after fulfilment/erasure/termination except where law requires isolation",
+          "retrieved": "2026-11-23"
         },
         "enterprise_tier": {
           "url": "https://mimo.mi.com/docs/terms/user-agreement",
-          "locator": "Section 1.1 (data storage regions selectable on request, subject to compliance and additional fees) and section 4.4 (services outside the Chinese Mainland store data on servers in Europe and Singapore); Token Plan host per the First API Call quickstart",
-          "retrieved": "2026-08-21"
+          "locator": "User Agreement §§1.1 and 4.4 (requestable restrictions subject to law/compliance/fees; Europe/Singapore storage); Token Plan quick-access and Team documentation (Individual tp- versus Team ttp- keys; Team administration, statistics, and billing)",
+          "retrieved": "2026-11-23"
         }
       }
     },
     "vertex_ai": {
       "training_default": "no",
-      "retention": "Per-feature retention conditions on the generative-AI platform: prompt logging for abuse monitoring applies unless an exemption is requested; Grounding with Search keeps derived queries up to 3 days and Grounding with Maps stores prompts/outputs 30 days (neither can be disabled); request-response logging and Live-API session resumption are opt-in (24h TTL); published Gemini models cache customer data in-memory for 24 hours, project-isolated, not at rest. Zero data retention is achievable by configuration.",
+      "retention": "Retention is model-, feature-, and contract-dependent. Conditional abuse logging may apply; Grounding with Google Search retains derived queries for 3 days and Maps prompts/outputs for 30 days. Opt-in BigQuery request/response logging has no automatic TTL. Interactions API stores state by default. In-memory and durable caches retain data for up to 24 hours; Live API session resumption retains data for 24 hours; CodeMender and Deep Research retain data for 7 days; Sandbox retention follows its TTL. OpenAI flagship partner-model abuse logs are retained for up to 30 days in Google's US multi-region, with approval-gated project ZDR. ZDR is not universal and depends on model, feature, and contract.",
       "subprocessors": null,
       "enterprise_tier": null,
-      "reviewed": "2026-08-23",
+      "reviewed": "2026-11-23",
       "citations": {
         "training_default": {
           "url": "https://cloud.google.com/terms/service-terms",
-          "locator": "Service Specific Terms 'Training Restriction': 'Google won't use your data to train or fine-tune any AI/ML models without your prior permission or instruction' — applies to all managed models on the generative-AI platform, GA and pre-GA",
-          "retrieved": "2026-08-23"
+          "locator": "Service Specific Terms §18 'Training Restriction': 'Google won't use your data to train or fine-tune any AI/ML models without your prior permission or instruction' — applies to all managed models on the generative-AI platform, GA and pre-GA",
+          "retrieved": "2026-11-23"
         },
         "retention": {
-          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/resources/zero-data-retention",
-          "locator": "Zero-data-retention page (last updated 2026-08-21): abuse-monitoring prompt logging with exception path; Grounding with Search (3-day derived queries) and Maps (30-day prompts/outputs) storage cannot be disabled; opt-in request-response logging and Live-API session resumption (24h); in-memory caching of inputs/outputs/derived data, project-level isolation, 24h TTL, 'does not violate zero data retention', disableable at project level",
-          "retrieved": "2026-08-23"
+          "url": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/resources/zero-data-retention?hl=en",
+          "locator": "Conditional abuse logging; Search 3-day/Maps 30-day grounding; opt-in BigQuery logging without TTL; Interactions default storage; in-memory/durable caches ≤24h; Live 24h; CodeMender/Deep Research 7 days; Sandbox TTL; Advanced AI Safety Addendum covers OpenAI flagship partner logs ≤30 days in Google's US multi-region and approval-gated project ZDR",
+          "retrieved": "2026-11-23"
         }
       }
     },

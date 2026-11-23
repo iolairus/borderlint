@@ -69,25 +69,33 @@ carrying its source citation; undocumented facts (subprocessors) SHALL be record
 
 ### Requirement: Curated facts for the top CN token-volume providers
 The bundled data-practice knowledge base SHALL carry cited entries for `deepseek`,
-`tencent_hunyuan`, and `zhipu` replacing their previously all-null entries: DeepSeek with
-training default `opt-out` (policy-level right, no documented API carve-out), PRC residency,
-and purpose-bound retention with no fixed window; Tencent Hunyuan with a 30-day
-diagnostic/usage retention scope quoted verbatim (including output information) and training
-default null where documents are silent; Zhipu with training default `no` for identifiable
-content plus its anonymisation training carve-out quoted in the locator, China-only storage,
-and its named third-party SDK table as subprocessors.
+`tencent_hunyuan`, and `zhipu`. DeepSeek SHALL retain training default `opt-out` (policy-level
+right, no documented API carve-out), PRC residency, and purpose-bound retention with no fixed
+window. Tencent TokenHub SHALL state training default `no`; with ZDR activated in Singapore,
+Frankfurt, or Silicon Valley it does not store Customer Content or Service Generated Content, and
+otherwise generally retains those categories up to 30 days after the task request, with separate
+configuration/diagnostic/billing limits. Zhipu SHALL distinguish domestic BigModel from
+international Z.ai: identifiable domestic customer API content retains training default `no` with
+anonymisation, generated-data optimisation, and non-personal-content exceptions quoted in locators;
+domestic retention remains China-based/minimum-necessary with statutory and backup limits, while
+Z.ai generally processes other Customer Data in Singapore and processes API content in real time
+without server storage. Domestic subprocessors SHALL be scoped to their account/payment/analytics
+surfaces and SHALL NOT be presented as an international Z.ai list.
 
-#### Scenario: DeepSeek entry carries the policy-level opt-out posture
+#### Scenario: DeepSeek entry retains the policy-level opt-out posture
 - **WHEN** the evidence pack or KB website renders data practices for `deepseek`
-- **THEN** the training default reads opt-out with a citation noting no self-serve API opt-out is documented, and the retention fact cites PRC processing and storage
+- **THEN** the training default reads opt-out with a citation noting no self-serve API opt-out is
+  documented, and the retention fact cites PRC processing and storage
 
-#### Scenario: Tencent Hunyuan retention quotes its actual scope
+#### Scenario: TokenHub states training and ZDR scope
 - **WHEN** data practices render for `tencent_hunyuan`
-- **THEN** the retention fact cites the 30-day diagnostic/usage window verbatim including output information, and training_default is null
+- **THEN** training default is `no`, and retention identifies both the three-region ZDR behavior
+  and the otherwise-general 30-day content window
 
-#### Scenario: Zhipu entry discloses the anonymisation carve-out
+#### Scenario: Zhipu separates domestic and international processing
 - **WHEN** data practices render for `zhipu`
-- **THEN** the training default reads no with the anonymisation-training carve-out quoted in its locator, and the subprocessors link cites the platform's third-party SDK table
+- **THEN** domestic BigModel's training exceptions and China retention are not applied to Z.ai,
+  whose real-time API content and Singapore Customer Data posture are stated separately
 
 ### Requirement: Cited entries without stale unavailability notes
 Every curated data-practice entry SHALL cite each non-null fact with a source URL, locator,
@@ -100,32 +108,39 @@ implying future availability.
 - **THEN** every non-null fact has a complete citation, no note claims sources were unreachable, and remaining nulls carry no misleading explanation
 
 ### Requirement: Curated facts for FAANG first-party AI platforms
-The bundled data-practice knowledge base SHALL carry cited entries for `meta_llama`,
-`vertex_ai`, `azure_foundry`, and `github_copilot`: each stating the training default for
-customer API/platform traffic, the retention posture, and the enterprise/tier distinction where
-the platform's terms make one, every non-null fact citing its platform-specific document — Meta
-Model API terms, Google Cloud Service Specific Terms "Training restriction" and its generative-AI
-zero-data-retention documentation, Microsoft Foundry data-privacy documentation, and GitHub
-Generative AI Services Terms respectively. Where a platform's training commitment is tier- or
-service-dependent (e.g. Meta's Standard vs Discounted services), the entry SHALL state the
-primary default and disclose the split in the tier fact's locator. Facts the cited documents do
-not state SHALL remain null with a scope caveat where the omission could mislead.
+The bundled data-practice knowledge base SHALL carry cited entries for `meta_llama`, `vertex_ai`,
+`azure_foundry`, and `github_copilot`, each stating the scoped training default, retention posture,
+and enterprise/tier distinction. Meta Standard Services SHALL retain training `no`; Contributor
+Services (replacing Discounted Services) and Coding Harness defaults SHALL be disclosed, and
+authorised Hosted Platforms SHALL remain separate. Vertex SHALL retain training `no` while its
+retention fact enumerates the feature/model/contract-dependent behavior in design D4 rather than
+implying universal ZDR. Azure Foundry SHALL retain training `no`, use live canonical privacy URLs,
+and qualify Modified Abuse Monitoring by the 2026-11-01 model-availability cutoff and future
+withdrawal notice. GitHub SHALL retain the volume-licensed commercial training `no`, disclose
+individual-plan opt-out behavior, and cite feature-specific retention. Every non-null fact SHALL
+cite its current platform-specific document; undocumented facts SHALL remain null.
 
-#### Scenario: Meta Llama entry discloses its service-tier split
+#### Scenario: Meta Llama entry discloses its current service-tier split
 - **WHEN** data practices render for `meta_llama`
-- **THEN** the training default reflects the Standard Services commitment (content not used to train Meta Models) and the tier fact discloses that Discounted Services may train on content by default
+- **THEN** the training default reflects Standard Services, and the tier fact identifies
+  Contributor Services, Coding Harness defaults, and the separate Hosted Platform relationship
 
-#### Scenario: Vertex entry cites the training restriction and retention paths
+#### Scenario: Vertex entry cites training restriction and scoped retention paths
 - **WHEN** data practices render for `vertex_ai`
-- **THEN** the training default cites Google Cloud's training restriction (no training without prior permission), and retention notes the abuse-monitoring logging exemption path and per-feature retention conditions
+- **THEN** the training default cites the no-training restriction, and retention covers the
+  grounding, caching, Interactions, partner-model, and feature-specific windows without presenting
+  ZDR as universally available
 
-#### Scenario: Azure Foundry mirrors its sibling posture
+#### Scenario: Azure Foundry states current MAM limits
 - **WHEN** data practices render for `azure_foundry`
-- **THEN** the entry states customer data is not used to train foundation models, citing Microsoft Foundry's data-privacy documentation
+- **THEN** it states customer data is not used to train foundation models and explains that MAM
+  continues for pre-cutoff approvals but will become unavailable for later models on a future
+  announced date with at least 30 days' notice
 
-#### Scenario: GitHub Copilot cites the current generative-AI terms
+#### Scenario: GitHub Copilot distinguishes commercial and individual plans
 - **WHEN** data practices render for `github_copilot`
-- **THEN** the training default cites the GitHub Generative AI Services Terms (Inputs/Outputs not used to train without documented instruction), and retention notes that per-product retention varies by documented feature
+- **THEN** the primary training default is scoped to commercial customers, individual opt-out
+  behavior is visible, and retention cites current product/feature documentation
 
 ### Requirement: Complete citations without stale notes
 Each of the four new entries SHALL cite every non-null fact with a source URL, locator, and
@@ -201,4 +216,32 @@ names the list URL as canonical, and SHALL NOT claim the source was unreachable.
 - **THEN** every non-null fact has a complete citation keyed to a provider-authored document,
   no entry claims unavailability, and each entry key exists in the bundled provider
   knowledge base
+
+### Requirement: Wave-12 data-practice entries reflect current scoped facts
+
+The nine stale entries not covered by the CN or FAANG requirements below SHALL be refreshed using
+the provider-authored sources and exact scope limits in design D4: Alibaba DashScope retains
+training `no` but removes its unsupported deletion promise; Anthropic gains its DPA-identified
+subprocessor URL; Azure OpenAI records the Modified Abuse Monitoring cutoff; Google Gemini retains
+Paid Service training `no` while correcting unpaid/paid retention and subprocessors; Moonshot adds
+enterprise ZDR and exclusions without changing its general `opt-out`; NVIDIA NIM records hosted
+trial API training `yes`, session/fine-tuning retention, and the production/self-hosted boundary;
+OpenAI corrects endpoint-specific retention and its subprocessor locator; and Xiaomi MiMo retains
+international training `no` while adding Team and regional-service facts. DeepSeek is addressed by
+the CN requirement and is the only date-only review in this wave.
+
+#### Scenario: Null training values change only with direct evidence
+- **WHEN** the refreshed AWS Bedrock and NVIDIA NIM entries are loaded
+- **THEN** their training defaults are respectively `no` and hosted-trial `yes`, each citing the
+  scoped current source rather than an inferred practice
+
+#### Scenario: Enterprise exceptions do not overwrite general defaults
+- **WHEN** Moonshot facts are rendered
+- **THEN** the entry still reports general `opt-out` alongside enterprise no-training/ZDR terms
+
+#### Scenario: Undocumented facts remain explicit nulls
+- **WHEN** a refreshed source does not publish a suitable fact or provider-specific subprocessor
+  list
+- **THEN** the corresponding field remains null and does not claim that the practice or
+  subprocessors do not exist
 

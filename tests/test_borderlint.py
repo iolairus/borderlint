@@ -5,6 +5,8 @@ import json
 import os
 import tempfile
 
+import pytest
+
 from borderlint.detect import Detection, _scan_config_endpoints, _scan_js, _scan_py, _scan_text, _resolve_sovereignty
 from borderlint.init import _InitArgs, run_init
 from borderlint.kb import load_kb
@@ -2595,7 +2597,11 @@ def test_kb_site_generator(tmp_path):
     assert "Data practices" in a and "not legal advice" in a
     assert "Trains on customer API data by default" in a
     assert '<a href="https://developers.openai.com/api/docs/guides/your-data">source</a>' in a
-    assert "(retrieved 2026-08-21)" in a
+    assert "(retrieved 2026-11-23)" in a
+    # EU endpoint overrides render even though the EU reference has no single regime name.
+    gradium = (tmp_path / "providers" / "gradium.html").read_text()
+    assert "Gradium" in gradium and "eu.api.gradium.ai" in gradium
+    assert "Region-dependent" in gradium and "None" not in gradium
     # uncurated provider states absence explicitly
     assert "not curated for Baseten yet" in (
         (tmp_path / "providers" / "baseten.html").read_text())
@@ -2758,8 +2764,9 @@ def test_data_practices_partial_entry_is_explicitly_unknown():
     dp = _dp()
     # partially curated entries record nulls — explicitly unknown, never guessed
     assert dp["anthropic"]["retention"] is None
-    assert dp["aws_bedrock"]["training_default"] is None
-    assert dp["aws_bedrock"]["subprocessors"] is None
+    assert dp["anthropic"]["enterprise_tier"] is None
+    assert dp["aws_bedrock"]["training_default"] == "no"
+    assert dp["aws_bedrock"]["subprocessors"]["url"] == "https://aws.amazon.com/compliance/sub-processors/"
 
 
 def test_data_practices_cn_entries_curated():
@@ -2768,10 +2775,11 @@ def test_data_practices_cn_entries_curated():
     assert ds["training_default"] == "opt-out"
     assert "People's Republic of China" in ds["retention"]
     assert ds["subprocessors"] is None
-    # tencent_hunyuan: retention cited verbatim-scope, training stays null
+    # tencent_hunyuan: TokenHub forbids training; ZDR and ordinary retention are region-scoped
     th = _dp()["tencent_hunyuan"]
-    assert th["training_default"] is None
-    assert "30 days" in th["retention"] and "output information" in th["retention"]
+    assert th["training_default"] == "no"
+    assert "30 days" in th["retention"] and "Zero Data Retention" in th["retention"]
+    assert th["subprocessors"] is None and th["enterprise_tier"] is None
     # zhipu: no for identifiable content; carve-out disclosed; subprocessors self-citing
     zp = _dp()["zhipu"]
     assert zp["training_default"] == "no"
@@ -2787,12 +2795,14 @@ def test_data_practices_cn_entries_curated():
 def test_data_practices_faang_entries_curated():
     from borderlint import kb as kbmod
     dp = _dp()
-    # meta_llama: Standard Services no-train posture; tier split disclosed in enterprise_tier
+    # meta_llama: Standard Services no-train posture; Contributor tier split disclosed
     ml = dp["meta_llama"]
     assert ml["training_default"] == "no"
     assert "not use Content from Standard Services to train Meta Models" in (
         ml["citations"]["training_default"]["locator"])
-    assert "Discounted Services" in ml["enterprise_tier"]
+    assert "Contributor Services" in ml["enterprise_tier"]
+    assert "Coding Harness" in ml["enterprise_tier"]
+    assert "Hosted Platforms" in ml["enterprise_tier"]
     # vertex_ai: training restriction + per-feature retention conditions
     va = dp["vertex_ai"]
     assert va["training_default"] == "no"
@@ -2804,12 +2814,14 @@ def test_data_practices_faang_entries_curated():
     assert "NOT used to train any generative AI foundation models" in (
         af["citations"]["training_default"]["locator"])
     assert "catalog" in af["enterprise_tier"].lower()
-    # github_copilot: current GenAI Services Terms; per-product retention variance
+    # github_copilot: current GenAI Services Terms; feature-specific retention windows
     gc = dp["github_copilot"]
     assert gc["training_default"] == "no"
     assert "will not use Inputs or Outputs to train generative AI models" in (
         gc["citations"]["training_default"]["locator"])
-    assert "Varies by Copilot product" in gc["retention"]
+    assert "28 days" in gc["retention"] and "lifetime of the account" in gc["retention"]
+    assert "volume-licensed commercial" in gc["enterprise_tier"]
+    assert "unless they opt out" in gc["enterprise_tier"]
     # all four: every non-null fact cited, no unavailability claims, keys in providers.json
     import json as _json
     with open("borderlint/data/providers.json", encoding="utf-8") as fh:
@@ -3022,7 +3034,7 @@ def test_init_without_profile_unchanged(tmp_path):
 
 
 def test_init_profile_seeds_interactive_walk(tmp_path, capsys):
-    # interactive (classes prompted): seeded CN-GBA offered keep-as-default (Y/n);
+    # interactive (classes prompted): seeded hk is offered keep-as-default (Y/n);
     # observed unseeded us keeps drop-default (y/N). Answering y keeps both.
     import json as _json
     import argparse
@@ -3040,10 +3052,10 @@ def test_init_profile_seeds_interactive_walk(tmp_path, capsys):
     err = capsys.readouterr().err
     assert "Hong Kong Monetary Authority" in err and "not legal advice" in err
     doc = _json.load(open(out, encoding="utf-8"))
-    assert sorted(doc["classifications"]["non-pii"]) == ["CN-GBA", "hk", "us"]
-    # seeded jurisdiction carries keep-as-default; unseeded observed stays drop-as-default
-    assert any("Keep 'CN-GBA' for 'non-pii'? (Y/n)" in p for p in prompts)
+    assert sorted(doc["classifications"]["non-pii"]) == ["hk", "us"]
+    # home and profile seed are the same hk; unseeded observed stays drop-as-default
     assert any("Keep 'us' for 'non-pii'? (y/N)" in p for p in prompts)
+    assert not any("CN-GBA" in p for p in prompts)
     assert doc["_profile"]["id"] == "hkma" and doc["_profile"]["regulator"]
     assert doc["home_location"] == "hk" and "fail_on" not in doc
 
@@ -3060,11 +3072,9 @@ def test_init_profile_noninteractive_union():
     doc = _json.load(open(out, encoding="utf-8"))
     cp = doc["classifications"]["customer-pii"]
     np = doc["classifications"]["non-pii"]
-    assert set(cp) >= {"hk", "us"}          # home + observed
-    assert "sg" not in cp                    # hkma seeds sg for non-pii only
-    assert set(np) >= {"hk", "us"}           # observed flows are non-pii too
-    # non-pii carries the CN-GBA seed from the hkma profile
-    assert "CN-GBA" in np
+    assert set(cp) == {"hk", "us"}           # hk-only profile + home + observed
+    assert set(np) == {"hk", "us"}           # hk-only profile + observed non-pii flow
+    assert "CN-GBA" not in np                 # GBA personal-information terms do not seed non-PII
 
 
 def test_init_emitted_policy_loads_and_shape_matches():
@@ -3110,7 +3120,8 @@ def test_init_profile_seat_mismatch_warns_but_proceeds(tmp_path, capsys):
     assert run_init(ns) == 0
     assert "warning: profile targets seat(s) hk" in capsys.readouterr().err
     doc = _json.load(open(out, encoding="utf-8"))
-    assert "CN-GBA" in doc["classifications"]["non-pii"]  # seed still applied
+    assert "hk" in doc["classifications"]["non-pii"]  # hk-only profile seed still applied
+    assert "CN-GBA" not in doc["classifications"]["non-pii"]
 
 
 def test_evidence_data_practices_register():
@@ -3124,8 +3135,8 @@ def test_evidence_data_practices_register():
     assert "Trains on customer API data by default: **no**" in pack
     # the href is exactly the URL; locator + retrieval date stay outside the link
     assert "[source](https://developers.openai.com/api/docs/guides/your-data)" in pack
-    assert "retrieved 2026-08-21" in pack
-    assert "reviewed 2026-08-21" in pack
+    assert "retrieved 2026-11-23" in pack
+    assert "reviewed 2026-11-23" in pack
     # verdicts untouched: register adds no summary or severity changes
     assert "1 fail" in pack.split("## Summary")[1].splitlines()[2]
 
@@ -3313,7 +3324,7 @@ def test_wave3_families_resolve_provenance():
         ("azure_ai/FW-GPT-OSS-120B", "us", "OpenAI"),
         ("gemini/deep-research-max-preview-04-2026", "us", "Google"),
         ("vertex_ai/virtual-try-on-001", "us", "Google"),
-        ("together_ai/together/Tev1-4B-experimental", "us", "Together AI"),
+        ("together_ai/together/Tev1-4B-experimental", "cn", "Alibaba (Together AI supervised fine-tune)"),
         ("c4ai-aya-expanse-32b", "ca", "Cohere"),
         ("openrouter/apodex/apodex-1.1-mini:free", "us", "Apodex"),
     ]
@@ -4524,7 +4535,7 @@ def test_observability_existing_renderers_and_schemas_end_to_end(tmp_path, capsy
 
 
 def test_observability_kb_notes_and_drift_exemptions():
-    assert kb.updated == "2026-11-17" and kb.sovereignty_updated == "2026-11-17"
+    assert kb.updated == "2026-11-23" and kb.sovereignty_updated == "2026-11-23"
     lf = kb.by_id["langfuse"]
     assert "Postgres backups" in lf["note"] and "DPA" in lf["note"]
     assert "ClickHouse" in lf["sovereignty_override_note"]
@@ -4607,3 +4618,264 @@ def test_observability_indexed_environment_runtime_value_single_and_double_quote
         assert (d.provider_id, d.jurisdiction, d.sovereignty) == (
             "custom_endpoint", "unknown", "unknown")
         assert d.evidence == "LANGSMITH_ENDPOINT -> runtime-resolved"
+
+
+# --- November 2026 drift resolution, wave 12 -----------------------------------
+
+def test_wave12_provider_sdk_host_and_sovereignty_resolution():
+    entries = {
+        "gnani": ("speech", "unknown", "in", ["gnani", "livekit.plugins.gnani", "pipecat_gnani"]),
+        "gradium": ("speech", "unknown", "eu", ["gradium"]),
+        "resetdata": ("inference", "au", "au", []),
+        "vispark": ("inference", "in", "in", []),
+    }
+    for pid, (category, residency, sovereignty, sdks) in entries.items():
+        entry = kb.by_id[pid]
+        assert kb.category(pid) == category
+        assert entry["jurisdiction"] == residency
+        assert entry["sdks"] == sdks
+        assert kb.default_sovereignty(pid) == sovereignty
+        assert kb.default_provenance(pid) == ("in" if pid == "vispark" else "unknown")
+    for pid in ("resetdata", "vispark"):
+        assert all(not kb.by_id[pid].get(field) for field in ("sdks", "npm", "jvm", "dotnet"))
+
+    src = ("import gnani\nfrom livekit.plugins.gnani import STT\n"
+           "import pipecat_gnani\nimport gradium\n")
+    sdk_hits = _resolve_sovereignty(_scan_py("wave12.py", src, kb), kb)
+    assert {(d.provider_id, d.jurisdiction, d.sovereignty) for d in sdk_hits} == {
+        ("gnani", "unknown", "in"), ("gradium", "unknown", "eu")}
+
+    hosts = {
+        "api.vachana.ai": ("gnani", "unknown", "in"),
+        "api.gradium.ai": ("gradium", "unknown", "eu"),
+        "eu.api.gradium.ai": ("gradium", "eu", "eu"),
+        "us.api.gradium.ai": ("gradium", "us", "eu"),
+        "api.resetdata.ai": ("resetdata", "au", "au"),
+        "api.lab.vispark.in": ("vispark", "in", "in"),
+        "api.vispark.in": ("vispark", "in", "in"),
+        "token-plan-cn.xiaomimimo.com": ("xiaomi_mimo", "cn", "cn"),
+        "token-plan-sgp.xiaomimimo.com": ("xiaomi_mimo", "sg", "cn"),
+        "token-plan-ams.xiaomimimo.com": ("xiaomi_mimo", "eu", "cn"),
+        "api.z.ai": ("zhipu", "sg", "cn"),
+    }
+    src = "".join(f'HOST_{i} = "https://{host}/v1"\n' for i, host in enumerate(hosts))
+    hits = _resolve_sovereignty(_scan_py("wave12.py", src, kb), kb)
+    assert len(hits) == len(hosts)
+    for detection in hits:
+        assert (detection.provider_id, detection.jurisdiction, detection.sovereignty) == hosts[detection.evidence]
+    assert "Singapore governing law and SIAC arbitration" in kb.by_id["zhipu"]["note"]
+    assert "does not establish a different legal entity" in kb.by_id["zhipu"]["note"]
+
+
+_WAVE12_MODEL_CASES = [
+    ("gnani/prisma-v2.5", "in", "Gnani AI"),
+    ("gnani/prisma-v3.0", "in", "Gnani AI"),
+    ("prisma-v2.5", "in", "Gnani AI"),
+    ("prisma-v3.0", "in", "Gnani AI"),
+    ("gradium/gradium-tts-202602", "eu", "Gradium"),
+    ("gradium/gradium-tts-beta", "eu", "Gradium"),
+    ("gradium/default", "eu", "Gradium"),
+    ("gradium-tts-202602", "eu", "Gradium"),
+    ("gradium-tts-beta", "eu", "Gradium"),
+    ("vispark/vision-small", "in", "Vispark"),
+    ("vispark/vision-medium", "in", "Vispark"),
+    ("vispark/vision-large", "in", "Vispark"),
+    ("jina-embeddings-v5-text-small", "cn", "Alibaba (Jina AI post-train)"),
+    ("jina-embeddings-v5-text-small-retrieval", "cn", "Alibaba (Jina AI post-train)"),
+    ("jina-embeddings-v5-text-nano", "eu", "EuroBERT collaboration (Jina AI post-train)"),
+    ("jina-embeddings-v5-text-nano-retrieval", "eu", "EuroBERT collaboration (Jina AI post-train)"),
+    ("jina-embeddings-v5-omni-small", "cn", "Alibaba (Jina AI post-train; Qwen vision/audio encoders)"),
+    ("jina-embeddings-v5-omni-small-retrieval", "cn", "Alibaba (Jina AI post-train; Qwen vision/audio encoders)"),
+    ("jina-embeddings-v5-omni-nano", "eu", "EuroBERT collaboration (Jina AI post-train; Alibaba Qwen vision/audio encoders)"),
+    ("jina-embeddings-v5-omni-nano-retrieval", "eu", "EuroBERT collaboration (Jina AI post-train; Alibaba Qwen vision/audio encoders)"),
+    ("tiny-aya-earth", "ca", "Cohere"),
+    ("tiny-aya-fire", "ca", "Cohere"),
+    ("tiny-aya-global", "ca", "Cohere"),
+    ("tiny-aya-water", "ca", "Cohere"),
+    ("CohereLabs/tiny-aya-global", "ca", "Cohere"),
+    ("cohere_chat/tiny-aya-water", "ca", "Cohere"),
+    ("ca.amazon.nova-lite-v1:0", "us", "Amazon"),
+    ("ca.anthropic.claude-haiku-5-5", "us", "Anthropic"),
+    ("ca.anthropic.claude-sonnet-5-5", "us", "Anthropic"),
+    ("amazon.nova-lite-v1:0", "us", "Amazon"),
+    ("anthropic.claude-haiku-5-5", "us", "Anthropic"),
+    ("anthropic.claude-sonnet-5-5", "us", "Anthropic"),
+    ("openrouter/respan/span-01", "us", "Respan (Keywords AI Inc.)"),
+    ("openrouter/respan/span-01-lite", "us", "Respan (Keywords AI Inc.)"),
+    ("openrouter/respan/span-01-lite:free", "us", "Respan (Keywords AI Inc.)"),
+    ("respan/span-01", "us", "Respan (Keywords AI Inc.)"),
+    ("respan/span-01-lite", "us", "Respan (Keywords AI Inc.)"),
+    ("baseten/decision-models/baseten-bison-latest", "us", "Google (Base Labs post-train)"),
+    ("baseten/decision-models/baseten-groundhog-latest", "us", "Google (Base Labs post-train)"),
+    ("baselabs/bison-1", "us", "Google (Base Labs post-train)"),
+    ("baselabs/groundhog-1", "us", "Google (Base Labs post-train)"),
+    ("together_ai/ideogram/ideogram-3.0", "ca", "Ideogram AI"),
+    ("together_ai/ideogram/ideogram-4.0", "ca", "Ideogram AI"),
+    ("ideogram/ideogram-3.0", "ca", "Ideogram AI"),
+    ("ideogram/ideogram-4.0", "ca", "Ideogram AI"),
+    ("together_ai/RunDiffusion/Juggernaut-pro-flux", "eu", "Black Forest Labs (RunDiffusion tune)"),
+    ("together_ai/RunDiffusion/Juggernaut-lightning-flux", "eu", "Black Forest Labs (RunDiffusion tune)"),
+    ("rundiffusion/juggernaut-pro-flux", "eu", "Black Forest Labs (RunDiffusion tune)"),
+    ("rundiffusion/juggernaut-lightning-flux", "eu", "Black Forest Labs (RunDiffusion tune)"),
+    ("north-mini-code-1.0", "ca", "Cohere / Cohere Labs"),
+    ("cohere_chat/north-mini-code-1.0", "ca", "Cohere / Cohere Labs"),
+    ("coherelabs/north-mini-code-1.0", "ca", "Cohere / Cohere Labs"),
+    ("north-small-translate-1.0", "ca", "Cohere (Command A+ base)"),
+    ("cohere_chat/north-small-translate-1.0", "ca", "Cohere (Command A+ base)"),
+    ("coherelabs/north-small-translate-1.0", "ca", "Cohere (Command A+ base)"),
+    ("sarvam/sarvam-105b", "in", "Sarvam AI"),
+    ("sarvam/sarvam-105b-conversations", "in", "Sarvam AI"),
+    ("sarvam-105b", "in", "Sarvam AI"),
+    ("sarvamai/sarvam-105b", "in", "Sarvam AI"),
+    ("together_ai/cartesia/sonic", "us", "Cartesia"),
+    ("together_ai/cartesia/sonic-3", "us", "Cartesia"),
+    ("cartesia/sonic", "us", "Cartesia"),
+    ("openrouter/liquid/d1", "us", "Liquid AI"),
+    ("liquid/d1", "us", "Liquid AI"),
+    ("nvidia_nim/adept/fuyu-8b", "us", "Adept AI"),
+    ("adept/fuyu-8b", "us", "Adept AI"),
+    ("fuyu-8b", "us", "Adept AI"),
+    ("gemini/genie-4", "us", "Google"),
+    ("genie-4", "us", "Google"),
+    ("openrouter/jaredpalmer/kev-4b", "cn", "Alibaba (Jared Palmer Kev LoRA/pointer head)"),
+    ("jaredpalmer/kev-4b", "cn", "Alibaba (Jared Palmer Kev LoRA/pointer head)"),
+    ("kev-4b", "cn", "Alibaba (Jared Palmer Kev LoRA/pointer head)"),
+    ("together_ai/hexgrad/Kokoro-82M", "us", "Columbia University (hexgrad/@rzvzn Kokoro fine-tune)"),
+    ("hexgrad/kokoro-82m", "us", "Columbia University (hexgrad/@rzvzn Kokoro fine-tune)"),
+    ("kokoro-82m", "us", "Columbia University (hexgrad/@rzvzn Kokoro fine-tune)"),
+    ("openrouter/togethercomputer/tev1-4b-experimental", "cn", "Alibaba (Together AI supervised fine-tune)"),
+    ("tev1-4b-experimental", "cn", "Alibaba (Together AI supervised fine-tune)"),
+    ("together/tev1-4b-experimental", "cn", "Alibaba (Together AI supervised fine-tune)"),
+    ("together_ai/together/tev1-4b-experimental", "cn", "Alibaba (Together AI supervised fine-tune)"),
+    ("togethercomputer/tev1-4b-experimental", "cn", "Alibaba (Together AI supervised fine-tune)"),
+    ("nvidia_nim/zyphra/zamba2-7b-instruct", "us", "Zyphra"),
+    ("zyphra/zamba2-7b-instruct", "us", "Zyphra"),
+    ("zamba2-7b-instruct", "us", "Zyphra"),
+]
+
+
+@pytest.mark.parametrize("model_id,bloc,org", _WAVE12_MODEL_CASES)
+def test_wave12_direct_model_provenance(model_id, bloc, org):
+    assert kb.match_model(model_id) == (model_id, bloc, org)
+
+
+def test_wave12_generic_future_and_namespace_near_misses_stay_unknown():
+    near_misses = (
+        "prisma", "prisma-v4.0", "gnani/prisma-v4.0",
+        "default", "gradium-tts-202701", "gradium/gradium-tts-202701",
+        "vision-small", "vispark/", "vispark/visionary",
+        "jina-embeddings-v5-text-medium", "jina-embeddings-v6-text-small",
+        "span-01", "openrouter/respan/span-02",
+        "ideogram/ideogram-5.0", "together_ai/ideogram/ideogram-5.0",
+        "north-star-1.0", "north-mini-code-2.0", "sonic", "d1",
+        "genie-3", "genie-5", "zamba-7b",
+    )
+    for model_id in near_misses:
+        assert kb.match_model(model_id) is None, model_id
+    assert kb.match_model("databricks/genie-4") == (
+        "databricks/genie-4", "us", "Databricks"
+    )
+
+
+def test_wave12_geo_ca_boundaries_do_not_imply_canadian_provenance():
+    for model_id in ("ca", "ca-central-1", "ca.unknown.model"):
+        assert kb.match_model(model_id) is None, model_id
+    assert "ca." in kb.provenance_passthrough
+
+
+def test_wave12_exact_pruna_residue_does_not_hide_future_variants():
+    current = "together_ai/prunaai/p-image-ideogram"
+    future = current + "-v2"
+    assert kb.match_model(current) is None and kb.match_model(future) is None
+    with open("scripts/kb_drift_aliases.json", encoding="utf-8") as fh:
+        residue = json.load(fh)["residue"]
+    assert current in residue and future not in residue
+    assert "together_ai/prunaai/" not in residue
+
+
+def test_wave12_broad_together_us_fallback_is_removed():
+    for model_id in ("together/unknown-future-model", "together_ai/together/unknown-future-model"):
+        assert kb.match_model(model_id) is None, model_id
+
+
+def test_wave12_refreshed_data_practices_have_current_provider_citations():
+    source_prefixes = {
+        "openai": ("https://developers.openai.com/", "https://openai.com/"),
+        "anthropic": ("https://www.anthropic.com/",),
+        "google_gemini": ("https://aistudio.google.com/", "https://business.safety.google/"),
+        "azure_openai": ("https://learn.microsoft.com/", "https://aka.ms/"),
+        "azure_foundry": ("https://learn.microsoft.com/", "https://aka.ms/"),
+        "aws_bedrock": ("https://docs.aws.amazon.com/", "https://aws.amazon.com/"),
+        "deepseek": ("https://cdn.deepseek.com/",),
+        "moonshot": ("https://platform.kimi.ai/",),
+        "alibaba_dashscope": ("https://www.alibabacloud.com/",),
+        "tencent_hunyuan": ("https://www.tencentcloud.com/",),
+        "zhipu": ("https://docs.bigmodel.cn/", "https://docs.z.ai/"),
+        "github_copilot": ("https://github.com/", "https://docs.github.com/"),
+        "meta_llama": ("https://dev.meta.ai/", "https://www.meta.com/"),
+        "nvidia_nim": ("https://assets.ngc.nvidia.com/",),
+        "xiaomi_mimo": ("https://privacy.mi.com/", "https://mimo.mi.com/"),
+        "vertex_ai": ("https://cloud.google.com/", "https://docs.cloud.google.com/"),
+    }
+    dp = _dp()
+    for pid, prefixes in source_prefixes.items():
+        entry = dp[pid]
+        assert entry["reviewed"] == "2026-11-23", pid
+        for fact in ("training_default", "retention", "enterprise_tier"):
+            if entry[fact] is not None:
+                citation = entry["citations"][fact]
+                assert citation["retrieved"] == "2026-11-23", (pid, fact)
+                assert citation["url"].startswith(prefixes), (pid, fact, citation["url"])
+                assert citation["locator"], (pid, fact)
+        if entry["subprocessors"] is not None:
+            assert entry["subprocessors"]["retrieved"] == "2026-11-23", pid
+            assert entry["subprocessors"]["url"].startswith(prefixes), pid
+            assert entry["subprocessors"]["locator"], pid
+
+    null_fields = {
+        "anthropic": ("retention", "enterprise_tier"),
+        "alibaba_dashscope": ("subprocessors",),
+        "deepseek": ("subprocessors",),
+        "moonshot": ("subprocessors",),
+        "tencent_hunyuan": ("subprocessors", "enterprise_tier"),
+        "zhipu": ("enterprise_tier",),
+        "github_copilot": ("subprocessors",),
+        "nvidia_nim": ("subprocessors",),
+        "xiaomi_mimo": ("subprocessors",),
+        "vertex_ai": ("subprocessors", "enterprise_tier"),
+    }
+    for pid, fields in null_fields.items():
+        for field in fields:
+            assert dp[pid][field] is None, (pid, field)
+
+    deepseek = dp["deepseek"]
+    assert deepseek["training_default"] == "opt-out"
+    assert "People's Republic of China" in deepseek["retention"]
+    assert "No fixed retention window" in deepseek["retention"]
+    assert "No self-serve API opt-out mechanism" in deepseek["enterprise_tier"]
+
+
+def test_wave12_kb_and_regulator_review_dates_and_defaults():
+    assert kb.provenance_updated == "2026-11-23"
+    with open("borderlint/data/data_practices.json", encoding="utf-8") as fh:
+        assert json.load(fh)["updated"] == "2026-11-23"
+    with open("borderlint/data/regulator_profiles.json", encoding="utf-8") as fh:
+        assert json.load(fh)["updated"] == "2026-11-23"
+
+    profiles = _rp()
+    hkma = profiles["hkma"]
+    assert hkma["citation"] == {
+        "url": "https://brdr.hkma.gov.hk/eng/doc-ldg/docId/20261015-2-EN",
+        "retrieved": "2026-11-23",
+    }
+    assert hkma["reviewed"] == "2026-11-23"
+    assert all(allow == ["hk"] for allow in hkma["defaults"].values())
+    assert "not a regulatory localisation mandate" in hkma["notes"]
+    assert "PIPC" not in hkma["notes"] and "Sandbox" not in hkma["notes"]
+
+    mas = profiles["mas"]
+    assert mas["citation"]["url"].endswith("/2024/artificial-intelligence-model-risk-management")
+    assert mas["citation"]["retrieved"] == "2026-11-23" and mas["reviewed"] == "2026-11-23"
+    assert all(allow == ["sg"] for allow in mas["defaults"].values())
+    assert "07 Oct 2027" in mas["notes"] and "07 Oct 2028" in mas["notes"]
+    assert "complement rather than supersede" in mas["notes"]
