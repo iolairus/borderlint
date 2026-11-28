@@ -212,7 +212,7 @@ a verdict.
 Use the same scan command in any pipeline. With GitHub Actions, use the composite action:
 
 ```yaml
-- uses: iolairus/borderlint@v1.19.3
+- uses: iolairus/borderlint@v1.19.4
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
@@ -232,7 +232,7 @@ To check code before each commit, add this to `.pre-commit-config.yaml`:
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
-  rev: v1.19.3
+  rev: v1.19.4
   hooks:
     - id: borderlint
       args: [--policy, residency.json, --classification, customer-pii]
