@@ -144,6 +144,32 @@ or less accurate technical content.
   package build, and `git diff --check`. Alternative: add an automated readability gate; rejected
   because readability formulas cannot judge technical accuracy or useful detail.
 
+- **D7 — State provider defaults and curated overrides together.** Describe US-provider sovereignty
+  as the default, then note that legally separated operations can override it. Name AWS Bedrock
+  China regions as the current `cn` example. Alternative: leave the general US-provider statement
+  unqualified; rejected because the bundled KB deliberately returns `cn` for those regions.
+
+- **D8 — State the policy activation condition exactly.** Sovereignty and provenance allow-list and
+  unknown-handling checks apply only when their block defines an allow-list for the active data
+  class. A block containing only `on_unknown` does not activate those checks. Apply the same
+  condition to unknown-provenance failures, while keeping `deny_models` independent of the class
+  allow-list. Alternative: describe the block's presence as sufficient; rejected by `policy.py`.
+
+- **D9 — Keep the baseline scan and add a post-edit scan.** Agent snippets first scan the unchanged
+  tree with the project policy or inventory mode. After making the proposed AI change, they scan
+  again before committing and report new non-`local` or `unknown` flows. Alternative: use only a
+  post-edit scan; rejected because it would remove the existing pre-addition review contract.
+
+- **D10 — Separate policy enforcement from SBOM comparison.** The pre-commit hook enforces its
+  configured policy scan and honours justified waivers. SBOM export is severity-free; `diff`
+  independently exits 1 for every added non-`local` provider/jurisdiction pair, even when policy
+  allows or waives it. Accept that pair by reviewing and updating the baseline, not by claiming
+  the waiver changes `diff`. Apply this wording to the README and every full agent snippet.
+
+- **D11 — Describe the Jenkins example as a complete file.** Offer the complete declarative
+  Jenkinsfile or instruct the reader to copy only the `AI data residency` stage into an existing
+  `stages` block. Preserve every pipeline command and trigger.
+
 ## Risks / Trade-offs
 
 - [A shorter README could hide an important limit] → use the claims inventory and link to the full

@@ -83,3 +83,30 @@ MUST NOT remove or weaken a limitation to make prose shorter.
 - **WHEN** repeated material is shortened or replaced with a link
 - **THEN** the destination retains the material information and the link leads to the relevant
   current documentation
+
+
+### Requirement: Documentation states activation and enforcement boundaries
+
+Current documentation SHALL describe curated sovereignty overrides alongside provider defaults.
+It SHALL state that sovereignty and provenance allow-list and unknown-handling checks require an
+allow-list for the active data class, while `deny_models` applies independently. It SHALL
+distinguish policy scans and waivers from the independent, severity-free SBOM comparison.
+
+#### Scenario: Reader checks AWS Bedrock sovereignty
+
+- **WHEN** a reader consults the sovereignty explanation
+- **THEN** it describes the US-provider default and states that legally separated operations can
+  override it, including AWS Bedrock China regions resolving to sovereignty `cn`
+
+#### Scenario: Reader supplies only an optional block's unknown setting
+
+- **WHEN** a policy contains a sovereignty or provenance block without an allow-list for the active
+  data class
+- **THEN** the documentation makes clear that the corresponding allow-list and unknown-handling
+  check is not active
+
+#### Scenario: Reader accepts a flow recorded in an SBOM
+
+- **WHEN** a reader compares inline waivers with SBOM `diff` behavior
+- **THEN** the documentation explains that `diff` ignores policy allow-lists and waivers and that
+  accepting an added non-`local` pair requires reviewing and updating the baseline

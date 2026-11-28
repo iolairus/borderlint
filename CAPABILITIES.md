@@ -116,12 +116,16 @@ never change the verdict. GDPR remains a reference, never a regime tag.
 
 ### 3.1 Sovereignty — who may compel disclosure
 
-**Sovereignty** describes which government may compel the provider to disclose data, regardless of
-where the endpoint sits. It is a separate check from residency.
+**Sovereignty** describes which government may compel the provider to disclose data. By default, it
+reflects the provider's home legal regime rather than the endpoint's location. It is a separate
+check from residency.
 
-A US-headquartered provider such as AWS, Azure, GCP, OpenAI, or Anthropic remains subject to US
-compelled-disclosure law in every hosting region. Relevant laws include the CLOUD Act 2018, FISA
-702, and Patriot Act §215.
+A US-headquartered provider such as AWS, Azure, GCP, OpenAI, or Anthropic has a default sovereignty
+of `us`, regardless of hosting region. Relevant US laws include the CLOUD Act 2018, FISA 702, and
+Patriot Act §215.
+
+Curated overrides handle legally separated operations. AWS Bedrock China regions currently resolve
+to residency and sovereignty `cn`, rather than the default `us`.
 
 For example, AWS Bedrock in `ap-east-1` has residency `hk` and sovereignty `us`. It can pass a Hong
 Kong residency policy while still carrying US disclosure exposure. Residency alone cannot express
@@ -130,9 +134,9 @@ a rule such as “customer PII may rest in `hk` but must not be under US compell
 **Sovereignty blocs:** `us`, `eu` (the EU/EEA as one unit), `cn`, `uk` (distinct from the EU), `ru`,
 `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `vn`, `local`, and `unknown`.
 
-The bloc comes from the provider's home legal regime, not the endpoint region. `local` means
-self-hosted inference with no external provider sovereign. `unknown` covers aggregators, custom
-endpoints, and unmapped providers.
+By default, the bloc comes from the provider's home legal regime, not the endpoint region. Curated
+regional overrides can change that default. `local` means self-hosted inference with no external
+provider sovereign. `unknown` covers aggregators, custom endpoints, and unmapped providers.
 
 **Optional policy block:**
 
@@ -143,8 +147,10 @@ endpoints, and unmapped providers.
 }
 ```
 
-Without this block, borderlint reports sovereignty but does not check it against the policy. With
-the block, mismatches warn unless you add `sovereignty` to `fail_on`. `local` is exempt from the
+Without this block, borderlint reports sovereignty but does not check it against the policy. The
+check is active only when the block defines an allow-list for the active data class. Mismatches
+then warn unless you add `sovereignty` to `fail_on`. A block without that class entry, including
+one containing only `on_unknown`, does not activate the check. `local` is exempt from the
 allow-list, matching the residency exemption.
 
 **Legal scope:** the sovereignty map reports potential compelled-disclosure exposure. It does not
@@ -212,13 +218,15 @@ organisation when the map knows it.
 }
 ```
 
-Without the block, borderlint reports provenance but does not check it against the policy. With
-the block, mismatches warn unless you add `provenance` to `fail_on`. Setting its `on_unknown` to
-`fail` makes unknown provenance fail on its own.
+Without the block, borderlint reports provenance but does not check it against the policy.
+Allow-list and unknown-handling checks are active only when the block defines an allow-list for
+the active data class. Mismatches then warn unless you add `provenance` to `fail_on`. Setting
+`on_unknown: fail` makes unknown provenance fail only when that class entry exists.
 
-`deny_models` contains anchored model-ID prefixes that block a family regardless of host or bloc.
-Denied models fail by default and cannot be waived inline. The provenance map reports weights
-origin; it does not decide whether export controls apply.
+`deny_models` applies independently of the class allow-list. It contains anchored model-ID
+prefixes that block a family regardless of host or bloc. Denied models fail by default and cannot
+be waived inline. The provenance map reports weights origin; it does not decide whether export
+controls apply.
 
 ## 4. Policy and execution model
 

@@ -1,9 +1,9 @@
 ---
 name: borderlint-check
-description: Check AI data flows before adding any AI SDK, endpoint, model identifier, or Model Context Protocol (MCP) server configuration. Use before introducing an AI provider dependency, LLM endpoint or base_url, model ID, or structured MCP server entry with a remote URL or stdio command and arguments.
+description: Check AI data flows before and after adding any AI SDK, endpoint, model identifier, or Model Context Protocol (MCP) server configuration. Use when introducing an AI provider dependency, LLM endpoint or base_url, model ID, or structured MCP server entry with a remote URL or stdio command and arguments.
 ---
 
-# borderlint pre-addition check
+# borderlint AI-change check
 
 borderlint checks residency (where AI data goes), sovereignty (which government may compel the
 provider to disclose it), and provenance (who developed the model weights).
@@ -12,24 +12,27 @@ provider to disclose it), and provenance (who developed the model weights).
    - Install the plugin: run `/plugin marketplace add iolairus/borderlint`, then
      `/plugin install borderlint@borderlint`.
    - Copy this file manually to `.claude/skills/borderlint-check/SKILL.md` in your project.
-2. **Check every AI change before making it.** This includes:
+2. **Identify every AI change before making it.** This includes:
    - An AI SDK import, AI endpoint reference, or model identifier.
    - A Model Context Protocol (MCP) server under `mcpServers` (VS Code: `servers`) in `.mcp.json`,
      `claude_desktop_config.json`, `.cursor/mcp.json`, or `.vscode/mcp.json`, using either a remote
      `url` or stdio `command` and `args`.
-3. **Run borderlint first.** If the project has a policy, find its path and run:
+3. **Run a baseline scan before editing.** If the project has a policy, find its path and run:
    `borderlint scan . --policy <project-policy-path> --classification <data class>`.
    Otherwise, run inventory mode: `borderlint scan .`.
-4. **Report the change before committing.** If the addition introduces a flow that is not `local`,
-   or a provider or router that resolves to `unknown`, name it in the conversation. Include the
-   provider, residency jurisdiction, sovereignty bloc, and provenance bloc when a model ID is
-   involved. Let the human decide whether to proceed.
-5. **Record every accepted flow.** Add an inline waiver using the file's comment syntax and a
+4. **Make the change, then scan again before committing.** Run the same command after editing so
+   borderlint can detect the flows introduced by your change.
+5. **Compare the results and report changes before committing.** If the addition introduces a flow
+   that is not `local`, or a provider or router that resolves to `unknown`, name it in the
+   conversation. Include the provider, residency jurisdiction, sovereignty bloc, and provenance
+   bloc when a model ID is involved. Let the human decide whether to proceed.
+6. **Record every accepted flow.** Add an inline waiver using the file's comment syntax and a
    genuine justification: `# borderlint: allow <justification>` or
    `// borderlint: allow <justification>`. borderlint ignores waivers without a justification.
    Waivers cannot override provider or model denies.
-6. **Keep the enforcement checks in place.** The pre-commit hook runs its configured scan. The CI
-   AI data-flow software bill of materials (SBOM) `diff` check exits 1 when the current SBOM adds a
+7. **Understand the two enforcement checks.** The pre-commit hook enforces its configured policy
+   scan and honours justified waivers. The CI AI data-flow software bill of materials (SBOM) `diff`
+   check is independent: it ignores policy allow-lists and waivers and exits 1 for every added
    non-`local` provider/jurisdiction pair, including `unknown`, that is absent from the baseline.
-   It does not fail for every new endpoint or model. Discuss the flow when you make the decision,
-   not after the build fails.
+   It does not fail for every new endpoint or model. To accept such a pair, review and update the
+   baseline. Discuss the flow when you make the decision, not after the build fails.

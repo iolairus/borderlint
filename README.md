@@ -135,17 +135,22 @@ class fails. In the example, `sg` is allowed but `my` is not.
 
 ### Sovereignty rules
 
-Sovereignty is separate from residency. It describes the provider's home legal regime, not the
-endpoint's physical location. For example, AWS, Azure, GCP, and OpenAI remain subject to US law
-regardless of the hosting region.
+Sovereignty is separate from residency. It usually describes the provider's home legal regime, not
+the endpoint's physical location. For example, AWS, Azure, GCP, and OpenAI have a default
+sovereignty of `us`, even when you choose another hosting region.
+
+Curated overrides handle legally separated operations. AWS Bedrock China regions currently resolve
+to residency and sovereignty `cn`, rather than the default `us`.
 
 Add a `sovereignty` block to check this per data class. Its vocabulary is `us`, `eu`, `cn`, `uk`,
 `ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `vn`, `local`, and `unknown`.
 
-Without the block, borderlint reports sovereignty but does not check it against your policy. With
-the block, mismatches warn unless you add `sovereignty` to `fail_on`. Self-hosted inference has
-`local` sovereignty and is exempt from the allow-list. See [CAPABILITIES.md](CAPABILITIES.md) for
-the full model and its legal limits.
+Without the block, borderlint reports sovereignty but does not check it against your policy. The
+check is active only when the block defines an allow-list for the active data class. Mismatches
+then warn unless you add `sovereignty` to `fail_on`. A block without that class entry, including
+one containing only `on_unknown`, does not activate the check. Self-hosted inference has `local`
+sovereignty and is exempt from the allow-list. See [CAPABILITIES.md](CAPABILITIES.md) for the full
+model and its legal limits.
 
 ### Provenance rules
 
@@ -165,7 +170,13 @@ network flow.
 The provenance vocabulary matches sovereignty except that it excludes `vn` and `local`. Model
 weights always have a developer.
 
-Use `deny_models` to block anchored model-ID prefixes regardless of host or bloc. For example,
+Without a `provenance` block, borderlint reports provenance but does not check it against your
+policy. Allow-list and unknown-handling checks are active only when the block defines an allow-list
+for the active data class. Mismatches then warn unless you add `provenance` to `fail_on`. Setting
+`on_unknown: fail` makes unknown provenance fail only when that class entry exists.
+
+Use `deny_models` independently of the class allow-list to block anchored model-ID prefixes
+regardless of host or bloc. For example,
 `"deny_models": ["deepseek"]` blocks DeepSeek-R1 on Bedrock even when `cn` is otherwise allowed.
 Matching normalises GGUF paths, redistributor repositories, `@` version pins, registry hosts, and
 runtime namespaces such as `ollama/` and `vllm/`. Denied models fail by default and cannot be
@@ -281,9 +292,10 @@ do not assign provenance to these findings.
 
 ### Coding-agent integrations
 
-The Claude Code plugin and Cursor rules ask your coding agent to scan before adding an AI
-dependency, endpoint, model ID, or MCP server. The agent reports any new non-`local` flow before
-committing so you can decide whether to accept it.
+The Claude Code plugin and Cursor rules ask your coding agent to run a baseline scan before adding
+an AI dependency, endpoint, model ID, or MCP server. After the edit, the agent scans again before
+committing. It compares the results and reports any new non-`local` or `unknown` flow so you can
+decide whether to accept it.
 
 For Claude Code, install the plugin:
 
@@ -302,8 +314,11 @@ Without plugins, choose one of these options:
 For Cursor, save [`integrations/cursor.mdc`](integrations/cursor.mdc) as
 `.cursor/rules/borderlint.mdc`.
 
-These agent instructions are advisory. The pre-commit hook and SBOM `diff` check still enforce your
-chosen rules. Record accepted flows with a justified inline waiver rather than hiding them.
+These agent instructions are advisory. The pre-commit hook enforces its configured policy scan and
+honours justified waivers. SBOM `diff` is independent: it ignores policy allow-lists and waivers,
+and exits 1 for every added non-`local` provider/jurisdiction pair. To accept such a pair, review
+and update the SBOM baseline. Record accepted flows with a justified inline waiver for policy
+scans, and update the baseline when needed.
 
 ## AI observability: Langfuse and LangSmith
 

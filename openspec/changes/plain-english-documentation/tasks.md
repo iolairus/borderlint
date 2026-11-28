@@ -69,3 +69,22 @@
 - [x] 4.4 Run the full pytest suite, build the package, run `git diff --check`, and run
       `openspec validate plain-english-documentation --strict`; review the final diff for unintended
       behavior or metadata changes (design D6)
+
+
+## 5. Correct independent-review findings
+
+- [x] 5.1 Update the proposal, design, documentation-accuracy delta, and agent-integrations delta
+      to cover provider overrides, policy activation, two-stage agent scans, independent SBOM
+      comparison, and the Jenkins example (design D7–D11)
+- [x] 5.2 Correct the README and CAPABILITIES sovereignty and provenance guidance, including the
+      AWS Bedrock China override and active-class allow-list requirement (design D7, D8)
+- [x] 5.3 Update the agent-integrations specification and all full agent snippets to require a
+      baseline scan and a post-edit, pre-commit scan with consistent reporting (design D9)
+- [x] 5.4 Correct README and agent-snippet enforcement guidance: policy scans honour waivers,
+      SBOM `diff` is independent, and accepted pairs require baseline review and update (design D10)
+- [x] 5.5 Correct the Jenkinsfile comment without changing its complete pipeline or scan commands
+      (design D11)
+- [x] 5.6 Run targeted resolver, policy-activation, agent-contract, SBOM-waiver, link, and command
+      checks for all five findings (design D7–D11)
+- [x] 5.7 Run the full pytest suite, build the package, run `git diff --check`, and run
+      `openspec validate plain-english-documentation --strict`; review the final diff (design D6)
