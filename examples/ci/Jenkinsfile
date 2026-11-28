@@ -1,5 +1,5 @@
-// Jenkins declarative pipeline — add the stage to a consuming repo's Jenkinsfile.
-// borderlint is a zero-dependency CLI; a non-zero exit fails the stage and the build.
+// Add this declarative pipeline stage to your repository's Jenkinsfile.
+// borderlint has no runtime dependencies. A non-zero scan exit fails the stage and build.
 pipeline {
   agent any
   stages {

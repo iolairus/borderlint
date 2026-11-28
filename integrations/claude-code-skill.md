@@ -1,5 +1,8 @@
-The borderlint-check skill moved to
+The full borderlint-check skill lives at
 [`integrations/claude-plugin/skills/borderlint-check/SKILL.md`](claude-plugin/skills/borderlint-check/SKILL.md).
-Install it with `/plugin marketplace add iolairus/borderlint` then
-`/plugin install borderlint@borderlint`, or copy that file to
-`.claude/skills/borderlint-check/SKILL.md` manually.
+
+Choose one installation method:
+
+1. Install the plugin by running `/plugin marketplace add iolairus/borderlint`, then
+   `/plugin install borderlint@borderlint`.
+2. Copy the canonical skill file to `.claude/skills/borderlint-check/SKILL.md` in your project.

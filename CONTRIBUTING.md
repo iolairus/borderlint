@@ -1,154 +1,181 @@
 # Contributing to borderlint
 
-The most valuable contribution is **the knowledge base** — the mapping from AI providers and
-endpoints to jurisdictions in `borderlint/data/providers.json`. borderlint is vendor-neutral:
-Western and Chinese providers are treated identically, and every entry is reviewed by a human.
+The most valuable contribution is the provider knowledge base in `borderlint/data/providers.json`.
+It maps AI providers and endpoints to residency (where data goes), sovereignty (which government
+may compel disclosure), and provenance (who developed model weights). borderlint is vendor-neutral:
+Western and Chinese providers receive the same review, and a person reviews every entry.
 
-borderlint is built **spec-first** with [OpenSpec](https://github.com/Fission-AI/OpenSpec) (see
-`AGENTS.md`). Code changes go through propose → review → apply. KB and doc contributions are
-lighter, but still follow the required OpenSpec proposal/review and branch workflow in `AGENTS.md`;
-a pull request alone is not enough.
+## Follow the development workflow
+
+borderlint uses spec-first development with [OpenSpec](https://github.com/Fission-AI/OpenSpec).
+Read `AGENTS.md` before changing code, knowledge bases, or documentation.
+
+1. Create and review an OpenSpec proposal.
+2. Create a feature branch.
+3. Implement the approved tasks.
+4. Run the tests and strict OpenSpec validation.
+5. Open a pull request. Keep each pull request to one concern.
+
+A pull request alone is not enough. Knowledge-base and documentation contributions follow the same
+proposal, review, and branch workflow.
 
 ## Add or correct a provider
 
-1. Edit `borderlint/data/providers.json` (add an entry, or fix an existing one).
-2. Add the provider-id → sovereignty-bloc mapping in `borderlint/data/sovereignty.json`. If the
-   provider serves only its own models, add its first-party default under `provider_defaults` in
-   `borderlint/data/provenance.json`; multi-model hosts and aggregators deliberately omit it.
-3. Curate the provider's entry in `borderlint/data/data_practices.json` using the rules below, or
-   add a reasoned exemption under `data_practices_exempt` in `scripts/kb_drift_aliases.json`.
-4. Run the suite: `pip install -e ".[dev]" && pytest`.
-5. Open a PR. State your **sources** for the jurisdiction and any sovereignty/provenance
-   assignments (provider docs, data-residency page, region list). A maintainer assigns/confirms
-   the jurisdiction — see *Jurisdictions are human-assigned* below.
+1. Add or edit the provider in `borderlint/data/providers.json`.
+2. Add its provider-ID → sovereignty-bloc mapping in `borderlint/data/sovereignty.json`.
+3. Add a first-party default under `provider_defaults` in `borderlint/data/provenance.json` only
+   when the provider serves exclusively its own models. Omit this default for multi-model hosts
+   and aggregators.
+4. Add the provider's entry in `borderlint/data/data_practices.json` using the rules below. If you
+   deliberately leave it uncurated, add a reason under `data_practices_exempt` in
+   `scripts/kb_drift_aliases.json`.
+5. Run `pip install -e ".[dev]" && pytest`.
+6. Open a pull request with primary sources for the jurisdiction and any sovereignty or provenance
+   assignments. Use provider documentation, data-residency pages, and region lists. A maintainer
+   must assign or confirm these values.
 
 ### Provider entry schema
 
-Each object in the `providers` array:
+Each object in the `providers` array uses these fields:
 
 | Field | Required | Type | Meaning |
 |---|---|---|---|
-| `id` | yes | string | Stable internal id (snake_case), e.g. `alibaba_dashscope`. |
+| `id` | yes | string | Stable internal ID in snake_case, such as `alibaba_dashscope`. |
 | `name` | yes | string | Human-readable name shown in reports. |
-| `category` | no | `inference` \| `vector_store` \| `aggregator` \| `speech` \| `observability` \| `service` | Provider type; defaults to `inference`. Use `vector_store` for a managed vector DBaaS (data-at-rest sink), `aggregator` for a multi-provider router, `speech` for a speech-to-text / text-to-speech API, `observability` for an AI tracing/telemetry provider such as Langfuse or LangSmith, and `service` for another operated service target such as an MCP integration or web-data API. JSON, SBOM, and evidence output include the category; text output adds labels only for vector stores and observability providers. |
-| `jurisdiction` | yes | string | Default jurisdiction token for the provider (see tokens below). Use `unknown` when the host carries the region (Azure/Bedrock), the cluster region is chosen per-deployment (vector stores), or the provider is an aggregator. |
-| `sdks` | no | string[] | Python import roots, e.g. `["openai"]`. Matched on `import x` / `from x …` and `x.<sub>`. |
-| `npm` | no | string[] | JS/TS package names, e.g. `["@anthropic-ai/sdk"]`. Matched on import/require and `pkg/<sub>`. |
-| `jvm` | no | string[] | Java/Kotlin import-package prefixes, e.g. `["com.openai"]`. Matched on `import` statements at dot boundaries (`com.openai.client.X`, not `com.openaiutils.X`). |
-| `dotnet` | no | string[] | C# namespace prefixes, e.g. `["OpenAI"]`. Matched case-sensitively on `using` directives (plain/`global`/`static`/alias) at dot boundaries (`OpenAI.Chat`, not `OpenAIUtils.X`). |
-| `endpoints` | no | string[] | Host substrings that identify the provider in code/config, e.g. `["api.openai.com"]`. |
-| `endpoint_jurisdictions` | no | object | Per-host override of `jurisdiction`, e.g. `{"dashscope-intl.aliyuncs.com": "sg"}`. |
-| `sovereignty_overrides` | no | object | Optional resolved-jurisdiction → sovereignty-bloc overrides for ring-fenced operations, e.g. `{"cn": "cn"}`; takes precedence over the provider-level sovereignty map. |
-| `region_scheme` | no | `"aws"` \| `"azure"` \| `"gcp"` \| `"aliyun"` \| `"huawei"` | The host carries the cloud region; borderlint resolves the region → jurisdiction (e.g. `bedrock-runtime.ap-east-1…` and `asia-east2-aiplatform.googleapis.com` → `hk`, `….cn-hongkong.pai-eas.aliyuncs.com` → `hk`, `api-ap-southeast-1.modelarts-maas.com` → `hk` — Huawei's `ap-southeast-1` is CN-Hong Kong, not Singapore). |
+| `category` | no | `inference` \| `vector_store` \| `aggregator` \| `speech` \| `observability` \| `service` | Provider type; defaults to `inference`. Use `vector_store` for a managed vector database, `aggregator` for a multi-provider router, `speech` for a speech-to-text or text-to-speech API, `observability` for an AI tracing provider, and `service` for another operated service such as a Model Context Protocol (MCP) integration or web-data API. JSON, software bill of materials (SBOM), and evidence output include the category. Text output adds labels only for vector stores and observability providers. |
+| `jurisdiction` | yes | string | Default jurisdiction token. Use `unknown` when the host carries the region, a vector-store cluster region is chosen per deployment, or the provider is an aggregator. |
+| `sdks` | no | string[] | Python import roots, such as `["openai"]`. Matches `import x`, `from x …`, and `x.<sub>`. |
+| `npm` | no | string[] | JavaScript/TypeScript package names, such as `["@anthropic-ai/sdk"]`. Matches import, require, and `pkg/<sub>`. |
+| `jvm` | no | string[] | Java/Kotlin package prefixes, such as `["com.openai"]`. Matches imports at dot boundaries: `com.openai.client.X` matches, but `com.openaiutils.X` does not. |
+| `dotnet` | no | string[] | C# namespace prefixes, such as `["OpenAI"]`. Matches plain, `global`, `static`, and alias `using` directives case-sensitively at dot boundaries. |
+| `endpoints` | no | string[] | Host substrings that identify the provider, such as `["api.openai.com"]`. |
+| `endpoint_jurisdictions` | no | object | Per-host jurisdiction overrides, such as `{"dashscope-intl.aliyuncs.com": "sg"}`. |
+| `sovereignty_overrides` | no | object | Optional resolved-jurisdiction → sovereignty-bloc overrides for legally separated operations, such as `{"cn": "cn"}`. Takes precedence over the provider-level sovereignty map. |
+| `region_scheme` | no | `"aws"` \| `"azure"` \| `"gcp"` \| `"aliyun"` \| `"huawei"` | The host carries a cloud region. borderlint maps it to a jurisdiction. For example, `bedrock-runtime.ap-east-1…` and `asia-east2-aiplatform.googleapis.com` resolve to `hk`. Huawei's `ap-southeast-1` means CN-Hong Kong, not Singapore. |
 
-Omit a field rather than setting it empty. At least one of `sdks`, `npm`, `jvm`, `dotnet`, or `endpoints`
-should be present, or the entry can never match. The exception is an MCP-only `service` entry with
-no direct SDK/endpoint keys: map each server package, binary, or container-image identifier to its
-provider id in the `servers` map in `borderlint/data/mcp_servers.json`, so stdio MCP configurations
-resolve to the operated service. Remote MCP URLs still resolve through `endpoints`.
+Omit optional fields instead of leaving them empty. Include at least one of `sdks`, `npm`, `jvm`,
+`dotnet`, or `endpoints`; otherwise the entry cannot match.
+
+The exception is a Model Context Protocol (MCP)-only `service` entry with no direct SDK or endpoint
+keys. Map each server package, binary, or container image to the provider ID in the `servers` map in
+`borderlint/data/mcp_servers.json`. Remote MCP URLs still resolve through `endpoints`.
 
 ### Jurisdiction tokens
 
-Lowercase **ccTLD / ISO-3166** country codes (`hk`, `cn`, `sg`, `my`, `us`, `gb`, `mo`, …) plus
-the special tokens **`CN-GBA`** (nine Mainland GBA cities), **`GBA`** (alias for `hk` + `CN-GBA`),
-**`local`** (loopback inference), and **`unknown`** (region set at runtime / undeterminable).
-Invalid tokens are rejected at load time in custom top-level `endpoints` maps and regulator-profile
-`defaults`; provider-entry `jurisdiction` and `endpoint_jurisdictions` values are not validated on
-that path.
+Use lowercase ccTLD/ISO-3166 country codes such as `hk`, `cn`, `sg`, `my`, `us`, `gb`, and `mo`.
+Also supported:
 
-### Jurisdictions are human-assigned
+- `CN-GBA`: the nine Mainland GBA cities.
+- `GBA`: an alias for `hk` plus `CN-GBA`.
+- `local`: loopback inference.
+- `unknown`: a region chosen at runtime or one that cannot be determined.
 
-The weekly drift check (`scripts/kb_drift.py`, `.github/workflows/kb-refresh.yml`) reports uncovered
-upstream providers and model families, missing/invalid sovereignty mappings, stale bundled KBs and
-data-practice entries, providers with Python/npm keys but missing JVM/.NET keys, and providers
-without data-practice curation. It reports existing ids and gaps, including an invalid configured
-bloc, but proposes **no jurisdiction or bloc assignments**. Mapping a
-provider to a jurisdiction, sovereignty, or provenance is human judgment and is **never
-auto-merged**: a reviewer assigns it in the PR. This keeps the KB trustworthy as a residency source.
-An upstream name that is a route alias of a covered provider, or not an AI model provider at all, is
-recorded in `scripts/kb_drift_aliases.json` (with a reason for ignores) instead of the KB. Reasoned
-`residue` entries acknowledge unactionable uncovered model ids, and `sdk_exempt` entries suppress
-known JVM/.NET gaps. These suppression lists are read only by the drift check. After editing any
-bundled KB, review it and advance its top-level `updated` date; update a data-practice entry's
-`reviewed` date after re-verifying its facts.
+Custom top-level `endpoints` maps and regulator-profile `defaults` reject invalid tokens when they
+load. That loading path does not validate provider-entry `jurisdiction` and
+`endpoint_jurisdictions` values.
 
-## Data-practice facts (`data_practices.json`)
+### Assign jurisdictions and blocs by hand
 
-A separate, hand-curated KB answering the four questions privacy reviewers ask first:
-does the provider train on customer API data by default, what is the retention window for
-API inputs/outputs, where is the subprocessor list, and does an enterprise tier change the
-answers. Strictly advisory — it never influences verdicts or exit codes.
+The weekly coverage check runs `scripts/kb_drift.py` through `.github/workflows/kb-refresh.yml`.
+It reports:
 
-Entry schema (one entry per provider id in `providers.json`):
+- Upstream providers and model families that the bundled knowledge bases do not cover.
+- Missing or invalid sovereignty mappings.
+- Knowledge bases and data-practice entries that need a fresh review.
+- Providers with Python or npm keys but missing JVM or .NET keys.
+- Providers without curated data practices.
+
+The check reports IDs and gaps. It never proposes or merges jurisdiction, sovereignty, or
+provenance assignments. A reviewer must make those judgments in the pull request.
+
+Record upstream route aliases and out-of-scope names in `scripts/kb_drift_aliases.json`, with a
+reason for each ignored name. Use `residue` entries for acknowledged model IDs that need no action
+and `sdk_exempt` entries for accepted JVM/.NET gaps. Only the coverage check reads these
+suppression lists; the scanner does not.
+
+After editing a bundled knowledge base, review it and advance its top-level `updated` date. After
+re-verifying a data-practice entry's facts, advance its `reviewed` date.
+
+## Curate data practices
+
+`borderlint/data/data_practices.json` answers four questions for each provider:
+
+1. Does the provider train on customer API data by default?
+2. How long does it retain API inputs and outputs?
+3. Where does it publish its subprocessor list?
+4. Does an enterprise tier change these answers?
+
+These facts are advisory. They never change verdicts or exit codes.
+
+### Data-practice schema
 
 | Field | Required | Meaning |
 |---|---|---|
-| `training_default` | no | `"yes"` \| `"no"` \| `"opt-out"`; omit (JSON `null`) when undocumented |
-| `retention` | no | Free-text retention window for API inputs/outputs; conditions belong in the text |
+| `training_default` | no | `"yes"` \| `"no"` \| `"opt-out"`; use JSON `null` when undocumented |
+| `retention` | no | Retention window for API inputs and outputs; include conditions in the text |
 | `subprocessors` | no | `{url, locator, retrieved}` link to the provider's subprocessor list |
-| `enterprise_tier` | no | Free-text note on whether an enterprise/commercial tier changes the answers |
-| `reviewed` | yes | ISO-8601 date you last verified every fact in the entry |
+| `enterprise_tier` | no | Note explaining whether an enterprise or commercial tier changes the answers |
+| `reviewed` | yes | ISO-8601 date when you last verified every fact |
 | `citations` | per fact | `{url, locator, retrieved}` for each non-null fact |
 
-Curation rules:
+Follow these rules:
 
-- **Every fact needs a citation**: the source URL, a locator note naming where in the source
-  the statement is made, and the date you retrieved it. Read the primary documentation — never
-  copy from third-party summaries.
-- **Unknown means null.** If a fact isn't publicly documented, leave it `null`; the renderers
-  state "not curated" rather than guessing.
-- **Human curation only.** The drift check reports providers without entries and entries whose
-  `reviewed` date exceeds the 90-day interval — ids only, never proposed values. Facts are
-  never auto-filled from upstream feeds. A provider deliberately left uncurated gets a reasoned
-  entry under `data_practices_exempt` in `scripts/kb_drift_aliases.json`.
-- Facts are statements about documented practices as of their retrieval dates — not legal advice.
+- **Cite every fact.** Record the source URL, a locator naming where the statement appears, and
+  the retrieval date. Read the provider's primary documentation, not third-party summaries.
+- **Use null for unknown facts.** If public documentation does not answer a question, leave it
+  `null`. Reports say “not curated” instead of guessing.
+- **Curate by hand.** The weekly check reports missing entries and entries whose `reviewed` date is
+  more than 90 days old. It never fills in facts. Record deliberate exemptions under
+  `data_practices_exempt` in `scripts/kb_drift_aliases.json`.
+- **Date every statement.** Facts describe documented practices as of their retrieval dates. They
+  are not legal advice.
 
-## Regulator profiles (`regulator_profiles.json`)
+## Curate regulator profiles
 
-Hand-curated profiles that pre-seed the `init` wizard's allow-list walk from a regulator's
-published AI guidance (`borderlint init --profile <id>`). Strictly advisory: every seeded
-jurisdiction stays operator-editable, and the wizard prints the profile's citation and an
-explicit not-legal-advice disclaimer whenever one is active.
+`borderlint/data/regulator_profiles.json` supplies starting choices for `borderlint init --profile
+<id>` from published regulator guidance. The profiles are advisory. You can change every suggested
+jurisdiction, and `init` always prints the citation and a not-legal-advice disclaimer.
 
-Profile schema (one entry per profile id):
+### Regulator-profile schema
 
 | Field | Required | Meaning |
 |---|---|---|
-| `seats` | yes | Supported seat(s) the profile targets (e.g. `["hk"]`); mismatch with `--home` warns but proceeds |
+| `seats` | yes | Home locations the profile targets, such as `["hk"]`; a mismatch with `--home` warns but continues |
 | `regulator` | yes | Display name of the issuing regulator |
-| `citation` | yes | `{url, retrieved}` link to the guidance the defaults derive from |
-| `defaults` | yes | Per-classification allow-list of jurisdiction tokens (recognised vocabulary only) |
-| `notes` | no | Free-text explaining the conservative choices |
-| `reviewed` | yes | ISO-8601 date you last verified the profile against the guidance |
+| `citation` | yes | `{url, retrieved}` link to the guidance behind the defaults |
+| `defaults` | yes | Per-classification allow-lists using recognised jurisdiction tokens |
+| `notes` | no | Explanation of the conservative choices |
+| `reviewed` | yes | ISO-8601 date when you last verified the profile against the guidance |
 
-Curation rules:
+Follow these rules:
 
-- **Defaults must cite the guidance.** Record the source URL and retrieval date; read the
-  primary document, never third-party summaries.
-- **Conservative by default.** Seed onshore only unless the guidance itself endorses a
-  cross-border arrangement (e.g. CN-GBA under the GBA Standard Contract for non-pii);
-  explain deviations in `notes`.
-- **Human curation only.** The file carries a top-level `updated` date and joins the weekly
-  staleness check; nothing is fetched or updated at runtime.
-- Profiles are starting points derived from cited guidance as of its retrieval date — never
-  legal advice and never a determination of filing sufficiency.
+- **Cite the guidance.** Record the primary source URL and retrieval date. Do not use third-party
+  summaries.
+- **Start conservatively.** Suggest onshore locations only unless the guidance itself supports a
+  cross-border arrangement. For example, CN-GBA may suit non-PII under the GBA Standard Contract.
+  Explain any deviation in `notes`.
+- **Curate by hand.** Advance the file's top-level `updated` date after review. The weekly check
+  includes this date. borderlint never fetches or updates profiles at runtime.
+- **Present profiles as starting points.** They reflect cited guidance as of its retrieval date.
+  They are not legal advice and do not determine whether a filing is sufficient.
 
-## Custom / private providers (no PR needed)
+## Add custom or private providers
 
-To add providers for your own org without contributing them upstream, pass a user KB with
-`--providers custom.json` — it merges over the bundled KB (your entries win on conflict). It
-accepts the same `providers` schema, plus an `endpoints` shorthand for internal hosts:
+You can add your organisation's providers without contributing them upstream. Pass a custom
+knowledge base with `--providers custom.json`. borderlint adds it to the bundled knowledge base,
+and your entries win on conflict.
+
+The file accepts the same `providers` schema plus an `endpoints` shorthand:
 
 ```json
 { "endpoints": { "llm-cn.acme.internal": "cn", "llm-hk.acme.internal": "hk" } }
 ```
 
-Custom KBs may also include optional top-level `sovereignty` and `provenance` objects. The first
-maps provider ids to sovereignty blocs; the second maps model-ID prefixes to provenance blocs.
-Both override bundled entries, and user provenance prefixes take precedence even over longer
-bundled prefixes.
+You can also include top-level `sovereignty` and `provenance` objects. The first maps provider IDs
+to sovereignty blocs. The second maps model-ID prefixes to provenance blocs. Both override bundled
+entries. Your provenance prefixes take precedence even over longer bundled prefixes.
 
 ## Other contributions
 
-Bug fixes, detection improvements, and docs are welcome via PR. Anything that changes tool
-behaviour follows the OpenSpec flow in `AGENTS.md`. Keep changes small — one concern per PR.
+Bug fixes, detection improvements, and documentation changes are welcome. Follow the OpenSpec
+workflow in `AGENTS.md` for every behaviour change, and keep each pull request to one concern.
