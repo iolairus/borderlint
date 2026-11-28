@@ -1,5 +1,5 @@
-# Copy into a consuming repo's .gitlab-ci.yml.
-# Replace residency.json and customer-pii with the repository's policy and data class.
+# Copy this file to .gitlab-ci.yml in your repository.
+# Replace residency.json and customer-pii with your policy path and data class.
 borderlint:
   image: python:3.12-slim
   stage: test

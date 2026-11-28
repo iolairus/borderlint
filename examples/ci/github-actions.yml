@@ -1,4 +1,4 @@
-# Drop into a consuming repo at .github/workflows/borderlint.yml
+# Copy this file to .github/workflows/borderlint.yml in your repository.
 name: AI data residency
 on: [push, pull_request]
 jobs:

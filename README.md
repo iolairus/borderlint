@@ -3,26 +3,35 @@
 [![PyPI](https://img.shields.io/pypi/v/borderlint)](https://pypi.org/project/borderlint/)
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-borderlint-2188ff?logo=githubactions&logoColor=white)](https://github.com/marketplace/actions/borderlint-ai-data-residency-lint)
 
-**Map and govern where your AI data and traffic flow — who can compel its disclosure, and whose
-model weights it runs.**
+**Map where your AI data goes, check who can compel its disclosure, and identify whose model weights you use.**
 
-A static, in-CI linter for **AI data residency, sovereignty, and model provenance across APAC &
-EMEA**, with first-class **HK / GBA** support. Scans **Python, TypeScript/JavaScript, Java/Kotlin,
-C#**, config files, and **MCP server configs**. Zero runtime dependencies.
+borderlint scans code without running it. It checks three separate facts about each AI data flow:
+
+- **Residency:** where the data goes.
+- **Sovereignty:** which government's laws may compel the provider to disclose the data.
+- **Provenance:** who developed the model weights.
+
+It supports Python, TypeScript/JavaScript, Java/Kotlin, C#, configuration files, and Model Context
+Protocol (MCP) server configurations. It has no runtime dependencies. Its strongest support is for
+Hong Kong and the Greater Bay Area (GBA), with additional home locations across APAC and EMEA.
+Western and Chinese providers receive the same checks.
 
 ## Quick start
+
+Install borderlint, list the AI data flows in your repository, create a policy, then check your code
+against that policy:
 
 ```bash
 pip install borderlint
 
-borderlint scan .        # inventory mode: where does this repo's AI data flow today?
-borderlint init .        # short interview → residency.json, grounded in what the scan found
-borderlint scan . --policy residency.json --classification customer-pii   # now it gates
+borderlint scan .        # List flows and jurisdictions; no policy needed.
+borderlint init .        # Answer a short interview to create residency.json.
+borderlint scan . --policy residency.json --classification customer-pii
 ```
 
-A violation looks like this (`--explain` adds the arrow lines):
+A policy violation looks like this. Add `--explain` to include the arrow lines:
 
-```
+```text
 borderlint — AI data-flow & residency report
 ==============================================
 [FAIL] DeepSeek -> Mainland China | sovereignty: Mainland China | weights: Mainland China
@@ -36,58 +45,61 @@ Reference: PIPL cross-border transfer — Mainland China cross-border PI: CAC se
 Summary: 1 fail, 0 warn, 0 waived, 0 ok
 ```
 
-Exit code is non-zero on a violation, so the same command gates CI unchanged.
+Without `--policy`, borderlint runs in inventory mode and exits zero. With a policy, it exits
+non-zero when it finds a violation in text, JSON, Mermaid, or SARIF format. Your CI system then
+fails the job.
+[Export formats](#output-formats) always exit zero so you can save evidence even after a violation.
 
-## What it checks
+## Understand the three checks
 
-Every detected AI flow is evaluated on three orthogonal axes:
+A flow can have a different answer for each check:
 
-- **Residency** — *where the bytes rest*: each flow resolves to a jurisdiction; outside the
-  allow-list for the declared data class fails the build.
-- **Sovereignty** — *which government can compel disclosure*: a US-headquartered provider is under
-  the CLOUD Act regardless of endpoint region.
-- **Provenance** — *whose model weights the flow runs*: model references resolve to the
-  developer's bloc.
+- **Residency — where the data rests.** borderlint maps the flow to a jurisdiction. A destination
+  outside your data class's allow-list violates the policy.
+- **Sovereignty — which government may compel disclosure.** A US-headquartered provider remains
+  under US law, including the CLOUD Act, even when you choose an endpoint outside the US.
+- **Provenance — whose model weights run.** borderlint maps the model to its developer's bloc.
 
-One flow, three different answers: **AWS Bedrock `ap-east-1` serving DeepSeek-R1 is residency
-`hk`, sovereignty `us`, provenance `cn`** — and self-hosted Qwen is `local`/`local`/`cn`. Declare
-a home base (HK, Macao, the GBA, Japan, Korea, Singapore, Australia, the UK, the EU, Malaysia)
-and flagged flows are tagged with the regime in play (PDPO, PIPL, APPI, PIPA, PDPA, the Privacy
-Act) and its cross-border reference. GDPR is a transfer-arrangement reference, never a regime tag.
-Western and Chinese providers are treated evenly.
+For example, AWS Bedrock in `ap-east-1` serving DeepSeek-R1 has residency `hk`, sovereignty `us`,
+and provenance `cn`. Self-hosted Qwen has residency `local`, sovereignty `local`, and provenance
+`cn`.
 
-Browse the full knowledge base — 142 providers with curated data-practice facts for the majors,
-model developers, regimes — at [iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/).
+Declare a home location to add relevant legal context. borderlint supports Hong Kong, Macao,
+Mainland China and the Mainland GBA cities, Japan, Korea, Singapore, Australia, the UK, the EU,
+and Malaysia. Reports name relevant data-protection regimes and link to cross-border references.
+These details never change the verdict. GDPR is always a transfer reference, never a regime tag.
 
-## Use
+Browse the [knowledge-base website](https://iolairus.github.io/borderlint/) for 142 providers,
+model developers, curated data practices, and legal references.
+
+## Scan commands and options
 
 ```bash
 python -m borderlint scan ./service --policy residency.json --classification customer-pii
 ```
 
-- No `--policy` → **inventory mode** (lists flows + jurisdictions, exits 0).
-- `--explain` — plain-language explanation and remediation hint under each violation
-  (text: a `→` line per reason; json: an `explanation` field per finding). Advisory only.
-- `--providers internal-endpoints.json` — merge your own endpoint map ([below](#internal-endpoints)).
-- `--format <name>` — see [output formats](#output-formats).
-- `diff <baseline.sbom> <current.sbom>` — compare two SBOMs; **exits 1 when the PR adds a new
-  non-`local` flow** (new egress), else 0.
-- `init [path]` — scaffold `residency.json` via a short interview (or non-interactively:
-  `borderlint init . --home hk --classes customer-pii,non-pii`). Add `--profile <id>` to seed
-  the allow-list walk from a bundled regulator profile (`hkma`, `mas`) — conservative defaults
-  derived from the regulator's published guidance, with the citation and retrieval date shown
-  during init and recorded in the emitted policy. Advisory starting point, not legal advice;
-  every seeded jurisdiction can be dropped in the walk.
-- Accept a reviewed flow with an inline `# borderlint: allow <reason>` **waiver** (justification
-  required; reported as *waived*, not hidden; can't override an explicit provider `deny`).
-- **MCP configs are scanned too**: `.mcp.json`, `claude_desktop_config.json`, and the Cursor /
-  VS Code equivalents — one finding per configured server ([details](#agentic-coding--mcp)).
+- Omit `--policy` to list flows and jurisdictions without assigning verdicts.
+- Add `--explain` for a plain-language reason and remediation hint with each finding. Text output
+  adds a `→` line for each reason. JSON adds an `explanation` field. These hints are advisory.
+- Add `--providers internal-endpoints.json` to add your own endpoint map or override bundled
+  entries. See [Internal endpoints](#internal-endpoints).
+- Choose `--format <name>` from the [output formats](#output-formats).
+- Use `diff <baseline.sbom> <current.sbom>` to compare two AI data-flow software bills of materials
+  (SBOMs). The command exits 1 when the current file adds a provider/jurisdiction pair that is not
+  `local`, including `unknown`. Otherwise it exits zero.
+- Use `init [path]` to create `residency.json` through a short interview. For scripts, provide both
+  values: `borderlint init . --home hk --classes customer-pii,non-pii`.
+- Add `--profile hkma` or `--profile mas` to start with conservative choices from a bundled
+  regulator profile. borderlint shows the source and retrieval date, and records them in the policy.
+  You can remove every suggested jurisdiction. Profiles are starting points, not legal advice.
+- Accept a reviewed flow with `# borderlint: allow <reason>` or the equivalent comment syntax for
+  the file. A reason is required. Reports show the flow as waived rather than hiding it. A waiver
+  cannot override an explicit provider or model deny.
 
-## Policy (the eval-set)
+## Write a policy
 
-`residency.json` maps each data class to the jurisdictions you accept, and optionally to the
-**sovereignty** and **provenance blocs** you accept for compelled-disclosure and model-origin
-exposure:
+`residency.json` maps each data class to the jurisdictions you allow. Optional blocks add
+sovereignty and provenance rules:
 
 ```json
 {
@@ -109,61 +121,114 @@ exposure:
 }
 ```
 
-**Residency — deny-by-default**: a resolved, non-`local` flow to any code not on the list for the
-declared class fails — so `sg` is allowed but `my` is not, matching a PDPO agreed-locations EULA.
-`local` flows are exempt from the jurisdiction allow-list because local inference is not a
-cross-border transfer; `unknown` follows the top-level `on_unknown` setting (`warn` by default, or
-`fail`). Other policy checks still apply. `GBA` is shorthand for `hk` + `CN-GBA`.
+### Residency rules
 
-**Sovereignty — opt-in, orthogonal to residency.** Residency says *where the bytes rest*;
-**sovereignty** says *which government can compel disclosure* — a US provider (AWS, Azure, GCP,
-OpenAI) is subject to the CLOUD Act regardless of the endpoint region. Add a `sovereignty` block
-to constrain it per class. Bloc vocabulary: `us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`,
-`kr`, `sg`, `au`, `ae`, `ch`, `vn`, `local`, `unknown`. Absent the block, behaviour is unchanged
-(sovereignty is reported as a column but never gates). `local` sovereignty is exempt (self-hosted
-= no external sovereign). See [CAPABILITIES.md §3.1](CAPABILITIES.md) for the full model.
+Residency uses deny-by-default rules. A resolved flow outside the allow-list for the active data
+class fails. In the example, `sg` is allowed but `my` is not.
 
-**Provenance — opt-in, orthogonal to both.** *Whose model weights* a flow runs, resolved in two
-tiers: a model reference bound to the flow wins; absent one, a provider that serves only its own
-models (OpenAI, Anthropic, DeepSeek …) resolves to its org's bloc, while multi-model hosts
-(Bedrock, Vertex) and aggregators stay `unknown`. Aggregator-qualified IDs
-(`deepseek/deepseek-r1` via OpenRouter) resolve provenance even where residency and sovereignty
-are `unknown` — the one axis routers don't obscure. The `provenance` block mirrors the
-sovereignty shape; vocabulary is the same minus `vn` and `local` (weights always have a developer).
-Fine-tunes inherit the base family's bloc. A `deny_models` list of anchored model-id prefixes
-bans a family regardless of host or bloc — `"deny_models": ["deepseek"]` fails a Bedrock flow
-serving DeepSeek-R1 even where `cn` weights are otherwise allowed; denies match after the same
-normalization as the map — GGUF paths, redistributor repos, `@`-version pins, and **registry or
-runtime namespaces** (`ollama/deepseek-r1`, `vllm/…`, a private `mirror.internal/…`, a scheme-less
-`huggingface.co/TheBloke/…` host path) can't dodge them — sit in the default failure set like the
-provider deny, and cannot be waived inline. One honest limit: a family that is simply
-absent from the provenance map resolves through the provider's first-party default and so cannot be
-denied — an empty `deny_models` match on a model you expected to block means the *family* needs
-curating, not the policy. See [CAPABILITIES.md §3.2](CAPABILITIES.md).
+- `local` flows are exempt from the jurisdiction allow-list because local inference is not a
+  cross-border transfer. Provider denies and other policy checks still apply.
+- `unknown` follows the top-level `on_unknown` setting: `warn` by default or `fail`.
+- `GBA` expands to `hk` and `CN-GBA`. `uk` is an alias for `gb`.
+- The default failure set covers residency violations, denied providers, and denied models. You can
+  change it with `fail_on`.
 
-Declare your **`home_location`** — a GBA seat (`hk`/`mo`/`CN-GBA`) or an APAC/EMEA seat
-(`jp`, `kr`, `sg`, `au`, `uk`, `eu`, `my`) — and a flagged flow is tagged with the **data-protection
-regime** in play and linked to the relevant **cross-border arrangement** (the matching GBA Standard
-Contract variant, PIPL cross-border, GDPR, the UK IDTA, APPI Art. 28, PIPA Art. 28-8, PDPA s.26/s.129,
-APP 8) as reference links. (`home_regime` `pdpo`/`pipl` is still accepted.)
+### Sovereignty rules
 
-## CI
+Sovereignty is separate from residency. It usually describes the provider's home legal regime, not
+the endpoint's physical location. For example, AWS, Azure, GCP, and OpenAI have a default
+sovereignty of `us`, even when you choose another hosting region.
 
-Same command in any pipeline. GitHub Actions (composite action):
+Curated overrides handle legally separated operations. AWS Bedrock China regions currently resolve
+to residency and sovereignty `cn`, rather than the default `us`.
+
+Add a `sovereignty` block to check this per data class. Its vocabulary is `us`, `eu`, `cn`, `uk`,
+`ru`, `in`, `il`, `ca`, `jp`, `kr`, `sg`, `au`, `ae`, `ch`, `vn`, `local`, and `unknown`.
+
+Without the block, borderlint reports sovereignty but does not check it against your policy. The
+check is active only when the block defines an allow-list for the active data class. Mismatches
+then warn unless you add `sovereignty` to `fail_on`. A block without that class entry, including
+one containing only `on_unknown`, does not activate the check. Self-hosted inference has `local`
+sovereignty and is exempt from the allow-list. See [CAPABILITIES.md](CAPABILITIES.md) for the full
+model and its legal limits.
+
+### Provenance rules
+
+Provenance identifies who developed the model weights. borderlint resolves it in two steps:
+
+1. Use a model reference bound to the flow when one exists.
+2. Otherwise, use a provider's first-party default when that provider serves only its own models.
+
+OpenAI, Anthropic, and DeepSeek have first-party defaults. Multi-model hosts such as Bedrock and
+Vertex, routers, and aggregators remain `unknown` without a model reference.
+
+A qualified ID such as `deepseek/deepseek-r1` through OpenRouter can still resolve provenance when
+residency and sovereignty are `unknown`. Fine-tunes inherit the base family's bloc. A model
+reference without an eligible provider flow becomes a standalone weights-origin finding, not a
+network flow.
+
+The provenance vocabulary matches sovereignty except that it excludes `vn` and `local`. Model
+weights always have a developer.
+
+Without a `provenance` block, borderlint reports provenance but does not check it against your
+policy. Allow-list and unknown-handling checks are active only when the block defines an allow-list
+for the active data class. Mismatches then warn unless you add `provenance` to `fail_on`. Setting
+`on_unknown: fail` makes unknown provenance fail only when that class entry exists.
+
+Use `deny_models` independently of the class allow-list to block anchored model-ID prefixes
+regardless of host or bloc. For example,
+`"deny_models": ["deepseek"]` blocks DeepSeek-R1 on Bedrock even when `cn` is otherwise allowed.
+Matching normalises GGUF paths, redistributor repositories, `@` version pins, registry hosts, and
+runtime namespaces such as `ollama/` and `vllm/`. Denied models fail by default and cannot be
+waived inline.
+
+Known limitations:
+
+- If a family is absent from the provenance map, borderlint may use the provider's first-party
+  default. No model ID is then available for `deny_models` to match. Curate the family if you
+  expected to block it.
+- A scheme-less host path such as `huggingface.co/TheBloke/model-x` can resolve through namespace
+  handling. A URL with `https://` currently resolves nothing. Removing the scheme is a known
+  follow-up, not current behaviour.
+
+See [CAPABILITIES.md](CAPABILITIES.md) for namespace and local-model examples.
+
+### Home locations and legal references
+
+Set `home_location` to `hk`, `mo`, `cn`, `CN-GBA`, `jp`, `kr`, `sg`, `au`, `uk`, `gb`, `eu`, or
+`my`. The legacy `home_regime` values `pdpo` and `pipl` remain accepted.
+
+For a flow that violates policy, borderlint adds relevant regime tags and cross-border links. These
+include the appropriate GBA Standard Contract variant, PIPL transfer guidance, GDPR, the UK IDTA,
+APPI Article 28, PIPA Article 28-8, Singapore PDPA section 26, Malaysia PDPA section 129, and
+Australian Privacy Principle 8.
+
+borderlint does not decide whether a law or transfer arrangement applies to your organisation. You
+choose the allowed jurisdictions and blocs. Legal references provide context only and never change
+a verdict.
+
+## Run borderlint in CI
+
+Use the same scan command in any pipeline. With GitHub Actions, use the composite action:
 
 ```yaml
 - uses: iolairus/borderlint@v1.19.3
   with: { path: ., policy: residency.json, classification: customer-pii }
 ```
 
-Jenkins / anything else: `pip install borderlint && borderlint scan . --policy residency.json
---classification customer-pii` — a non-zero exit fails the stage. Full examples in `examples/ci/`.
+For Jenkins or another CI system, install borderlint and run:
 
-GitLab CI: copy `examples/ci/gitlab-ci.yml` into `.gitlab-ci.yml` and replace `residency.json` and
+```bash
+pip install borderlint && borderlint scan . --policy residency.json --classification customer-pii
+```
+
+A non-zero scan exit fails the stage. Full examples are in `examples/ci/`.
+
+For GitLab CI, copy `examples/ci/gitlab-ci.yml` into `.gitlab-ci.yml`. Replace `residency.json` and
 `customer-pii` with your policy path and data class. The job runs on merge requests and pushes to
-the default branch, and a non-zero scan exit fails the job.
+the default branch.
 
-pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`):
+To check code before each commit, add this to `.pre-commit-config.yaml`:
 
 ```yaml
 - repo: https://github.com/iolairus/borderlint
@@ -173,71 +238,92 @@ pre-commit — catch a bad flow before it's committed (`.pre-commit-config.yaml`
       args: [--policy, residency.json, --classification, customer-pii]
 ```
 
-The hook runs `borderlint scan` over the repo (the `args` are required for a real gate; without a
-policy it runs inventory mode and always passes).
+The hook scans the repository rather than only staged files. Supply policy arguments to enforce
+your policy. Without them, the hook runs in inventory mode and always passes.
 
-## Agentic coding & MCP
+## MCP servers and agent tools
 
-The fastest-growing source of unreviewed AI egress is the agent stack itself — the coding agent
-reaching for an SDK, and the MCP servers wired into it.
+Model Context Protocol (MCP) servers and agent tools can send data to services outside your AI
+provider. borderlint checks their configured destinations, but does not observe network traffic.
 
-**MCP config scanning**: `.mcp.json`, `claude_desktop_config.json`, `.cursor/mcp.json`, and
-`.vscode/mcp.json` are parsed structurally — one finding per configured MCP server (kind
-`mcp_server`). Remote (`url`) servers resolve their host against the provider KB; stdio servers
-resolve their package against a bundled MCP-server map (`borderlint/data/mcp_servers.json`); anything
-unmapped surfaces as an explicit `unknown`, and purely local servers (filesystem, memory, your
-own database) as `local`. Claude Desktop's config lives outside your repo — scan it directly:
-`borderlint scan ~/Library/Application\ Support/Claude/claude_desktop_config.json`.
+### MCP configuration files
 
-**Explicit MCP / agent-tool endpoints**: declarations in other scanned source and config files
-produce `agent_tool_endpoint` findings. The curated key families pair `mcp`, `mcp_server`,
-`mcp_gateway`, or `agent_tool` with `url`, `endpoint`, `base_url`, or `host`, in snake_case,
-environment-style uppercase, or camelCase — for example `MCP_SERVER_URL`, `mcp_endpoint`, and
-`agentToolEndpoint`. Arbitrary URLs, bare `url` / `tool_url`, and authentication lookalikes such
-as `MCP_AUTH_URL` do not qualify. Valid structural MCP configs retain their `mcp_server`
-findings; otherwise explicit detection suppresses only the generic detection for the same
-declaration, avoiding duplicates.
+borderlint reads `.mcp.json`, `claude_desktop_config.json`, `.cursor/mcp.json`, and
+`.vscode/mcp.json`. It creates one `mcp_server` finding per configured server.
 
-Known hosts resolve through the provider KB (including `--providers` overrides), loopback resolves
-to `local`, and unmapped static hosts or runtime-templated destinations resolve to
-`custom_endpoint` / `unknown` rather than a guessed jurisdiction. Evidence records only
-`<key> -> <host>` or `<key> -> runtime-resolved`: URL credentials, paths, query strings,
-fragments, headers, and complete assignment values are not retained.
+- Remote `url` servers resolve through the provider knowledge base.
+- Stdio servers resolve their package, binary, or image through `borderlint/data/mcp_servers.json`.
+- Unmapped destinations resolve to `unknown`. Local filesystem, memory, database, and loopback
+  servers resolve to `local`.
+- A valid MCP configuration produces no duplicate generic endpoint finding. Invalid JSON falls back
+  to ordinary line scanning without failing the scan.
 
-These findings describe configured potential destinations, not observed transmissions. Detection
-does not infer tool use from arbitrary URLs or call graphs, perform runtime `tools/list` discovery,
-inspect traffic or payloads, analyze tool permissions, or claim transitive egress. Existing
-residency rules, `on_unknown`, inline waivers, output formats, and exit codes apply unchanged,
-with no new CLI option or policy block. Tool endpoints are not model providers: same-file model
-references and first-party provider defaults do not assign model provenance to
-`agent_tool_endpoint` findings.
+Claude Desktop's configuration usually lives outside your repository. Scan it directly:
 
-**Agent integrations**: `integrations/` ships an installable Claude Code plugin and copy-paste
-rules that make the agent run borderlint *before* adding an AI dependency, endpoint, or model id
-— and surface any new non-`local` flow in the conversation, before it is committed:
+```bash
+borderlint scan ~/Library/Application\ Support/Claude/claude_desktop_config.json
+```
 
-- **Claude Code** — install the plugin (this repo is its marketplace):
+### Explicit agent-tool endpoints
 
-  ```
-  /plugin marketplace add iolairus/borderlint
-  /plugin install borderlint@borderlint
-  ```
+In other source and configuration files, borderlint recognises explicit MCP and agent-tool keys.
+It produces an `agent_tool_endpoint` finding for key families that combine `mcp`, `mcp_server`,
+`mcp_gateway`, or `agent_tool` with `url`, `endpoint`, `base_url`, or `host`. Snake case,
+environment-style uppercase, and camelCase are supported. Examples include `MCP_SERVER_URL`,
+`mcp_endpoint`, and `agentToolEndpoint`.
 
-  Without plugins: copy
-  [`integrations/claude-plugin/skills/borderlint-check/SKILL.md`](integrations/claude-plugin/skills/borderlint-check/SKILL.md)
-  to `.claude/skills/borderlint-check/SKILL.md`, or append
-  [`integrations/claude-code.md`](integrations/claude-code.md) to your project's
-  `CLAUDE.md` / `AGENTS.md`.
-- **Cursor** — save [`integrations/cursor.mdc`](integrations/cursor.mdc) as
-  `.cursor/rules/borderlint.mdc`.
+Arbitrary URLs, bare `url` or `tool_url`, and authentication lookalikes such as `MCP_AUTH_URL` do
+not match. An explicit finding replaces only the generic finding for the same declaration.
 
-Advisory by design: the pre-commit hook and the SBOM `diff` gate stay on as the enforcing
-backstop, and accepted flows are recorded with the inline waiver rather than hidden.
+Known hosts resolve through the provider knowledge base, including `--providers` overrides.
+Loopback resolves to `local`. Unmapped static hosts and runtime-templated destinations resolve to
+`custom_endpoint` and `unknown`.
 
-## AI observability (Langfuse and LangSmith)
+Evidence contains only `<key> -> <host>` or `<key> -> runtime-resolved`. borderlint does not retain
+URL credentials, paths, query strings, fragments, headers, or complete assignment values.
 
-A6 covers only **Langfuse and LangSmith**, using a curated SDK inventory rather than broad vendor
-prefixes:
+These findings describe configured destinations, not observed transmissions. borderlint does not
+infer tool use from arbitrary URLs or call graphs, discover tools at runtime, inspect traffic or
+payloads, analyse permissions, or claim indirect data flows. Existing policy, unknown-handling,
+waiver, output, and exit-code rules apply without a new CLI option or policy block.
+
+Agent-tool endpoints are not model providers. Same-file model references and first-party defaults
+do not assign provenance to these findings.
+
+### Coding-agent integrations
+
+The Claude Code plugin and Cursor rules ask your coding agent to run a baseline scan before adding
+an AI dependency, endpoint, model ID, or MCP server. After the edit, the agent scans again before
+committing. It compares the results and reports any new non-`local` or `unknown` flow so you can
+decide whether to accept it.
+
+For Claude Code, install the plugin:
+
+```text
+/plugin marketplace add iolairus/borderlint
+/plugin install borderlint@borderlint
+```
+
+Without plugins, choose one of these options:
+
+1. Copy [`integrations/claude-plugin/skills/borderlint-check/SKILL.md`](integrations/claude-plugin/skills/borderlint-check/SKILL.md)
+   to `.claude/skills/borderlint-check/SKILL.md`.
+2. Append [`integrations/claude-code.md`](integrations/claude-code.md) to your project's `CLAUDE.md`
+   or `AGENTS.md`.
+
+For Cursor, save [`integrations/cursor.mdc`](integrations/cursor.mdc) as
+`.cursor/rules/borderlint.mdc`.
+
+These agent instructions are advisory. The pre-commit hook enforces its configured policy scan and
+honours justified waivers. SBOM `diff` is independent: it ignores policy allow-lists and waivers,
+and exits 1 for every added non-`local` provider/jurisdiction pair. To accept such a pair, review
+and update the SBOM baseline. Record accepted flows with a justified inline waiver for policy
+scans, and update the baseline when needed.
+
+## AI observability: Langfuse and LangSmith
+
+borderlint detects a curated set of Langfuse and LangSmith SDKs. It does not match broad vendor
+prefixes or other observability vendors.
 
 - **Python:** `langfuse` and `langsmith`.
 - **JavaScript/TypeScript:** Langfuse `@langfuse/tracing`, `@langfuse/otel`, `@langfuse/openai`,
@@ -245,16 +331,16 @@ prefixes:
   `langfuse-node`, `langfuse-langchain`, and `langfuse-vercel`; LangSmith `langsmith`.
 - **Java/Kotlin:** LangSmith imports under `com.langchain.smith`.
 
-Other packages under `@langfuse/*`, unofficial SDK namespaces, and other observability vendors do
-not match. Documented hosted endpoint references resolve through the provider KB. Exactly six
-explicit destination keys are also recognized, using their raw, **case-sensitive** spellings:
-`LANGFUSE_BASE_URL`, `LANGFUSE_HOST`, `LANGFUSE_BASEURL`, `LANGFUSE_OTEL_HOST`,
-`LANGSMITH_ENDPOINT`, and legacy `LANGCHAIN_ENDPOINT`. These declarations produce
-`observability_endpoint` findings; lowercase, camelCase, and other case variants do not qualify.
-Evidence retains only the key and sanitized host (or a runtime-resolved marker), with
-occurrence-scoped duplicate suppression.
+Other `@langfuse/*` packages and unofficial SDK namespaces do not match. Documented hosted endpoint
+references resolve through the provider knowledge base.
 
-Documented hosted endpoints resolve to the exact country of their primary trace/application-data
+Six explicit destination keys are recognised with their exact, case-sensitive spellings:
+`LANGFUSE_BASE_URL`, `LANGFUSE_HOST`, `LANGFUSE_BASEURL`, `LANGFUSE_OTEL_HOST`,
+`LANGSMITH_ENDPOINT`, and legacy `LANGCHAIN_ENDPOINT`. They produce `observability_endpoint`
+findings. Lowercase, camelCase, and other variants do not match. Evidence contains only the key and
+sanitised host, or a runtime-resolved marker.
+
+Documented hosted endpoints resolve to the country of their primary trace and application-data
 hosting region:
 
 | Hosted endpoint | Residency |
@@ -267,80 +353,83 @@ hosting region:
 | `apac.api.smith.langchain.com`, `australia-southeast1.p.api.smith.langchain.com` | `au` (Australia) |
 | `us-central1.p.api.smith.langchain.com` | `us` (United States) |
 
-Every documented Langfuse Cloud and LangSmith SaaS host above has advisory sovereignty `us`,
-independently of its physical residency. This is an operator signal, not an adjudication of which
-statute applies; Langfuse's ClickHouse/Langfuse GmbH contracting nuance does not change that curated
-value. Residency does not assert the location of every backup, authentication, billing, support, or
-subprocessed copy.
+Every hosted Langfuse Cloud and LangSmith SaaS host above has advisory sovereignty `us`, regardless
+of physical residency. This signals the operator; it does not decide which statute applies.
+Langfuse's ClickHouse/Langfuse GmbH contracting nuance does not change the curated value. Residency
+does not assert where every backup, authentication, billing, support, or subprocessed copy lives.
 
-An SDK import alone never infers a cloud default, destination, or operator: residency, sovereignty,
-and provenance remain `unknown`. An unmapped static custom destination is reported as
-`custom_endpoint` with residency and sovereignty `unknown`; a runtime-resolved destination also
-remains `unknown` on both axes. Loopback retains the existing `local` behavior.
+An SDK import alone never implies a cloud destination or operator. Residency, sovereignty, and
+provenance remain `unknown`. An unmapped custom destination has residency and sovereignty
+`unknown`. A runtime-resolved destination also remains `unknown`. Loopback remains `local`.
 
-Observability providers are categorized as `observability`: text output annotates them as
-`(observability)`, while JSON and SBOM retain `category: "observability"`. The category does not
-change verdicts. Observability SDK and endpoint findings are not model providers, so same-file model
-references and first-party provider defaults never assign provenance to them; their provenance stays
-`unknown`, and references bind only to an eligible model-provider flow when one is present.
+Observability providers have category `observability` in text, JSON, and SBOM output. The category
+does not change verdicts. Observability findings are not model providers, so their provenance stays
+`unknown`. Same-file model references bind only to eligible model-provider flows.
 
-These findings describe potential or configured telemetry, not observed transmission or payload
-contents. Static analysis does not determine whether tracing is enabled, inspect prompts or outputs,
-perform call-graph attribution, or claim transitive egress. API keys, tracing flags, generic
-OpenTelemetry declarations, arbitrary URLs, and undocumented destination keys do not independently
-produce `observability_endpoint` findings. Constructor-only custom destinations without vendor
-context are outside this slice. Existing residency, `on_unknown`, waiver, output, and exit-code
-behavior applies unchanged, with no new CLI option or policy block.
+These findings describe potential or configured telemetry, not observed transmissions or payload
+contents. Static analysis cannot determine whether tracing is enabled. API keys, tracing flags,
+generic OpenTelemetry declarations, arbitrary URLs, and undocumented destination keys do not create
+findings by themselves. Constructor-only custom destinations without vendor context are outside
+this scope. Existing policy, waiver, output, and exit-code behaviour applies unchanged.
 
 ## Output formats
 
 | Format | What you get |
 |---|---|
 | `text` (default) | The human-readable report above |
-| `json` | Machine-readable findings, all three axes per flow |
+| `json` | Machine-readable findings with all three checks |
 | `mermaid` | A data-flow map grouped by jurisdiction |
 | `sarif` | SARIF 2.1.0 for GitHub code scanning |
-| `sbom` | A deterministic AI data-flow SBOM (feeds the `diff` gate) |
-| `evidence` | A fileable markdown transfer inventory with audit envelope and regime annex |
-| `html` | One self-contained file to hand your DPO or General Counsel |
-| `badge` | shields.io endpoint JSON: pass/fail/flow-count |
-| `suricata` | A Suricata TLS-SNI alert ruleset compiled from the KB and policy — network-level detection of AI egress the code scan can't see |
+| `sbom` | A deterministic AI data-flow SBOM for the `diff` command |
+| `evidence` | A Markdown transfer inventory with audit details and legal annexes |
+| `html` | One self-contained file for privacy or legal review |
+| `badge` | shields.io endpoint JSON with status or flow count |
+| `suricata` | TLS-SNI alert rules compiled from the knowledge base and policy |
 
-Exports (`sbom`, `evidence`, `html`, `badge`, `suricata`) are artifacts, not gates: they exit 0.
+The `sbom`, `evidence`, `html`, `badge`, and `suricata` formats export artifacts. They always exit
+zero, even when the report contains violations.
 
-The **evidence pack** carries an audit envelope (git commit, policy SHA-256, KB review dates),
-all three governance axes with developer orgs, a waiver register, a **data-practices register**
-(cited training-default / retention / subprocessor facts per flow's provider; uncurated providers
-marked explicitly), and a regime annex (PDPO, PIPL + GBA SC, Macao PDPA, PDPA-SG) that fills what
-the scan proves and leaves marked blanks for what only the organisation knows.
+The evidence pack includes:
 
-The **badge** renders green for clean, red for violations, yellow for warnings, blue for
-inventory mode (flow count):
+- An audit envelope with the git commit, policy SHA-256, and knowledge-base review dates.
+- All three checks, model developers, code locations, and a waiver register.
+- A data-practices register with cited training-default, retention, subprocessor, and
+  enterprise-tier facts. Uncurated providers remain visible as “not curated”.
+- Legal annexes for PDPO, PIPL and the GBA Standard Contract, Macao PDPA, and Singapore PDPA.
+  borderlint fills fields supported by static evidence and leaves organisation-supplied fields
+  blank and marked.
+
+A badge is green for a clean policy scan, red for violations, yellow for warnings only, and blue
+for inventory mode:
 
 ```json
 {"schemaVersion": 1, "label": "borderlint", "message": "clean", "color": "green"}
 ```
 
-The **suricata** ruleset is derived from the KB and policy, not from scan findings — it covers
-providers your code doesn't use yet, so runtime egress (an env-configured base URL, an agent's
-tool call) still trips an alert at the network boundary. One rule per KB endpoint host whose
-jurisdiction the policy disallows (region-selectable clouds always alert, marked
-region-dependent); without a policy, every known AI endpoint alerts. Alert posture — the header
-documents converting to `drop` for inline IPS. sids are deterministic per KB version; regenerate
-rather than diff. Validated against Suricata 8.
-
-Publish the badge by writing the JSON to any static host (GitHub Pages, a gist) on every push:
+Publish it by writing the JSON to a static host on every push:
 
 ```yaml
 - run: borderlint scan . --policy residency.json --classification customer-pii --format badge > badge.json
 ```
 
-then reference `https://img.shields.io/endpoint?url=https://your-host/badge.json` in your README.
+Then reference `https://img.shields.io/endpoint?url=https://your-host/badge.json` in your README.
+
+The Suricata ruleset comes from the knowledge base and policy, not scan findings. It can therefore
+cover providers your code does not use yet and detect network traffic that static analysis cannot
+see.
+
+- With a policy, borderlint creates one alert per knowledge-base host whose jurisdiction is not
+  allowed. Region-selectable clouds always alert and are marked region-dependent.
+- Without a policy, every known AI endpoint produces an alert.
+- Rules use `alert`, not `drop`. The file header explains how to convert them for an inline
+  intrusion-prevention system.
+- Rule IDs are deterministic for each knowledge-base version. Regenerate the file rather than
+  comparing revisions. The output is validated against Suricata 8.
 
 ## Internal endpoints
 
-Map your own regional endpoints to jurisdictions; they **merge** with the bundled provider KB (your
-entries win on conflict):
+Map your own regional endpoints to jurisdictions with `--providers`. Your entries add to the
+bundled knowledge base and win on conflict:
 
 ```json
 { "endpoints": { "llm-cn.acme.internal": "cn", "llm-hk.acme.internal": "hk", "llm-sg.acme.internal": "sg" } }
@@ -350,14 +439,10 @@ entries win on conflict):
 borderlint scan . --providers internal-endpoints.json --policy residency.json --classification customer-pii
 ```
 
-A configuration wired to the **wrong regional endpoint** — e.g. the CN endpoint for HK-only
-customer PII — then fails the build, so you can't ship a service pointed at the wrong region.
+A configuration that uses the wrong regional endpoint then fails the policy check. For example,
+a Mainland China endpoint fails a Hong Kong-only customer-PII policy.
 
-A runnable end-to-end example is in [`examples/gba-resident-app/`](examples/gba-resident-app/) — a
-GBA-resident app (internal Shenzhen endpoint → `CN-GBA`, plus Mainland / Western / local fallbacks). Run
-it under `residency-hk.json` vs `residency-mo.json` and the surfaced **GBA Standard Contract** flips
-between the *(Mainland, Hong Kong)* and *(Mainland, Macao)* variant, and the regime tag between PDPO and
-Macao PDPA:
+Try the runnable example in [`examples/gba-resident-app/`](examples/gba-resident-app/):
 
 ```bash
 borderlint scan examples/gba-resident-app \
@@ -365,133 +450,100 @@ borderlint scan examples/gba-resident-app \
   --policy examples/gba-resident-app/residency-hk.json --classification customer-pii
 ```
 
-The same scan renders to a data-flow map grouped by jurisdiction — Mermaid source in
-[`dataflow.mmd`](https://github.com/iolairus/borderlint/blob/main/examples/gba-resident-app/dataflow.mmd),
-rendered to PNG:
+The example uses an internal Shenzhen endpoint mapped to `CN-GBA`, plus Mainland, Western, and
+local alternatives. Run it with `residency-hk.json` and then `residency-mo.json`. The GBA Standard
+Contract link changes between the Hong Kong and Macao variants, and the regime tag changes between
+PDPO and Macao PDPA.
+
+The same scan produces a Mermaid data-flow map grouped by jurisdiction. See
+[`dataflow.mmd`](https://github.com/iolairus/borderlint/blob/main/examples/gba-resident-app/dataflow.mmd)
+or the rendered image:
 
 ![borderlint AI data-flow map for the GBA-resident sample app, grouped by jurisdiction](https://raw.githubusercontent.com/iolairus/borderlint/main/examples/gba-resident-app/dataflow.png)
 
-## Capabilities
+## Capability summary
 
-- **Languages:** Python (AST), TypeScript/JavaScript (`import` / `require` / dynamic `import()`),
-  **Java/Kotlin** (`import` / `import static`, incl. **LangChain4j** and **Spring AI** as
-  runtime-routed aggregators and the official OpenAI/Anthropic/Bedrock/Vertex/Azure JVM SDKs),
-  and **C#** (`using` directives incl. `global`/`static`/alias forms — the official
-  OpenAI/Anthropic/Azure/Bedrock/Google .NET SDKs, plus **Semantic Kernel** and
-  **Microsoft.Extensions.AI** as runtime-routed aggregators),
-  plus endpoint references in config/text files (incl. env-style keys like `MYAPP_LLM_SERVER_URL` in `.env`, compose, and settings files) and **OpenAI-compatible `/v1/chat/completions` calls**
-  — even to a runtime-configured host (resolved to `unknown`, so `on_unknown: fail` gates it).
-- **Providers:** 100+ across the east-west boundary — OpenAI, Anthropic, Google (Gemini + **Vertex
-  AI**), Azure, Bedrock, Mistral, Cohere, Groq, Together, Perplexity, xAI, Cerebras, Fireworks,
-  Replicate, SambaNova, Meta Llama, **AWS SageMaker, Snowflake Cortex** + **Tencent, Alibaba, DeepSeek, Moonshot, Zhipu/Z.ai, Baidu,
-  Xiaomi MiMo, Volcengine, MiniMax, Huawei ModelArts**, plus **AI21 (IL), Jina (DE), Voyage, GigaChat (RU), Sarvam (IN), Scaleway &
-  OVHcloud (FR/EU)** and region-selectable clouds (**IBM watsonx, Oracle OCI, Cloudflare Workers AI,
-  Heroku** → `unknown` until you pin a region) — with Python and JS/TS package names and the **Vercel
-  AI SDK** (`@ai-sdk/*`).
-- **MCP configs:** `.mcp.json`, `claude_desktop_config.json`, Cursor / VS Code — one `mcp_server`
-  finding per configured server, resolved via the provider KB and the bundled MCP-server map.
-- **Image / video / speech:** generation (**Stability AI, Black Forest Labs/Flux, Runway, Recraft**)
-  and **speech-to-text / TTS** (**ElevenLabs, Deepgram, AssemblyAI, Soniox, Amazon Polly**) — tagged
-  with their `category` and governed for residency like any other flow.
-- **Vector stores (data sinks):** Pinecone, Weaviate Cloud, Qdrant Cloud, Zilliz/Milvus — flagged
-  as `vector_store` and governed for residency (region is per-cluster, so default `unknown`).
-- **Aggregators / routers:** litellm, langchain, LlamaIndex, aisuite, OpenRouter, AI/ML API, Vercel
-  AI core & Gateway → `unknown` (runtime-routed), so `on_unknown: fail` blocks them for sensitive classes.
-- **Jurisdictions:** ccTLD/ISO codes + `CN-GBA` / `GBA`; **AWS / Azure / GCP-Vertex region resolved
-  from the endpoint host** where present (e.g. `bedrock-runtime.ap-east-1…` and
-  `asia-east2-aiplatform.googleapis.com` → `hk`).
-- **Sovereignty:** a per-flow bloc (`us`, `eu`, `cn`, `uk`, `ru`, `in`, `il`, `ca`, `jp`, `kr`,
-  `sg`, `au`, `ae`, `ch`, `vn`, `local`, `unknown`) derived from the provider's home legal regime — orthogonal to residency. Opt-in
-  policy block; reported in every output format; host-level overrides for ring-fenced
-  subsidiaries (e.g. AWS China / Sinnet → `cn`).
-- **Provenance:** whose model weights a flow runs — a third orthogonal bloc resolved from model
-  references in code (`anthropic.claude-…`, `qwen2.5-72b`, `deepseek/deepseek-r1`, `Qwen/…`,
-  version-pinned `claude-3-5-haiku@20241022`) or
-  the provider's first-party default. Local LLM usage resolves too: GGUF/MLX redistributor repos
-  (`TheBloke/…`, `mlx-community/…`), `.gguf` file paths, and Ollama tags (`llama3.2`, `qwen2.5`).
-  Namespaces that say *where weights were pulled from* rather than *who made them* are stripped before
-  matching — curated launcher names (`ollama/`, `vllm/`, `lmstudio/`) and host-like registry segments
-  (`docker.io/library/…`, `mirror.internal/…`) — while an unknown org prefix is never stripped, so a
-  path like `src/deepseek/client.py` stays unmatched instead of resolving to a bloc. Write a URL without
-  its scheme (`huggingface.co/TheBloke/model-x`): with `https://` the first segment is not host-like, so
-  the walk never starts and the reference resolves nothing. Stripping a leading scheme is a known
-  follow-up, not current behaviour.
-  Opt-in `provenance` policy block, same
-  shape as sovereignty, plus a `deny_models` family ban with provider-deny semantics; findings
-  name the developer organisation when the map knows it.
-- **Policy:** classification-keyed JSON eval-set, deny-by-default, provider allow/deny, configurable
-  failure set, declared home regime — scaffolded interactively by **`borderlint init`** (or
-  non-interactively with `--home`/`--classes` for CI).
-- **Regimes & arrangements:** declared home location → data-protection regime tag + the cross-border
-  mechanism reference for a flagged flow (context only, never adjudicated). GBA seats `hk`/`mo`/`CN-GBA`
-  → PDPO / Macao PDPA / PIPL + the matching GBA Standard Contract; **APAC/EMEA seats `jp` (APPI), `kr`
-  (PIPA), `sg`/`my` (PDPA s.26 / s.129), `au` (APP 8), `uk` (UK IDTA), `eu` (GDPR)** → their transfer
-  mechanism. PIPL cross-border and GDPR are also surfaced for those destinations.
-- **Regulator profiles:** `init --profile hkma|mas` seeds the policy walk from cited regulator
-  guidance (see `Use` above).
-- **Data practices:** hand-curated, citation-backed facts per provider — does it train on your API
-  data by default, what retention applies, where the subprocessor list lives, does an enterprise
-  tier change the answer. Rendered as a register in the `evidence` pack (uncurated providers stay
-  visible as "not curated") and as a section on each KB-website provider page; every fact carries a
-  source URL, locator note, and retrieval date. Strictly advisory — never gates.
-- **Output & CI:** text / JSON / Mermaid / SARIF / SBOM / evidence / HTML / badge / Suricata, an
-  SBOM **`diff`** gate for new egress, inline **waivers**, exit codes, GitHub Action + Jenkins +
-  GitLab CI.
-- **Agentic coding:** an installable **Claude Code plugin** (this repo is its own marketplace —
-  `/plugin marketplace add iolairus/borderlint`) and **Cursor** rules that make the agent scan
-  *before* adding an AI dependency, endpoint, or model id.
+| Area | Support |
+|---|---|
+| Languages | Python AST; TypeScript/JavaScript imports and `require`; Java/Kotlin imports; C# `using` directives; source and configuration endpoint references |
+| SDK ecosystems | Official OpenAI, Anthropic, Bedrock, Vertex, Azure, LangChain4j, Spring AI, Semantic Kernel, Microsoft.Extensions.AI, and Vercel AI SDK packages |
+| Flow types | Model providers, managed vector stores, aggregators and routers, image/video/speech services, observability endpoints, MCP servers, and agent tools |
+| Providers | 142 bundled providers across Western, Chinese, and other blocs, with regional endpoint handling for AWS, Azure, GCP Vertex, Aliyun, and Huawei |
+| Jurisdictions | Country codes, `CN-GBA`, `GBA`, `local`, and `unknown`; `uk` as an alias for `gb` |
+| Policy | Data-class allow-lists, provider allow/deny rules, configurable failures, unknown handling, inline waivers, and optional sovereignty and provenance blocks |
+| Legal context | Regime tags and transfer references for supported home locations, plus cited HKMA and MAS starter profiles |
+| Data practices | Cited training-default, retention, subprocessor, and enterprise-tier facts in evidence packs and provider pages; never part of a verdict |
+| Reports | Text, JSON, Mermaid, SARIF, SBOM, evidence, HTML, badge, and Suricata |
+| Workflows | Desktop CLI, GitHub Actions, GitLab CI, Jenkins, pre-commit, Claude Code, and Cursor |
 
-## Scope
+Unknown jurisdictions remain visible rather than guessed. Set `on_unknown: fail` when your data
+class requires a known destination. Region-selectable clouds and runtime-routed aggregators often
+resolve to `unknown` until you provide more specific evidence.
 
-For HK / CN / GBA / MO plus **JP / KR / SG / AU / UK / EU / MY** home bases (regime tags + cross-border
-references). Not yet: AE / IN / ID (cross-border instruments not yet operational); other jurisdictions;
-CycloneDX / SPDX SBOM export and optional LLM enrichment. Per-capability status — shipped vs. next
-vs. later — is tracked in [`CAPABILITIES.md`](CAPABILITIES.md).
+## Scope and limits
 
-## Keeping the KB fresh
+borderlint provides static evidence about configured or potential AI data flows. It does not
+inspect payloads, observe runtime traffic, or prove that a transmission occurred. It is not a
+runtime proxy, a secret scanner, a data-loss-prevention product, or a source of legal advice.
 
-**Browse the KB** at [iolairus.github.io/borderlint](https://iolairus.github.io/borderlint/) —
-one page per provider and per model developer (residency, sovereignty, provenance, regime and
-cross-border references), generated straight from the bundled JSON on every KB change.
+Supported home locations cover Hong Kong, Macao, Mainland China and the Mainland GBA cities, Japan,
+Korea, Singapore, Australia, the UK, the EU, and Malaysia. Regime and transfer-reference support
+for the UAE, India, and Indonesia remains deferred until their cross-border instruments become
+operational. Other home locations receive no derived legal context.
 
-A weekly GitHub Action (`.github/workflows/kb-refresh.yml`) checks freshness on every axis:
-providers we don't yet cover (diffed against litellm's registry), **model families the
-provenance map doesn't resolve** (aggregated, so the issue lists families to curate rather than
-thousands of model IDs), **SDK-key coverage gaps**, **data-practice curation gaps**,
-sovereignty-map completeness, and each bundled KB's last-reviewed date.
-It maintains a single standing review issue, updated in place. Route aliases and out-of-scope
-names are recorded in `scripts/kb_drift_aliases.json`; jurisdictions and blocs are assigned
-**by hand**, never auto-merged. `borderlint --version` shows the KB's last-reviewed
-date. To add or correct a provider, see [`CONTRIBUTING.md`](CONTRIBUTING.md) (KB schema + PR
-workflow).
+CycloneDX and SPDX export, optional LLM enrichment, payload classification, and supply-chain or
+container scanning remain future work. See [CAPABILITIES.md](CAPABILITIES.md) for the status of
+every planned capability.
+
+## Keep the knowledge base fresh
+
+The [knowledge-base website](https://iolairus.github.io/borderlint/) is generated from the bundled
+JSON. It includes one page per provider and model developer, with residency, sovereignty,
+provenance, legal references, and curated data practices.
+
+A weekly GitHub Action checks:
+
+- Providers missing from the bundled knowledge base, using litellm's registry for comparison.
+- Model families missing from the provenance map.
+- Provider SDK coverage for JVM and .NET.
+- Sovereignty-map completeness.
+- Data-practice coverage and review dates.
+- Review dates for every bundled knowledge base.
+
+The action updates one standing review issue instead of opening duplicates. Route aliases and
+out-of-scope names live in `scripts/kb_drift_aliases.json`. People assign jurisdictions and blocs
+by hand; the action never merges them automatically. Run `borderlint --version` to see the bundled
+knowledge base's last-reviewed date. To add or correct a provider, follow
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Development
 
-borderlint is built **spec-first** with [OpenSpec](https://github.com/Fission-AI/OpenSpec): every change
-is a reviewed proposal (specs + design + tasks) gated by a `spec-reviewer` agent before any code is
-written. To bootstrap the same workflow into another repo:
+borderlint uses spec-first development with [OpenSpec](https://github.com/Fission-AI/OpenSpec).
+Every change starts with a reviewed proposal containing specifications, a design, and tasks. A
+`spec-reviewer` agent reviews it before implementation.
+
+To add the same workflow to another repository, run:
 
 ```bash
-scripts/opsx-init.sh [--no-jira] /path/to/your/repo
+bash scripts/opsx-init.sh [--no-jira] /path/to/your/repo
 ```
 
-It scaffolds `AGENTS.md`, `.claude/` (slash commands + the spec-reviewer gate), an empty `openspec/`, and
-`workflow.yaml`. `--no-jira` trims it to the core loop — propose → review → apply → commit → ship.
+The script creates `AGENTS.md`, `.claude/`, an empty `openspec/`, and `workflow.yaml`. Use
+`--no-jira` for the core loop: propose → review → apply → commit → ship.
 
 ### AI assistance
 
-The AI coding agents used to build borderlint, scored on borderlint's own three axes
-(residency / sovereignty / provenance):
+The coding agents used to build borderlint, scored on its three checks:
 
 | Model | Route | Residency | Sovereignty | Provenance |
 |---|---|---|---|---|
 | Claude Opus 4.8 | Anthropic, first-party | `us` | `us` | `us` (Anthropic) |
 | Claude Fable 5 | Anthropic, first-party | `us` | `us` | `us` (Anthropic) |
 | Kimi K3 | Moonshot, first-party | `cn` | `cn` | `cn` (Moonshot) |
-| Qwen 3.6 27B | local, self-hosted | `hk` - My desk, Hong Kong, China | `local` | `cn` (Alibaba) |
+| Qwen 3.6 27B | local, self-hosted | `hk` — my desk, Hong Kong, China | `local` | `cn` (Alibaba) |
 | GLM 5.2 | OpenRouter → z.ai | `cn` | `cn` (+ `us` exposure at the router hop) | `cn` (Zhipu) |
 | Hunyuan 3 | OpenRouter → Novita AI | `unknown` | `us` (Novita, San Mateo; + router hop) | `cn` (Tencent) |
-| Muse-Glimmer 30B | local, self-hosted | `hk` - My desk, Hong Kong, China | `local` | `us` (Meta) |
+| Muse-Glimmer 30B | local, self-hosted | `hk` — my desk, Hong Kong, China | `local` | `us` (Meta) |
 
 ## License
 
